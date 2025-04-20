@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Terminal } from "lucide-react"
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const token = searchParams.get('token');
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState<string>('');
@@ -24,16 +25,28 @@ function VerifyEmailContent() {
 
       setStatus('loading');
       try {
-        // Construct the backend URL
-        // Ensure NEXT_PUBLIC_API_BASE_URL is set in your .env.local
-        const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'; 
+        const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
         const response = await fetch(`${apiUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}`);
-
         const data = await response.json();
 
-        if (response.ok) {
+        if (response.ok && data.role) {
+          setMessage(data.message || 'Email verified successfully! Preparing your next step...');
           setStatus('success');
-          setMessage(data.message || 'Email verified successfully!');
+          
+          const userRole = data.role;
+          if (['STARTUP_ADMIN', 'STARTUP_MEMBER', 'FREELANCER'].includes(userRole)) {
+            router.push('/auth/waitlist');
+          } else if (userRole === 'CORP_ADMIN') {
+            router.push('/auth/pending-onboarding');
+          } else {
+            setMessage('Email verified, but role unclear. Redirecting to login.');
+            setTimeout(() => router.push('/login'), 3000);
+          }
+
+        } else if (response.ok) {
+            setStatus('success');
+            setMessage(data.message || 'Email verified successfully! Role information missing, proceeding to login.');
+            setTimeout(() => router.push('/login'), 3000);
         } else {
           setStatus('error');
           setMessage(data.detail || 'Failed to verify email. The link may be invalid or expired.');
@@ -46,7 +59,8 @@ function VerifyEmailContent() {
     };
 
     verifyToken();
-  }, [token]); // Rerun effect if token changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, router]);
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-background">
@@ -56,20 +70,15 @@ function VerifyEmailContent() {
         </CardHeader>
         <CardContent>
           {status === 'loading' && <p>Verifying your email...</p>}
-          
+
           {status === 'success' && (
-            <>
-              <Alert variant="default">
+             <Alert variant="default">
                 <Terminal className="h-4 w-4" />
                 <AlertTitle>Success!</AlertTitle>
                 <AlertDescription>
                   {message}
                 </AlertDescription>
               </Alert>
-              <Button asChild className="w-full mt-4">
-                <Link href="/login">Proceed to Login</Link>
-              </Button>
-            </>
           )}
 
           {status === 'error' && (
