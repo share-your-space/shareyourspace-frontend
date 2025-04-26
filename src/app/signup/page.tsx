@@ -66,7 +66,7 @@ export default function SignUpPage() {
       full_name: fullName,
       email,
       password,
-      role_type: userType === 'corporate' ? 'CORP_REP' : userType === 'startup' ? 'STARTUP_REP' : 'FREELANCER',
+      role: userType === 'corporate' ? 'CORP_ADMIN' : userType === 'startup' ? 'STARTUP_ADMIN' : 'FREELANCER',
       company_name: (userType === 'corporate' || userType === 'startup') ? companyName : undefined,
       title: roleTitle || undefined,
     };
