@@ -30,8 +30,8 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      // Adjust the URL to your actual backend endpoint
-      const response = await fetch("http://localhost:8000/api/auth/login", {
+      // Use relative URL or environment variable for backend API
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded", // FastAPI OAuth2PasswordRequestForm expects form data
