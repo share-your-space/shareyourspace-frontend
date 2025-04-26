@@ -14,11 +14,12 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuthStore } from "@/store/authStore"; // Assuming authStore exists
+import { useAuthStore } from "@/store/authStore";
+import { api } from "@/lib/api"; // Import the api client
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setToken /* , setUser */ } = useAuthStore(); // Placeholder for Zustand actions
+  const { setToken, setUser } = useAuthStore(); // Get setUser action
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -30,39 +31,51 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      // Use relative URL or environment variable for backend API
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded", // FastAPI OAuth2PasswordRequestForm expects form data
-        },
-        // Encode email as 'username' for OAuth2PasswordRequestForm
-        body: new URLSearchParams({
+      // Use the api client for login (it handles base URL and content type)
+      const response = await api.post(
+        '/auth/login',
+        new URLSearchParams({
           username: email,
           password: password,
         }),
-      });
+        {
+          headers: {
+             // Override Content-Type for this specific request
+             'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        }
+      );
 
-      const data = await response.json();
+      const data = response.data; // axios puts data directly in .data
 
-      if (!response.ok) {
-        throw new Error(data.detail || "Login failed. Please check your credentials.");
+      if (!data.access_token) {
+        throw new Error(data.detail || "Login failed. No token received.");
       }
 
       // --- Update Zustand Store --- 
-      // Assuming the response contains access_token
       setToken(data.access_token);
       console.log("Login Successful, Token stored.");
-      // If backend sends user data upon login:
-      // if (data.user) {
-      //   setUser(data.user);
-      // }
+
+      // --- Fetch User Details AFTER setting token --- 
+      try {
+          const userResponse = await api.get('/users/me'); // api client now uses the token
+          setUser(userResponse.data); // Update user state
+          console.log("User data fetched and stored:", userResponse.data);
+      } catch (userFetchError: any) {
+          console.error("Failed to fetch user data after login:", userFetchError);
+          // Decide how to handle this - maybe logout? Or proceed but show error?
+          setError("Login successful, but failed to fetch user details.");
+          setIsLoading(false);
+          // Clear token if fetch fails? Optional.
+          // logout();
+          return; // Stop execution here if user fetch fails
+      }
       // -------------------------
 
-      router.push("/dashboard"); // Redirect to dashboard on successful login
+      router.push("/dashboard"); // Redirect to dashboard on successful login AND user fetch
 
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred.");
+    } catch (err: any) {
+      setError(err.response?.data?.detail || err.message || "An unexpected error occurred.");
     } finally {
       setIsLoading(false);
     }
