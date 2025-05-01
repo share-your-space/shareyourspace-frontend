@@ -1,610 +1,428 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
-import AuthGuard from '@/components/layout/AuthGuard';
-import { useAuthStore } from '@/store/authStore';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Terminal, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { toast } from 'sonner';
+import { Loader2, Edit, Save, X, User } from 'lucide-react';
+import { api } from '@/lib/api'; // Assuming api client is set up
+import { useAuthStore } from '@/store/authStore'; // Assuming zustand store for auth token
 
-// Define types for profile data (mirroring backend schemas)
-interface UserProfileData {
-  id?: number;
-  user_id?: number;
-  title?: string | null;
-  bio?: string | null;
-  contact_info_visibility?: 'private' | 'connections' | 'public';
-  skills_expertise?: string[] | null;
-  industry_focus?: string[] | null;
-  project_interests_goals?: string | null;
-  collaboration_preferences?: string[] | null;
-  tools_technologies?: string[] | null;
-  linkedin_profile_url?: string | null;
-  profile_picture_url?: string | null;
-  profile_picture_signed_url?: string | null;
+// Define the shape of the profile data based on backend schema
+interface UserProfile {
+  id: number;
+  user_id: number;
+  title: string | null;
+  bio: string | null;
+  full_name: string | null; // From User model, included in response
+  contact_info_visibility: 'private' | 'connections' | 'public' | null;
+  skills_expertise: string[] | null;
+  industry_focus: string[] | null;
+  project_interests_goals: string | null;
+  collaboration_preferences: string[] | null;
+  tools_technologies: string[] | null;
+  linkedin_profile_url: string | null;
+  profile_picture_url: string | null; // Original blob name
+  profile_picture_signed_url: string | null; // Temporary signed URL for display
 }
 
-// --- Main Page Component ---
+// Schema for form validation using Zod
+// Make all fields optional for update, matching UserProfileUpdate
+const profileFormSchema = z.object({
+  title: z.string().optional().nullable(),
+  bio: z.string().optional().nullable(),
+  contact_info_visibility: z.enum(['private', 'connections', 'public']).optional().nullable(),
+  // Use string for array fields, convert before sending
+  skills_expertise: z.string().optional().nullable(),
+  industry_focus: z.string().optional().nullable(),
+  project_interests_goals: z.string().optional().nullable(),
+  collaboration_preferences: z.string().optional().nullable(),
+  tools_technologies: z.string().optional().nullable(),
+  linkedin_profile_url: z.string().url().or(z.literal('')).optional().nullable(),
+});
+
+type ProfileFormData = z.infer<typeof profileFormSchema>;
+
+// Helper function to convert comma-separated string to array
+const stringToArray = (str: string | null | undefined): string[] | null => {
+  if (!str || str.trim() === '') return null;
+  return str.split(',').map(item => item.trim()).filter(item => item !== '');
+};
+
+// Helper function to convert array to comma-separated string
+const arrayToString = (arr: string[] | null | undefined): string => {
+  return arr ? arr.join(', ') : '';
+};
+
+
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<UserProfileData | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false); // Separate state for saving
-  const [isUploading, setIsUploading] = useState(false); // Add this state variable
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null); // State for success message
   const [isEditing, setIsEditing] = useState(false);
-  const token = useAuthStore((state) => state.token);
+  const [isSaving, setIsSaving] = useState(false);
+  const [pictureFile, setPictureFile] = useState<File | null>(null);
+  const [picturePreview, setPicturePreview] = useState<string | null>(null);
 
-  // Ref for the hidden file input
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null); // State for the selected file
+  const { token } = useAuthStore(); // Get token for API calls
 
-  useEffect(() => {
-    const fetchProfile = async () => {
+  const {
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors }
+  } = useForm<ProfileFormData>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      title: '',
+      bio: '',
+      contact_info_visibility: 'connections',
+      skills_expertise: '',
+      industry_focus: '',
+      project_interests_goals: '',
+      collaboration_preferences: '',
+      tools_technologies: '',
+      linkedin_profile_url: '',
+    },
+  });
+
+  // Fetch profile data
+  const fetchProfile = useCallback(async () => {
       if (!token) return;
       setIsLoading(true);
-      setError(null);
-      setSuccessMessage(null); // Clear messages on load
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/me/profile`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!response.ok) {
-          throw new Error(`Failed to fetch profile: ${response.statusText}`);
-        }
-        const data: UserProfileData = await response.json();
-        setProfile(data);
-        setPreviewImage(data.profile_picture_signed_url || data.profile_picture_url || null);
-      } catch (err: any) {
-        console.error(err);
-        setError(err.message || 'Failed to load profile.');
+    try {
+      const response = await api.get<UserProfile>('/users/me/profile');
+      setProfile(response.data);
+      // Reset form with fetched data when starting to edit
+      reset({
+        title: response.data.title || '',
+        bio: response.data.bio || '',
+        contact_info_visibility: response.data.contact_info_visibility || 'connections',
+        skills_expertise: arrayToString(response.data.skills_expertise),
+        industry_focus: arrayToString(response.data.industry_focus),
+        project_interests_goals: response.data.project_interests_goals || '',
+        collaboration_preferences: arrayToString(response.data.collaboration_preferences),
+        tools_technologies: arrayToString(response.data.tools_technologies),
+        linkedin_profile_url: response.data.linkedin_profile_url || '',
+      });
+      setPicturePreview(response.data.profile_picture_signed_url); // Set initial preview
+    } catch (error: any) {
+      console.error("Failed to fetch profile:", error);
+      toast.error(error.response?.data?.detail || "Failed to load profile.");
       } finally {
         setIsLoading(false);
       }
-    };
+  }, [token, reset]);
 
+  useEffect(() => {
     fetchProfile();
-  }, [token]);
+  }, [fetchProfile]);
 
-  const handleSave = async (updatedData: UserProfileData) => {
-    setIsSaving(true); // Indicate overall saving process starts
-    setError(null);
-    setSuccessMessage(null);
-
-    let pictureUploadSuccess = true; // Assume success if no file selected
-
-    // 1. Upload picture if a new one is selected
-    if (selectedFile) {
-      pictureUploadSuccess = await handlePictureUpload(selectedFile);
-      if (pictureUploadSuccess) {
-        setSelectedFile(null); // Clear selected file state on successful upload
-      } else {
-        // Error state is already set by handlePictureUpload
-        setIsSaving(false); // Stop the overall saving process
-        return; // Don't proceed to save text data if upload failed
-      }
-    }
-
-    // 2. Save profile text data (only if picture upload was successful or not needed)
-    const dataChanged = Object.keys(updatedData).some(key => {
-        const k = key as keyof UserProfileData;
-        // Handle array comparison carefully if needed, simple check for MVP
-        return updatedData[k] !== profile?.[k];
-    });
-
-    if (!dataChanged) {
-        // If only the picture was uploaded, or no changes at all
-        setIsEditing(false);
-        setIsSaving(false);
-        if (pictureUploadSuccess && selectedFile === null) { // Check selectedFile null to confirm pic was just uploaded
-           setSuccessMessage("Profile picture updated!");
-           setTimeout(() => setSuccessMessage(null), 3000); // Clear after 3s
-        } else if (!pictureUploadSuccess){
-            // Error message is already set
-        } else {
-             // No text changes, no pic change
-        }
-        return;
-    }
-
-    // Proceed to save text data
-    const success = await handleSaveProfileData(updatedData);
-
-    if (success) {
-      setIsEditing(false); // Exit edit mode on success
-      setSuccessMessage("Profile updated successfully!");
-      setTimeout(() => setSuccessMessage(null), 3000); // Clear after 3s
-    }
-    // Error state is set within handleSaveProfileData if it fails
-
-    setIsSaving(false); // Indicate overall saving process ends
-  };
-
-  // Function to save only the profile text data
-  const handleSaveProfileData = async (updatedData: UserProfileData): Promise<boolean> => {
-    if (!token || !profile) return false;
-    // This function assumes isSaving state is managed by the caller (handleSave)
-    setError(null); // Clear previous errors specific to text saving
-
-    const payload: Partial<UserProfileData> = {};
-     Object.keys(updatedData).forEach(key => {
-        const k = key as keyof UserProfileData;
-        // Basic check, might need deeper comparison for arrays/objects later
-        if (updatedData[k] !== profile[k]) {
-            // Convert comma-separated strings back to arrays for saving
-            if (['skills_expertise', 'industry_focus', 'collaboration_preferences', 'tools_technologies'].includes(k)) {
-                payload[k] = stringToArray(updatedData[k] as string | null);
-            } else if (k === 'linkedin_profile_url') {
-                // Send null if the URL is an empty string, otherwise send the value
-                payload[k] = updatedData[k] ? updatedData[k] : null;
-            } else {
-                 payload[k] = updatedData[k];
-            }
-        }
-    });
-
-    if (Object.keys(payload).length === 0) {
-        console.log("No textual profile data changes detected.");
-        return true; // No changes needed, consider it a success
-    }
-
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/me/profile`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
+  const handleEditToggle = () => {
+    if (!isEditing && profile) {
+      // Populate form with current profile data when entering edit mode
+      reset({
+        title: profile.title || '',
+        bio: profile.bio || '',
+        contact_info_visibility: profile.contact_info_visibility || 'connections',
+        skills_expertise: arrayToString(profile.skills_expertise),
+        industry_focus: arrayToString(profile.industry_focus),
+        project_interests_goals: profile.project_interests_goals || '',
+        collaboration_preferences: arrayToString(profile.collaboration_preferences),
+        tools_technologies: arrayToString(profile.tools_technologies),
+        linkedin_profile_url: profile.linkedin_profile_url || '',
       });
-      if (!response.ok) {
-        let errorDetail = 'Failed to save profile data';
-        try {
-            const errorData = await response.json();
-            console.error("Backend Validation Error Data:", errorData); // Log the full error data
-            // Attempt to extract a more specific message if available (FastAPI validation errors)
-            if (errorData.detail && Array.isArray(errorData.detail)) {
-                errorDetail = errorData.detail.map((err: any) => `${err.loc ? err.loc.join(' -> ') : 'field'}: ${err.msg}`).join('; ');
-            } else if (errorData.detail) {
-                errorDetail = errorData.detail;
-            }
-        } catch (e) {
-            // If parsing JSON fails, use the status text
-            errorDetail = `HTTP ${response.status}: ${response.statusText}`;
-        }
-        throw new Error(errorDetail); // Throw the improved error message
-      }
-      const savedProfile: UserProfileData = await response.json();
-      // Update local state with the full saved profile (includes pic URL if it was just updated)
-      setProfile(savedProfile);
-      // Ensure preview reflects the saved state (important if upload happened in same save cycle)
-      setPreviewImage(savedProfile.profile_picture_signed_url || savedProfile.profile_picture_url || null);
-      console.log("Profile data saved successfully!");
-      return true; // Indicate success
-    } catch (err: any) {
-      console.error("Save Data Error:", err);
-      // Error message is now more detailed from the throw above
-      setError(err.message || 'Failed to save profile data.');
-      return false; // Indicate failure
+      setPicturePreview(profile.profile_picture_signed_url); // Reset preview
+      setPictureFile(null); // Clear any staged file
     }
+    setIsEditing(!isEditing);
   };
 
-  // Handle file selection for preview - NO UPLOAD HERE
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Generate local preview URL
+  const handlePictureChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      setPictureFile(file);
+      // Create a preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
-        setPreviewImage(reader.result as string);
+        setPicturePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
-
-      // Store the selected file for later upload on save
-      setSelectedFile(file);
-
-      // Reset file input value immediately after selection
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
     }
   };
 
-  // Function to handle profile picture upload to backend - Returns success status
-  const handlePictureUpload = async (file: File): Promise<boolean> => {
-     if (!token) return false;
-     console.log("Initiating upload for:", file.name);
-     setIsUploading(true);
-     setError(null); // Clear previous errors
-     setSuccessMessage(null);
+  // Handle profile text data submission
+  const onSubmit = async (data: ProfileFormData) => {
+    if (!token) return;
+    setIsSaving(true);
 
-     try {
+    // Convert comma-separated strings back to arrays for the API
+    const updatePayload = {
+      ...data,
+      // Ensure null is sent if string is empty, otherwise split and trim
+      skills_expertise: data.skills_expertise ? stringToArray(data.skills_expertise) : null,
+      industry_focus: data.industry_focus ? stringToArray(data.industry_focus) : null,
+      collaboration_preferences: data.collaboration_preferences ? stringToArray(data.collaboration_preferences) : null,
+      tools_technologies: data.tools_technologies ? stringToArray(data.tools_technologies) : null,
+      // Ensure null is sent if URL field is empty/nullish, otherwise send the valid URL
+      linkedin_profile_url: data.linkedin_profile_url || null 
+    };
+
+    // Log the exact payload being sent
+    console.log("Sending profile update payload:", JSON.stringify(updatePayload, null, 2));
+
+    try {
+      // First, upload picture if changed
+      let pictureUpdated = false;
+      if (pictureFile) {
        const formData = new FormData();
-       formData.append('file', file);
+        formData.append('file', pictureFile);
+        await api.post('/users/me/profile/picture', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        pictureUpdated = true;
+        setPictureFile(null); // Clear file after upload
+        toast.success("Profile picture updated!");
+      }
 
-       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/me/profile/picture`, {
-         method: 'POST',
-         headers: {
-           Authorization: `Bearer ${token}`,
-         },
-         body: formData,
-       });
+      // Then, update profile text data
+      // Use the prepared updatePayload which has arrays and correct linkedin_profile_url
+      const response = await api.put<UserProfile>('/users/me/profile', updatePayload);
+      setProfile(response.data); // Update profile state with response
+      reset({ // Reset form with latest data
+        title: response.data.title || '',
+        bio: response.data.bio || '',
+        contact_info_visibility: response.data.contact_info_visibility || 'connections',
+        skills_expertise: arrayToString(response.data.skills_expertise),
+        industry_focus: arrayToString(response.data.industry_focus),
+        project_interests_goals: response.data.project_interests_goals || '',
+        collaboration_preferences: arrayToString(response.data.collaboration_preferences),
+        tools_technologies: arrayToString(response.data.tools_technologies),
+        linkedin_profile_url: response.data.linkedin_profile_url || '',
+      });
+      // Update preview only if picture wasn't just uploaded (response might have new signed URL)
+      if (!pictureUpdated) {
+        setPicturePreview(response.data.profile_picture_signed_url);
+      } else {
+        // If picture was updated, we need to refresh to get the new signed URL
+        fetchProfile(); // Re-fetch to get the new signed URL for the uploaded pic
+      }
 
-       if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ detail: `HTTP error ${response.status}: ${response.statusText}` }));
-         throw new Error(errorData.detail || 'Upload failed');
-       }
-
-       const updatedProfilePartial: UserProfileData = await response.json(); // Backend returns the updated profile part
-
-       // Update *only the picture part* of the main profile state immediately
-       setProfile(prev => ({
-         ...(prev ?? {}), // Ensure prev is not null
-         profile_picture_url: updatedProfilePartial.profile_picture_url,
-         profile_picture_signed_url: updatedProfilePartial.profile_picture_signed_url
-        }));
-       // Set the preview to the confirmed signed URL from the server
-       setPreviewImage(updatedProfilePartial.profile_picture_signed_url || updatedProfilePartial.profile_picture_url || null);
-       console.log("Picture uploaded successfully!");
-       // Don't set global success message here, handleSave will do it.
-       return true; // Indicate success
-
-     } catch (err: any) {
-       console.error("Upload Error:", err);
-       setError(err.message || 'Failed to upload picture.');
-       // Reset preview to the last known *good* signed URL on error
-       // This might revert the user's selection, which is debatable UX, but prevents showing broken state
-       setPreviewImage(profile?.profile_picture_signed_url || profile?.profile_picture_url || null);
-       return false; // Indicate failure
+      setIsEditing(false); // Exit edit mode
+      if (!pictureUpdated) { // Avoid double toast if picture was already updated
+        toast.success("Profile updated successfully!");
+      }
+    } catch (error: any) {
+      console.error("Failed to update profile:", error);
+      // Improved error details for 422
+      let errorMessage = "Failed to update profile.";
+      if (error.response && error.response.status === 422 && error.response.data && error.response.data.detail) {
+          // Pydantic validation errors are often in `detail` which can be an array
+          if (Array.isArray(error.response.data.detail)) {
+              errorMessage = error.response.data.detail.map((err: any) => `${err.loc?.length > 1 ? err.loc[1] : 'field'}: ${err.msg}`).join('; ');
+          } else {
+              errorMessage = `Validation Error: ${JSON.stringify(error.response.data.detail)}`;
+          }
+      } else if (error.response?.data?.detail) {
+          errorMessage = error.response.data.detail;
+      }
+      toast.error(errorMessage);
      } finally {
-         setIsUploading(false);
+      setIsSaving(false);
      }
   };
 
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
-  };
 
   if (isLoading) {
-    return <AuthenticatedLayout><div className="p-4 md:p-8"><ProfileSkeleton /></div></AuthenticatedLayout>;
+    return <div className="flex justify-center items-center h-screen"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
 
-  if (!profile && !isLoading) {
-     return (
-      <AuthenticatedLayout>
-        <div className="p-4 md:p-8">
-          <Alert variant="destructive">
-            <Terminal className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error || 'Could not load profile data.'}</AlertDescription>
-          </Alert>
-        </div>
-      </AuthenticatedLayout>
-    );
+  if (!profile) {
+    return <div className="text-center py-10">Failed to load profile data. Please try again later.</div>;
   }
-  
-  // Helper function to convert array to comma-separated string for display/editing
-  const arrayToString = (arr: string[] | null | undefined): string => {
-    return arr ? arr.join(', ') : '';
-  };
 
-  // Helper function to convert comma-separated string back to array
-  const stringToArray = (str: string | null | undefined): string[] => {
-    if (!str) return [];
-    return str.split(',').map(item => item.trim()).filter(item => item.length > 0);
-  };
-
-  return (
-    <AuthGuard>
-      <AuthenticatedLayout>
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold">My Profile</h1>
-            {!isEditing && (
-              <Button onClick={() => setIsEditing(true)}>Edit Profile</Button>
-            )}
-          </div>
-
-          {/* Display Success/Error messages */}
-          {successMessage && (
-             <Alert variant="default" className="mb-4 bg-green-100 border-green-400 text-green-700 dark:bg-green-900 dark:border-green-700 dark:text-green-300">
-               <CheckCircle className="h-4 w-4" />
-               <AlertTitle>Success</AlertTitle>
-               <AlertDescription>{successMessage}</AlertDescription>
-             </Alert>
-           )}
-           {/* Show error inline during editing or if it happens outside edit mode */}
-           {error && (
-             <Alert variant="destructive" className="mb-4">
-               <XCircle className="h-4 w-4" />
-               <AlertTitle>Error</AlertTitle>
-               <AlertDescription>{error}</AlertDescription>
-             </Alert>
-           )}
-
-          <Separator className="mb-8" />
-
-          {profile && !isEditing && (
-            <ProfileDisplay profile={profile} previewImage={previewImage} />
-          )}
-
-          {profile && isEditing && (
-            <ProfileEditForm
-              profile={profile}
-              onSave={handleSave} // Use the combined save handler
-              onCancel={() => {
-                setIsEditing(false);
-                setError(null); // Clear errors on cancel
-                setSuccessMessage(null);
-                // Reset preview image to original profile URL on cancel
-                setPreviewImage(profile.profile_picture_signed_url || profile.profile_picture_url || null);
-                setSelectedFile(null); // Clear any selected file
-              }}
-              isLoading={isSaving || isUploading} // Form shows loading if saving data OR uploading image
-              triggerFileInput={triggerFileInput}
-              previewImage={previewImage} // Pass current preview
-              // Convert arrays to comma-separated strings for Textarea editing
-              initialSkills={arrayToString(profile.skills_expertise)}
-              initialIndustries={arrayToString(profile.industry_focus)}
-              initialCollaborationPrefs={arrayToString(profile.collaboration_preferences)}
-              initialTools={arrayToString(profile.tools_technologies)}
-            />
-          )}
-
-          {/* Hidden file input */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            style={{ display: 'none' }}
-            accept="image/png, image/jpeg, image/gif" // Accept common image types
-          />
-        </div>
-      </AuthenticatedLayout>
-    </AuthGuard>
-  );
-}
-
-// --- Child Components ---
-
-// --- Profile Display Component ---
-interface ProfileDisplayProps {
-  profile: UserProfileData;
-  previewImage: string | null; // Display uses the potentially updated preview
-}
-
-const ProfileDisplay: React.FC<ProfileDisplayProps> = ({ profile, previewImage }) => {
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-         <Avatar className="h-20 w-20">
-           <AvatarImage src={previewImage ?? undefined} alt={profile.user_id?.toString() || 'User'} />
-           <AvatarFallback>
-             {profile.user_id?.toString().substring(0, 2).toUpperCase() || 'U'}
-           </AvatarFallback>
-         </Avatar>
-         <div>
-           <h2 className="text-2xl font-semibold">{profile.user_id?.toString()}</h2>
-           <p className="text-muted-foreground">{profile.title || 'No title set'}</p>
-         </div>
-       </div>
-
-      <ProfileField label="Bio" value={profile.bio} isLongText />
-      <ProfileField label="LinkedIn Profile" value={profile.linkedin_profile_url} isUrl/>
-      <ProfileField label="Contact Info Visibility" value={profile.contact_info_visibility} />
-      <ProfileField label="Skills & Expertise" value={profile.skills_expertise?.join(', ')} />
-      <ProfileField label="Industry Focus" value={profile.industry_focus?.join(', ')} />
-      <ProfileField label="Project Interests/Goals" value={profile.project_interests_goals} isLongText />
-      <ProfileField label="Collaboration Preferences" value={profile.collaboration_preferences?.join(', ')} />
-      <ProfileField label="Tools & Technologies" value={profile.tools_technologies?.join(', ')} />
+  // Helper to display profile data or placeholder
+  const renderDetail = (label: string, value: string | string[] | null | undefined, isList = false) => (
+    <div className="mb-4">
+      <Label className="text-sm font-semibold text-muted-foreground">{label}</Label>
+      <p className="text-sm mt-1">
+        {isList
+          ? Array.isArray(value) ? value.join(', ') || 'N/A' : value || 'N/A' // Handle array or string from form
+          : value || 'N/A'}
+      </p>
     </div>
   );
-};
-
-const ProfileField = ({ label, value, isLongText = false, isUrl = false }: { label: string; value: string | string[] | undefined | null; isLongText?: boolean; isUrl?: boolean }) => (
-  <div>
-    <h3 className="text-lg font-medium mb-1">{label}</h3>
-    {value ? (
-       isUrl && typeof value === 'string' ? (
-          <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-words">
-            {value}
-          </a>
-        ) : isLongText ? (
-        <p className="text-muted-foreground whitespace-pre-wrap">{value}</p>
-      ) : (
-        <p className="text-muted-foreground">{Array.isArray(value) ? value.join(', ') : value}</p>
-      )
-    ) : (
-      <p className="text-muted-foreground italic">Not provided</p>
-    )}
-  </div>
-);
-
-// --- Skeleton Loader ---
-const ProfileSkeleton = () => (
-  <div className="space-y-8">
-     <div className="flex justify-between items-center">
-       <Skeleton className="h-8 w-48" />
-       <Skeleton className="h-10 w-24" />
-     </div>
-     <Separator />
-     <div className="flex items-center space-x-4">
-       <Skeleton className="h-20 w-20 rounded-full" />
-       <div className="space-y-2">
-         <Skeleton className="h-6 w-32" />
-         <Skeleton className="h-4 w-48" />
-       </div>
-     </div>
-     <div className="space-y-4">
-       <Skeleton className="h-4 w-1/4" />
-       <Skeleton className="h-10 w-full" />
-     </div>
-     <div className="space-y-4">
-       <Skeleton className="h-4 w-1/4" />
-       <Skeleton className="h-6 w-full" />
-     </div>
-     <div className="space-y-4">
-       <Skeleton className="h-4 w-1/4" />
-       <Skeleton className="h-6 w-3/4" />
-     </div>
-     {/* Add more skeleton fields as needed */}
-   </div>
-);
-
-// --- Profile Edit Form Component ---
-interface ProfileEditFormProps {
-  profile: UserProfileData;
-  onSave: (data: UserProfileData) => void; // Function now handles both image and text
-  onCancel: () => void;
-  isLoading: boolean; // Combined loading state for save/upload
-  triggerFileInput: () => void; // Function to trigger file input
-  previewImage: string | null; // Current preview image URL (local or remote)
-  initialSkills: string; // Comma-separated strings for easier textarea editing
-  initialIndustries: string;
-  initialCollaborationPrefs: string;
-  initialTools: string;
-}
-
-const ProfileEditForm: React.FC<ProfileEditFormProps> = ({
-  profile,
-  onSave,
-  onCancel,
-  isLoading,
-  triggerFileInput,
-  previewImage,
-  initialSkills,
-  initialIndustries,
-  initialCollaborationPrefs,
-  initialTools
-}) => {
-  // Use initial state from props, converting arrays to strings for editing
-  const [formData, setFormData] = useState({
-    title: profile.title || '',
-    bio: profile.bio || '',
-    linkedin_profile_url: profile.linkedin_profile_url || '',
-    contact_info_visibility: profile.contact_info_visibility || 'connections',
-    skills_expertise: initialSkills, // Use pre-converted string
-    industry_focus: initialIndustries, // Use pre-converted string
-    project_interests_goals: profile.project_interests_goals || '',
-    collaboration_preferences: initialCollaborationPrefs, // Use pre-converted string
-    tools_technologies: initialTools, // Use pre-converted string
-  });
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  // Helper function integrated directly into handleSaveProfileData now
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Pass the current form data (which includes comma-separated strings)
-    // The handleSave function (and its sub-functions) will handle conversion back to arrays if needed
-    onSave({ ...formData }); // Pass the updated form data
-  };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Image Upload Section */}
-      <div className="flex items-center space-x-4">
-        <Avatar className="h-24 w-24 cursor-pointer relative group" onClick={triggerFileInput}>
-           <AvatarImage src={previewImage ?? undefined} alt={profile.user_id?.toString() || 'User'} className="group-hover:opacity-50 transition-opacity"/>
-           <AvatarFallback>{profile.user_id?.toString().substring(0, 2).toUpperCase() || 'U'}</AvatarFallback>
-           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-              <Camera className="text-white h-8 w-8" />
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <div>
+            <CardTitle className="text-2xl font-bold">My Profile</CardTitle>
+            <CardDescription>View and manage your profile details.</CardDescription>
            </div>
+          <Button variant="outline" size="icon" onClick={handleEditToggle} disabled={isSaving}>
+            {isEditing ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
+            <span className="sr-only">{isEditing ? 'Cancel Edit' : 'Edit Profile'}</span>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Profile Picture Section */}
+              <div className="md:col-span-1 flex flex-col items-center space-y-4">
+                <Avatar className="h-32 w-32 border">
+                  <AvatarImage src={picturePreview || undefined} alt={profile.full_name || 'User'} />
+                  <AvatarFallback><User className="h-16 w-16" /></AvatarFallback>
         </Avatar>
-        <Button type="button" onClick={triggerFileInput} variant="outline" disabled={isLoading}>
-            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Camera className="mr-2 h-4 w-4" />}
-           Change Picture
-        </Button>
+                {isEditing && (
+                    <div>
+                        <Input
+                            id="picture"
+                            type="file"
+                            accept="image/*"
+                            onChange={handlePictureChange}
+                            className="text-sm"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Upload a new profile picture.</p>
+                    </div>
+                )}
+                {!isEditing && (
+                   <h2 className="text-xl font-semibold text-center">{profile.full_name || 'Your Name'}</h2>
+                )}
       </div>
 
-      {/* Text Fields */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Profile Details Section */}
+              <div className="md:col-span-2 space-y-4">
+                {!isEditing ? (
+                  <>
+                    {renderDetail("Title", profile.title)}
+                    {renderDetail("Bio", profile.bio)}
+                    {renderDetail("Contact Info Visibility", profile.contact_info_visibility)}
+                    {renderDetail("Skills & Expertise", profile.skills_expertise, true)}
+                    {renderDetail("Industry Focus", profile.industry_focus, true)}
+                    {renderDetail("Project Interests/Goals", profile.project_interests_goals)}
+                    {renderDetail("Collaboration Preferences", profile.collaboration_preferences, true)}
+                    {renderDetail("Tools & Technologies", profile.tools_technologies, true)}
+                    {renderDetail("LinkedIn Profile", profile.linkedin_profile_url)}
+                  </>
+                ) : (
+                  <>
+                    {/* Form Fields */}
         <div>
-           <Label htmlFor="title">Title/Role</Label>
-           <Input id="title" name="title" value={formData.title} onChange={handleChange} disabled={isLoading} />
+                      <Label htmlFor="title">Title</Label>
+                      <Controller
+                        name="title"
+                        control={control}
+                        render={({ field }) => <Input id="title" placeholder="e.g., Software Engineer, UX Designer" {...field} value={field.value ?? ''} />}
+                      />
         </div>
         <div>
-          <Label htmlFor="linkedin_profile_url">LinkedIn Profile URL</Label>
-          <Input id="linkedin_profile_url" name="linkedin_profile_url" value={formData.linkedin_profile_url} onChange={handleChange} placeholder="https://linkedin.com/in/..." disabled={isLoading}/>
-        </div>
+                      <Label htmlFor="bio">Bio</Label>
+                      <Controller
+                        name="bio"
+                        control={control}
+                        render={({ field }) => <Textarea id="bio" placeholder="Tell us about yourself..." {...field} value={field.value ?? ''}/>}
+                      />
       </div>
-
       <div>
-         <Label htmlFor="bio">Bio/Introduction</Label>
-         <Textarea id="bio" name="bio" value={formData.bio} onChange={handleChange} rows={4} disabled={isLoading} />
+                        <Label htmlFor="contact_info_visibility">Contact Info Visibility</Label>
+                         <Controller
+                            name="contact_info_visibility"
+                            control={control}
+                            render={({ field }) => (
+                                <Select onValueChange={field.onChange} defaultValue={field.value ?? 'connections'}>
+                                <SelectTrigger id="contact_info_visibility">
+                                    <SelectValue placeholder="Select visibility" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="private">Private</SelectItem>
+                                    <SelectItem value="connections">Connections Only</SelectItem>
+                                    <SelectItem value="public">Public</SelectItem>
+                                </SelectContent>
+                                </Select>
+                            )}
+                        />
       </div>
-
-       {/* Array-like fields as Textareas */}
        <div>
           <Label htmlFor="skills_expertise">Skills & Expertise (comma-separated)</Label>
-          <Textarea id="skills_expertise" name="skills_expertise" value={formData.skills_expertise} onChange={handleChange} rows={3} placeholder="e.g., Python, React, Project Management, UX Design" disabled={isLoading} />
+                        <Controller
+                            name="skills_expertise"
+                            control={control}
+                            render={({ field }) => <Input id="skills_expertise" placeholder="e.g., Python, React, Project Management" {...field} value={field.value ?? ''}/>}
+                        />
+                         {errors.skills_expertise && <p className="text-xs text-red-500 mt-1">{errors.skills_expertise.message}</p>}
        </div>
        <div>
           <Label htmlFor="industry_focus">Industry Focus (comma-separated)</Label>
-          <Textarea id="industry_focus" name="industry_focus" value={formData.industry_focus} onChange={handleChange} rows={2} placeholder="e.g., Automotive, SaaS, Healthcare" disabled={isLoading} />
+                        <Controller
+                            name="industry_focus"
+                            control={control}
+                            render={({ field }) => <Input id="industry_focus" placeholder="e.g., Automotive, SaaS, Healthcare" {...field} value={field.value ?? ''}/>}
+                        />
+                        {errors.industry_focus && <p className="text-xs text-red-500 mt-1">{errors.industry_focus.message}</p>}
+                    </div>
+                    <div>
+                      <Label htmlFor="project_interests_goals">Project Interests/Goals</Label>
+                      <Controller
+                        name="project_interests_goals"
+                        control={control}
+                        render={({ field }) => <Textarea id="project_interests_goals" placeholder="What are you working on or looking for?" {...field} value={field.value ?? ''}/>}
+                      />
        </div>
        <div>
           <Label htmlFor="collaboration_preferences">Collaboration Preferences (comma-separated)</Label>
-          <Textarea id="collaboration_preferences" name="collaboration_preferences" value={formData.collaboration_preferences} onChange={handleChange} rows={2} placeholder="e.g., Brainstorming, Focused Work, Pair Programming" disabled={isLoading} />
+                        <Controller
+                            name="collaboration_preferences"
+                            control={control}
+                            render={({ field }) => <Input id="collaboration_preferences" placeholder="e.g., Brainstorming, Focused work" {...field} value={field.value ?? ''}/>}
+                        />
+                        {errors.collaboration_preferences && <p className="text-xs text-red-500 mt-1">{errors.collaboration_preferences.message}</p>}
        </div>
         <div>
           <Label htmlFor="tools_technologies">Tools & Technologies (comma-separated)</Label>
-          <Textarea id="tools_technologies" name="tools_technologies" value={formData.tools_technologies} onChange={handleChange} rows={2} placeholder="e.g., Figma, Docker, AWS, Jira" disabled={isLoading}/>
+                        <Controller
+                            name="tools_technologies"
+                            control={control}
+                            render={({ field }) => <Input id="tools_technologies" placeholder="e.g., Figma, Docker, Google Cloud" {...field} value={field.value ?? ''}/>}
+                        />
+                        {errors.tools_technologies && <p className="text-xs text-red-500 mt-1">{errors.tools_technologies.message}</p>}
        </div>
-
       <div>
-         <Label htmlFor="project_interests_goals">Project Interests / Goals</Label>
-         <Textarea id="project_interests_goals" name="project_interests_goals" value={formData.project_interests_goals} onChange={handleChange} rows={4} disabled={isLoading}/>
+                      <Label htmlFor="linkedin_profile_url">LinkedIn Profile URL</Label>
+                      <Controller
+                        name="linkedin_profile_url"
+                        control={control}
+                        render={({ field }) => <Input id="linkedin_profile_url" type="url" placeholder="https://linkedin.com/in/..." {...field} value={field.value ?? ''}/>}
+                      />
+                       {errors.linkedin_profile_url && <p className="text-xs text-red-500 mt-1">{errors.linkedin_profile_url.message}</p>}
+                    </div>
+                  </>
+                )}
+      </div>
       </div>
 
-      <div>
-          <Label htmlFor="contact_info_visibility">Contact Info Visibility</Label>
-           <Select
-              name="contact_info_visibility"
-              value={formData.contact_info_visibility}
-              onValueChange={(value) => handleSelectChange('contact_info_visibility', value)}
-              disabled={isLoading}
-            >
-            <SelectTrigger>
-              <SelectValue placeholder="Select visibility" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="private">Private (Nobody)</SelectItem>
-              <SelectItem value="connections">Connections Only</SelectItem>
-              <SelectItem value="public">Public (Visible to all in space)</SelectItem>
-            </SelectContent>
-          </Select>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="flex justify-end space-x-3">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+            {isEditing && (
+              <div className="flex justify-end space-x-2 mt-6">
+                <Button type="button" variant="outline" onClick={handleEditToggle} disabled={isSaving}>
           Cancel
         </Button>
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-          {isLoading ? 'Saving...' : 'Save Profile'}
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Save Changes
         </Button>
       </div>
+            )}
     </form>
+        </CardContent>
+      </Card>
+    </div>
   );
-}; 
+} 

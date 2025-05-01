@@ -2,11 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation'; // Use next/navigation for App Router
+import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout'; // Import layout
 import CompanyProfileDisplay from '@/components/organization/CompanyProfileDisplay';
 import { useAuthStore } from '@/store/authStore';
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Terminal } from "lucide-react"
+import { api } from '@/lib/api'; // Import api client
 
 // Define the expected structure matching the display component
 interface CompanyData {
@@ -29,10 +31,13 @@ const CompanyPage = () => {
   const token = useAuthStore((state) => state.token);
 
   useEffect(() => {
-    if (!companyId || !token) {
-      // Wait for ID and token
-      if (!token) setError("Authentication required.");
-      if (!companyId) setError("Company ID not found.");
+    if (!companyId) { // ID is required
+      setError("Company ID not found in URL.");
+      setLoading(false);
+      return;
+    }
+    if (!token) { // Token is required for API call
+      setError("Authentication required to view company details.");
       setLoading(false);
       return;
     }
@@ -41,65 +46,67 @@ const CompanyPage = () => {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/organizations/companies/${companyId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error('Company not found.');
-          } else if (response.status === 401 || response.status === 403) {
-            throw new Error('Unauthorized or forbidden.');
-          }
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data: CompanyData = await response.json();
-        setCompany(data);
+        // Use api client
+        const response = await api.get<CompanyData>(`/organizations/companies/${companyId}`);
+        setCompany(response.data);
       } catch (err: any) {
-        setError(err.message || 'Failed to fetch company data.');
+        console.error("Fetch company error:", err);
+        if (err.response?.status === 404) {
+          setError('Company not found.');
+        } else if (err.response?.status === 401 || err.response?.status === 403) {
+          setError('You are not authorized to view this company profile.');
+        } else {
+          setError(err.response?.data?.detail || err.message || 'Failed to fetch company data.');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchCompany();
-  }, [companyId, token]); // Re-run effect if ID or token changes
+  }, [companyId, token]);
 
   if (loading) {
     return (
-        <div className="flex justify-center items-center min-h-screen">
-             <Skeleton className="w-full max-w-2xl h-[300px]" />
+      <AuthenticatedLayout>
+        <div className="flex justify-center items-center min-h-[calc(100vh-theme(space.16))]" >
+          <Skeleton className="w-full max-w-2xl h-[300px]" />
         </div>
+      </AuthenticatedLayout>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto py-8">
-        <Alert variant="destructive" className="max-w-2xl mx-auto">
-          <Terminal className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      </div>
+      <AuthenticatedLayout>
+        <div className="container mx-auto py-8">
+          <Alert variant="destructive" className="max-w-2xl mx-auto">
+            <Terminal className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </div>
+      </AuthenticatedLayout>
     );
   }
 
   if (!company) {
-     return (
+    return (
+      <AuthenticatedLayout>
         <div className="container mx-auto py-8 text-center">
           <p>Company data not available.</p>
         </div>
-     );
+      </AuthenticatedLayout>
+    );
   }
 
   return (
-    <div className="container mx-auto py-8">
-      <CompanyProfileDisplay company={company} />
-      {/* Future: Add section to list active members */}
-    </div>
+    <AuthenticatedLayout>
+      <div className="container mx-auto py-8">
+        <CompanyProfileDisplay company={company} />
+        {/* Future: Add section to list active members */}
+      </div>
+    </AuthenticatedLayout>
   );
 };
 

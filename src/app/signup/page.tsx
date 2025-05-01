@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert"; // For displaying errors/success
+import { api } from "@/lib/api"; // Import the shared api client
 
 type UserType = 'corporate' | 'startup' | 'freelancer';
 
@@ -72,29 +73,12 @@ export default function SignUpPage() {
     };
 
     try {
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiBaseUrl}/api/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result?.detail ?? 'Registration failed. Please try again.');
-      }
+      await api.post('/auth/register', payload);
 
       router.push('/auth/check-email');
 
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unexpected error occurred.');
-      }
+    } catch (err: any) {
+      setError(err.response?.data?.detail || err.message || 'An unexpected error occurred.');
     } finally {
       setIsLoading(false);
     }

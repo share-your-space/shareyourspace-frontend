@@ -1,18 +1,158 @@
-import React from 'react';
+"use client";
+
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation'; // Import useRouter and usePathname
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Bell } from "lucide-react"
+import { Bell, Check, X, Loader2, MailQuestion, LogOut } from "lucide-react" // Add LogOut icon
+import { useAuthStore } from '@/store/authStore';
+import { toast } from 'sonner';
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { cn } from "@/lib/utils"
+import { api } from "@/lib/api"; // Import api client
+import { type Connection } from '@/types/connection'; // Import Connection type
 
-// Placeholder function to check auth state (replace with actual logic)
-const useIsAuthenticated = () => {
-  // In a real app, check Zustand store, context, or session
-  return false; // Assume not logged in for now
+// Define Frontend Notification Type (matching backend schema)
+interface Notification {
+  id: number;
+  user_id: number;
+  type: string;
+  related_entity_id: number | null;
+  message: string;
+  is_read: boolean;
+  created_at: string; // Assuming ISO string format
 }
 
+// --- Mock Auth Hook (Replace with actual logic later) ---
+// Keeping this simple, directly reading from store is fine
+// const useIsAuthenticated = () => {
+//   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+//   return isAuthenticated;
+// }
+// --- End Mock Auth Hook ---
+
 const Navbar = () => {
-  const isAuthenticated = useIsAuthenticated(); // Check auth state
+  // const isAuthenticated = useIsAuthenticated();
+  const router = useRouter();
+  const pathname = usePathname(); // Use the hook correctly
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const token = useAuthStore(state => state.token);
+  const user = useAuthStore((state) => state.user);
+  const isLoadingAuth = useAuthStore((state) => state.isLoading);
+  const logout = useAuthStore(state => state.logout); // Get logout action from store
+
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
+  const fetchNotifications = async () => {
+    if (!token) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Use api client
+      const response = await api.get<Notification[]>('/notifications/?limit=10&include_read=true');
+      setNotifications(response.data);
+    } catch (err: any) { 
+      setError(err.response?.data?.detail || err.message || 'Could not load notifications.');
+      console.error("Fetch notifications error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch notifications initially OR when pathname changes while authenticated
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      console.log("Navbar detected auth/pathname change, fetching notifications..."); // Debug log
+      fetchNotifications();
+    }
+    // Depends on pathname to refetch on navigation
+  }, [isAuthenticated, token, pathname]); // Add pathname here
+
+  // Refetch notifications specifically when popover opens (for refresh)
+  useEffect(() => {
+    if (popoverOpen && isAuthenticated && token) {
+        console.log("Popover opened, fetching notifications..."); // Debug log
+        fetchNotifications();
+    }
+    // Depends on popoverOpen to trigger only when it changes to true
+  }, [popoverOpen, isAuthenticated, token]); // Keep this one separate
+
+  // --- Action Handlers ---
+  const handleMarkRead = async (notificationId: number) => {
+    if (!token) return; // Should not happen if button is visible, but good practice
+    try {
+      // Use api client
+      await api.post(`/notifications/${notificationId}/read`);
+      setNotifications(prev => 
+        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+      );
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Failed to mark as read.');
+      console.error("Mark read error:", err);
+    }
+  };
+
+  const handleAccept = async (connectionId: number | null, notificationId: number) => {
+    if (!token || !connectionId) {
+        toast.error("Cannot accept: Missing required info.");
+        return;
+    }
+    try {
+        // Use api client
+        await api.put<Connection>(`/connections/${connectionId}/accept`);
+        toast.success("Connection accepted!");
+        await handleMarkRead(notificationId); // Mark as read after accepting
+        fetchNotifications(); // Refetch for popover
+        useAuthStore.getState().triggerConnectionUpdate(); // Trigger global update
+    } catch (err: any) {
+        toast.error(err.response?.data?.detail || 'Accept failed.');
+        console.error("Accept connection error:", err);
+    }
+  };
+
+   const handleDecline = async (connectionId: number | null, notificationId: number) => {
+    if (!token || !connectionId) {
+        toast.error("Cannot decline: Missing required info.");
+        return;
+    }
+    try {
+        // Use api client
+         await api.put<Connection>(`/connections/${connectionId}/decline`);
+         toast.info("Connection declined.");
+         await handleMarkRead(notificationId); // Mark as read after declining
+         fetchNotifications(); // Refetch for popover
+         useAuthStore.getState().triggerConnectionUpdate(); // Trigger global update
+    } catch (err: any) {
+        toast.error(err.response?.data?.detail || 'Decline failed.');
+        console.error("Decline connection error:", err);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+      if (!token) return;
+      try {
+          // Use api client
+          await api.post('/notifications/read-all');
+          toast.success("All notifications marked as read.");
+          setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      } catch (err: any) {
+          toast.error(err.response?.data?.detail || 'Failed to mark all as read.');
+          console.error("Mark all read error:", err);
+      }
+  };
+
+  const handleLogout = () => {
+    logout(); // Call the logout action from the store
+    toast.success("Logged out successfully.");
+    router.push('/'); // Redirect to home/login page
+  };
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return (
     <nav className="bg-background border-b sticky top-0 z-50">
@@ -33,82 +173,102 @@ const Navbar = () => {
               Discover
             </Link>
           )}
+          {isAuthenticated && (
+              <Link href="/connections" className="text-sm lg:text-base text-muted-foreground hover:text-foreground transition-colors">
+                Connections
+              </Link>
+          )}
+          {isAuthenticated && (
+              <Link href="/profile" className="text-sm lg:text-base text-muted-foreground hover:text-foreground transition-colors">
+                My Profile
+            </Link>
+          )}
           {/* Add more links as needed */}
         </div>
 
-        {/* Auth Buttons & Theme Toggle */}
-        <div className="flex items-center space-x-2">
+        {/* Right Side: Actions */}
+        <div className="flex items-center space-x-3 lg:space-x-4">
           <ThemeToggle />
 
           {isAuthenticated ? (
             <>
-              {/* Notification Bell - Show when authenticated */}
-              <Popover>
+              {/* Notification Bell */}
+              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="icon" className="relative">
+                  <Button variant="ghost" size="icon" className="relative rounded-full"> {/* Add relative positioning */}
                     <Bell className="h-5 w-5" />
-                    {/* Optional: Add a badge for unread notifications */}
-                    {/* <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
-                    </span> */}
+                    {unreadCount > 0 && (
+                        <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full transform translate-x-1/2 -translate-y-1/2">
+                           {unreadCount}
+                        </span>
+                    )}
+                     {/* <span className={cn("absolute top-1 right-1 block h-2 w-2 rounded-full bg-primary ring-background ring-offset-2", { hidden: unreadCount === 0 })} /> */}
+                    <span className="sr-only">Notifications</span>
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-4" align="end">
-                  <div className="grid gap-4">
-                    <div className="space-y-2">
-                      <h4 className="font-medium leading-none">Notifications</h4>
-                      <p className="text-sm text-muted-foreground">
-                        You have 3 unread messages.
-                      </p>
+                <PopoverContent className="w-80 p-0" align="end">
+                  <div className="flex justify-between items-center p-4 font-medium border-b">
+                    <span>
+                        Notifications
+                        {unreadCount > 0 && (
+                            <span className="text-xs text-muted-foreground ml-2">({unreadCount} unread)</span>
+                        )}
+                    </span>
+                    <Button 
+                        variant="link" 
+                        size="sm" 
+                        className="text-xs h-auto p-0" 
+                        onClick={handleMarkAllRead}
+                        disabled={unreadCount === 0}
+                    >
+                        Mark all read
+                    </Button>
                     </div>
-                    <div className="grid gap-2">
-                      {/* Placeholder Notification Items */}
-                      <div className="flex items-start space-x-4 rounded-md p-2 border">
+                  <ScrollArea className="h-72">
+                    <div className="p-2 space-y-1"> {/* Reduced padding */} 
+                      {isLoading && <div className="flex justify-center py-4"><Loader2 className="animate-spin h-5 w-5"/></div>}
+                      {error && <p className="text-red-500 text-sm px-2 py-4 text-center">{error}</p>}
+                      {!isLoading && !error && notifications.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">No notifications yet.</p>
+                      )}
+                      {!isLoading && !error && notifications.map((n) => (
+                        <div 
+                            key={n.id} 
+                            className={cn("flex items-start space-x-3 p-2 rounded-lg hover:bg-muted/80", !n.is_read ? "bg-muted/50" : "")}
+                            onClick={() => !n.is_read && handleMarkRead(n.id)} // Mark read on click if unread
+                            style={{ cursor: !n.is_read ? 'pointer' : 'default' }}
+                        >
+                           <span className="mt-1"><MailQuestion className="w-4 h-4 text-muted-foreground"/></span> {/* Smaller Icon */} 
                         <div className="flex-1 space-y-1">
-                          <p className="text-sm font-medium leading-none">
-                            Connection Request
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Alex Johnson wants to connect.
-                          </p>
+                                <p className="text-xs leading-tight">{n.message}</p> {/* Smaller text */} 
+                                <p className="text-xs text-muted-foreground">{new Date(n.created_at).toLocaleString()}</p>
+                                {/* Action buttons for connection requests */} 
+                                {n.type === 'connection_request' && !n.is_read && (
+                                    <div className="flex gap-2 mt-1"> 
+                                        <Button size="sm" variant="default" onClick={(e) => { e.stopPropagation(); handleAccept(n.related_entity_id, n.id); }}> 
+                                            <Check className="h-4 w-4 mr-1"/> Accept
+                                        </Button> 
+                                        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleDecline(n.related_entity_id, n.id); }}> 
+                                            <X className="h-4 w-4 mr-1"/> Decline
+                                        </Button> 
                         </div>
+                                )} 
                       </div>
-                       <div className="flex items-start space-x-4 rounded-md p-2 border">
-                        <div className="flex-1 space-y-1">
-                          <p className="text-sm font-medium leading-none">
-                            Welcome!
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Complete your profile to get started.
-                          </p>
                         </div>
-                      </div>
-                      {/* Add more placeholders... */}
+                      ))}
                     </div>
-                    <div className="flex justify-between pt-2 border-t">
-                      <Button variant="outline" size="sm">Mark all as read</Button>
-                      <Button variant="link" size="sm" asChild>
-                        <Link href="/notifications">View all</Link>
-                      </Button>
-                    </div>
-                  </div>
+                  </ScrollArea>
                 </PopoverContent>
               </Popover>
 
-              {/* TODO: Replace Login/Signup with User Menu/Logout when authenticated */}
-              <Button size="sm">Account</Button> 
+              {/* Logout Button */}
+               <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout">
+                <LogOut className="h-5 w-5" />
+                <span className="sr-only">Logout</span>
+               </Button>
             </>
           ) : (
-            <>
-              {/* Login/Signup Buttons - Show when not authenticated */}
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/login">Login</Link>
-              </Button>
-              <Button size="sm" asChild>
-                <Link href="/signup">Sign Up</Link>
-              </Button>
-            </>
+            <Button onClick={() => router.push('/login')}>Login</Button>
           )}
         </div>
       </div>
@@ -117,3 +277,6 @@ const Navbar = () => {
 };
 
 export default Navbar; 
+
+// --- Helper component for Notification Item ---
+// ... existing code ...

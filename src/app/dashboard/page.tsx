@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import AuthenticatedLayout from "@/components/layout/AuthenticatedLayout";
 import AuthGuard from "@/components/layout/AuthGuard";
 import { useAuthStore } from "@/store/authStore";
+import { api } from "@/lib/api"; // Import the api client
 
 // Define a basic type for the user data expected from the API
 interface UserData {
@@ -15,7 +16,7 @@ interface UserData {
 const DashboardPage = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const token = useAuthStore((state) => state.token); // Get token from store
+  const token = useAuthStore((state) => state.token); // Token is used implicitly by api interceptor
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -25,32 +26,18 @@ const DashboardPage = () => {
         return;
       }
 
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/me`;
-
       try {
-        // TODO: Replace with a proper API client if you have one
-        const response = await fetch(apiUrl, { // Use the full API URL
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        // Use the api client with the relative path
+        const response = await api.get('/users/me');
 
-        if (!response.ok) {
-          if (response.status === 401) {
-             // Handle unauthorized, maybe logout user
-             console.error("Unauthorized fetching user data.");
-             setError("Failed to fetch user data: Unauthorized.");
-             // Potentially call logout action from authStore here
-          } else {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-        }
-
-        const data: UserData = await response.json();
+        // Axios response data is directly in response.data
+        const data: UserData = response.data;
         setUserData(data);
       } catch (err: any) {
+        // Error handling can likely be simplified as the interceptor handles 401
         console.error("Failed to fetch user data:", err);
-        setError(err.message || "An unexpected error occurred.");
+        // Check if error has response details (axios error format)
+        setError(err.response?.data?.detail || err.message || "An unexpected error occurred.");
       }
     };
 

@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Terminal } from "lucide-react"
+import { api } from "@/lib/api"; // Import shared API client
 
 function VerifyEmailContent() {
   const searchParams = useSearchParams();
@@ -25,36 +26,40 @@ function VerifyEmailContent() {
 
       setStatus('loading');
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-        const response = await fetch(`${apiUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}`);
-        const data = await response.json();
+        // Use the imported api client
+        const response = await api.get(`/auth/verify-email?token=${encodeURIComponent(token)}`);
+        const data = response.data; // Data is directly available in response.data with Axios
 
-        if (response.ok && data.role) {
+        if (response.status === 200 && data.role) {
           setMessage(data.message || 'Email verified successfully! Preparing your next step...');
           setStatus('success');
           
           const userRole = data.role;
+          // Determine redirect based on role
           if (['STARTUP_ADMIN', 'STARTUP_MEMBER', 'FREELANCER'].includes(userRole)) {
             router.push('/auth/waitlist');
           } else if (userRole === 'CORP_ADMIN') {
             router.push('/auth/pending-onboarding');
           } else {
+            // Handle other roles or default to login
             setMessage('Email verified, but role unclear. Redirecting to login.');
             setTimeout(() => router.push('/login'), 3000);
           }
-
-        } else if (response.ok) {
+        } else if (response.status === 200) {
+            // Success but role missing (shouldn't happen with current backend)
             setStatus('success');
             setMessage(data.message || 'Email verified successfully! Role information missing, proceeding to login.');
             setTimeout(() => router.push('/login'), 3000);
         } else {
+          // This case might not be reachable if api client throws for non-2xx
           setStatus('error');
           setMessage(data.detail || 'Failed to verify email. The link may be invalid or expired.');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Verification error:", error);
         setStatus('error');
-        setMessage('An unexpected error occurred during verification.');
+        // Use Axios error structure
+        setMessage(error.response?.data?.detail || error.message || 'An unexpected error occurred during verification.');
       }
     };
 

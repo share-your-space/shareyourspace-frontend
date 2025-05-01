@@ -1,29 +1,32 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
 import { MatchCard } from '@/components/discover/MatchCard';
 import { useAuthStore } from '@/store/authStore';
+import { api } from "@/lib/api"; // Import the api client
 import { type MatchResult } from '@/types/matching';
+import { type ConnectionStatusCheck } from '@/types/connection'; // Import ConnectionStatusCheck type
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Loader2, AlertTriangle, Info } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 
-// Define the expected API response structure
-// interface ApiResponse {
-//   matches: MatchResult[];
-// }
+// Type for the status map
+type StatusMap = Record<number, ConnectionStatusCheck>;
 
 export default function DiscoverPage() {
   const [matches, setMatches] = useState<MatchResult[]>([]);
+  const [connectionStatuses, setConnectionStatuses] = useState<StatusMap>({}); // State for statuses
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const token = useAuthStore((state) => state.token);
 
   useEffect(() => {
-    const fetchMatches = async () => {
+    const fetchMatchesAndStatuses = async () => {
       setIsLoading(true);
       setError(null);
+      setMatches([]);
+      setConnectionStatuses({});
 
       if (!token) {
         setError('Authentication required. Please log in.');
@@ -32,36 +35,58 @@ export default function DiscoverPage() {
       }
 
       try {
-        const response = await fetch('/api/matching/discover', { // Use relative path for API route
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        // 1. Fetch Matches
+        const matchesResponse = await api.get<MatchResult[]>('/matching/discover');
+        const fetchedMatches = matchesResponse.data;
+        setMatches(fetchedMatches);
 
-        if (!response.ok) {
-          let errorDetail = 'Failed to fetch matches.';
+        // 2. Fetch Connection Statuses if matches exist
+        if (fetchedMatches && fetchedMatches.length > 0) {
+          const userIds = fetchedMatches.map(m => m.profile.user_id);
+          
+          // Construct query parameters correctly for a list
+          const params = new URLSearchParams();
+          userIds.forEach(id => params.append('user_id', id.toString()));
+
           try {
-             const errorData = await response.json();
-             errorDetail = errorData.detail || errorDetail;
-          } catch (jsonError) {
-             // Keep default error message if response is not JSON
+            const statusesResponse = await api.get<StatusMap>(
+              `/connections/status-batch?${params.toString()}`
+            );
+            setConnectionStatuses(statusesResponse.data);
+          } catch (statusError: any) {
+            console.error("Fetch connection statuses error:", statusError);
+            // Don't block UI for status errors, just log and maybe show partial info
+            setError("Could not load connection statuses for all matches. Proceeding with available data."); 
           }
-          throw new Error(`${response.status}: ${errorDetail}`);
         }
-
-        const data: MatchResult[] = await response.json();
-        setMatches(data);
-        
       } catch (err: any) {
         console.error("Fetch matches error:", err);
-        setError(err.message || 'An unknown error occurred.');
+        setError(err.response?.data?.detail || err.message || 'An unknown error occurred.');
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchMatches();
-  }, [token]); // Re-fetch if token changes
+    fetchMatchesAndStatuses();
+  }, [token]);
+
+  // Convert backend status string to MatchCard prop type
+  const getInitialStatus = (userId: number): 'idle' | 'pending' | 'connected' => {
+    const statusInfo = connectionStatuses[userId];
+    if (!statusInfo) return 'idle';
+    
+    switch (statusInfo.status) {
+        case 'connected':
+            return 'connected';
+        case 'pending_from_me':
+        case 'pending_from_them':
+            return 'pending';
+        case 'not_connected':
+        case 'declined': // Treat declined as idle for the button
+        default:
+            return 'idle';
+    }
+  };
 
   const renderContent = () => {
     if (isLoading) {
@@ -75,7 +100,7 @@ export default function DiscoverPage() {
       );
     }
 
-    if (error) {
+    if (error && !matches.length) { // Only show critical error if no matches loaded
       return (
          <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -85,7 +110,7 @@ export default function DiscoverPage() {
       );
     }
 
-    if (matches.length === 0) {
+    if (!isLoading && matches.length === 0) {
       return (
          <Alert>
             <Info className="h-4 w-4" />
@@ -97,12 +122,26 @@ export default function DiscoverPage() {
       );
     }
 
+    // Render matches, potentially with a non-critical error message above
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {matches.map((match, index) => (
-          <MatchCard key={match.profile.user_id || index} match={match} />
-        ))}
-      </div>
+      <>
+        {error && matches.length > 0 && ( // Show non-critical error (e.g., status fetch failure) above list
+             <Alert variant="warning" className="mb-4">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Warning</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+            </Alert>
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {matches.map((match, index) => (
+            <MatchCard 
+              key={match.profile.user_id || index} 
+              match={match} 
+              initialConnectionStatus={getInitialStatus(match.profile.user_id)}
+            />
+          ))}
+        </div>
+      </>
     );
   };
 
