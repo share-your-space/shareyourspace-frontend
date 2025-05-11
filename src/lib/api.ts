@@ -41,4 +41,50 @@ api.interceptors.response.use(
     }
 );
 
-export { api }; 
+export { api };
+
+const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:8000/api/v1';
+
+/**
+ * Helper function for making authenticated API requests.
+ * Automatically adds Authorization header if token exists.
+ */
+export async function fetchAuthenticated(path: string, options: RequestInit = {}): Promise<Response> {
+  const token = useAuthStore.getState().token; // Get token directly from store state
+
+  const headers = new Headers(options.headers || {});
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  // Add default content type if not provided for relevant methods
+  // AND if the body is not FormData (which sets its own Content-Type)
+  if (
+    !headers.has('Content-Type') && 
+    options.method && 
+    ['POST', 'PUT', 'PATCH'].includes(options.method.toUpperCase()) &&
+    !(options.body instanceof FormData) // Do not set Content-Type for FormData
+  ) {
+      headers.set('Content-Type', 'application/json');
+  }
+
+  const defaultOptions: RequestInit = {
+      method: 'GET', // Default to GET
+      ...options,
+      headers,
+  };
+
+  const response = await fetch(`${BASE_URL}${path}`, defaultOptions);
+
+  if (!response.ok) {
+    // Handle common errors or throw a custom error
+    const errorData = await response.json().catch(() => ({ detail: 'Failed to parse error response' }));
+    console.error('API Error:', response.status, errorData);
+    throw new Error(errorData.detail || `HTTP error ${response.status}`);
+  }
+
+  return response;
+}
+
+// Example usage:
+// const data = await fetchAuthenticated('/users/me').then(res => res.json());
+// await fetchAuthenticated('/some/path', { method: 'POST', body: JSON.stringify({ key: 'value' }) }); 
