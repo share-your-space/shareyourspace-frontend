@@ -23,6 +23,8 @@ interface Notification {
   message: string;
   is_read: boolean;
   created_at: string; // Assuming ISO string format
+  link?: string | null; // Added for navigation
+  reference?: string | null; // Added for context
 }
 
 // --- Mock Auth Hook (Replace with actual logic later) ---
@@ -154,6 +156,35 @@ const Navbar = () => {
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
+  // Helper to render notification content, possibly as a link
+  const renderNotificationContent = (notification: Notification) => {
+    const content = (
+      <>
+        <span className="mt-1">
+          {/* TODO: Consider different icons based on notification.type */} 
+          <MailQuestion className="w-4 h-4 text-muted-foreground"/>
+        </span>
+        <div className="flex-grow">
+          <p className="text-xs leading-tight">{notification.message}</p>
+          <p className="text-xs text-muted-foreground">{new Date(notification.created_at).toLocaleString()}</p>
+        </div>
+      </>
+    );
+
+    if (notification.link) {
+      return (
+        <Link 
+            href={notification.link} 
+            className="flex items-start space-x-3 w-full" 
+            onClick={() => setPopoverOpen(false)} // Close popover on link click
+        >
+          {content}
+        </Link>
+      );
+    }
+    return content;
+  };
+
   return (
     <nav className="bg-background border-b sticky top-0 z-50">
       <div className="container mx-auto px-4 md:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -234,26 +265,32 @@ const Navbar = () => {
                       {!isLoading && !error && notifications.map((n) => (
                         <div 
                             key={n.id} 
-                            className={cn("flex items-start space-x-3 p-2 rounded-lg hover:bg-muted/80", !n.is_read ? "bg-muted/50" : "")}
-                            onClick={() => !n.is_read && handleMarkRead(n.id)} // Mark read on click if unread
-                            style={{ cursor: !n.is_read ? 'pointer' : 'default' }}
+                            className={cn(
+                                "p-2 rounded-lg hover:bg-muted/80", 
+                                !n.is_read ? "bg-muted/50" : "",
+                                n.link ? "cursor-pointer" : (!n.is_read ? "cursor-pointer" : "cursor-default") 
+                            )}
+                            // Mark as read if not a link and unread, or always if it's just a clickable div
+                            onClick={() => { 
+                                if (!n.is_read) handleMarkRead(n.id);
+                                // If it's not a link itself, and we want to close popover on any click:
+                                // if (!n.link) setPopoverOpen(false); 
+                            }}
                         >
-                           <span className="mt-1"><MailQuestion className="w-4 h-4 text-muted-foreground"/></span> {/* Smaller Icon */} 
-                        <div className="flex-1 space-y-1">
-                                <p className="text-xs leading-tight">{n.message}</p> {/* Smaller text */} 
-                                <p className="text-xs text-muted-foreground">{new Date(n.created_at).toLocaleString()}</p>
-                                {/* Action buttons for connection requests */} 
-                                {n.type === 'connection_request' && !n.is_read && (
-                                    <div className="flex gap-2 mt-1"> 
-                                        <Button size="sm" variant="default" onClick={(e) => { e.stopPropagation(); handleAccept(n.related_entity_id, n.id); }}> 
-                                            <Check className="h-4 w-4 mr-1"/> Accept
-                                        </Button> 
-                                        <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleDecline(n.related_entity_id, n.id); }}> 
-                                            <X className="h-4 w-4 mr-1"/> Decline
-                                        </Button> 
-                        </div>
-                                )} 
-                      </div>
+                           <div className="flex items-start space-x-3">
+                                {renderNotificationContent(n)}
+                           </div>
+                           {/* Action buttons for connection requests */} 
+                           {n.type === 'connection_request' && !n.is_read && (
+                               <div className="flex gap-2 mt-2 pl-7"> {/* Indent actions */} 
+                                   <Button size="sm" variant="default" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); handleAccept(n.related_entity_id, n.id); }}> 
+                                       <Check className="h-3 w-3 mr-1"/> Accept
+                                   </Button> 
+                                   <Button size="sm" variant="outline" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); handleDecline(n.related_entity_id, n.id); }}> 
+                                       <X className="h-3 w-3 mr-1"/> Decline
+                                   </Button> 
+                               </div>
+                           )} 
                         </div>
                       ))}
                     </div>

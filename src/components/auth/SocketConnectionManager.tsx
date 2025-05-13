@@ -2,20 +2,38 @@ import { useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { socket } from '@/lib/socket';
 import { useChatStore } from '@/store/chatStore'; // Import chat store
+import { toast } from 'sonner'; // <<< ADDED IMPORT
+import { useRouter } from 'next/navigation'; // <<< ADDED IMPORT
 
 /**
  * Component responsible for managing the Socket.IO connection based on auth state.
  * This should be mounted client-side within a layout component.
  */
+
+interface NewMessageNotificationPayload {
+  message_id: number;
+  conversation_id: number;
+  sender_id: number;
+  sender_name: string;
+  message_preview: string;
+  created_at: string;
+}
+
 export function SocketConnectionManager() {
   const token = useAuthStore((state) => state.token);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isLoading = useAuthStore((state) => state.isLoading); // Use isLoading to wait for hydration
+  const currentUser = useAuthStore((state) => state.user); // Get the full user object from authStore
   
   // Actions from chat store
   const setOnlineUsers = useChatStore((state) => state.setOnlineUsers);
   const addOnlineUser = useChatStore((state) => state.addOnlineUser);
   const removeOnlineUser = useChatStore((state) => state.removeOnlineUser);
+  const activeConversationId = useChatStore((state) => state.activeConversationId);
+  const setActiveConversationId = useChatStore((state) => state.setActiveConversationId);
+
+  // Router for navigation
+  const router = useRouter();
 
   useEffect(() => {
     // Wait for Zustand store to rehydrate before managing connection
@@ -82,6 +100,52 @@ export function SocketConnectionManager() {
       socket.off('online_users_list', handleOnlineUsersList);
     };
   }, [addOnlineUser, removeOnlineUser, setOnlineUsers]); // Dependencies for these listeners
+
+  // Listener for new message notifications
+  useEffect(() => {
+    const handleNewMessageNotification = (payload: NewMessageNotificationPayload) => {
+      console.log('Received new_message_notification:', payload);
+
+      if (!currentUser || typeof currentUser.id === 'undefined') { // Check if currentUser and currentUser.id exist
+        console.log('Current user or user ID not available, skipping notification.');
+        return; 
+      }
+      
+      const currentUserId = parseInt(currentUser.id, 10); 
+      if (isNaN(currentUserId)) {
+        console.error('Current user ID from authStore is not a valid number:', currentUser.id);
+        return;
+      }
+
+      // Don't show notification for your own messages
+      if (payload.sender_id === currentUserId) {
+        return;
+      }
+
+      // Don't show notification if the relevant chat is already active
+      if (payload.conversation_id === activeConversationId) {
+        return;
+      }
+
+      toast.info(`New message from ${payload.sender_name}`, {
+        description: payload.message_preview,
+        action: {
+          label: "Open Chat",
+          onClick: () => {
+            setActiveConversationId(payload.conversation_id);
+            router.push('/chat'); 
+          },
+        },
+        duration: 8000, // milliseconds
+      });
+    };
+
+    socket.on('new_message_notification', handleNewMessageNotification);
+
+    return () => {
+      socket.off('new_message_notification', handleNewMessageNotification);
+    };
+  }, [currentUser, activeConversationId, setActiveConversationId, router]); // Added currentUser to dependencies
 
   // This component doesn't render anything itself
   return null;

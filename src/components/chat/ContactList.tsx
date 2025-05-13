@@ -17,63 +17,77 @@ interface User {
   profile_picture_url?: string;
 }
 
-// Define structure for the Connection object from the API
-interface Connection {
-  id: number;
-  requester_id: number;
-  recipient_id: number;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  requester: User; // Embedded requester details
-  recipient: User; // Embedded recipient details
+// Define structure for the Conversation Info from the API/Store
+interface ConversationInfo {
+  id: number; // Conversation ID
+  other_user: User;
+  last_message: {
+    id: number;
+    content: string;
+    created_at: string;
+    sender_id: number;
+    read_at?: string | null;
+  } | null;
+  has_unread_messages: boolean; // Added from backend
 }
 
 interface ContactListProps {
-    onSelectUser: (user: User) => void;
-    selectedUser: User | null; // Pass down selectedUser for highlighting
+    // onSelectUser now receives the full ConversationInfo object
+    onSelectUser: (conversation: ConversationInfo) => void; 
+    selectedUser: User | null; 
 }
 
 export function ContactList({ onSelectUser, selectedUser }: ContactListProps) {
-    const [contacts, setContacts] = useState<User[]>([]);
+    // State now holds conversations
+    const [conversations, setConversations] = useState<ConversationInfo[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const currentUserId = useAuthStore((state) => state.user?.id); // Get current user ID
+    const currentUserId = useAuthStore((state) => state.user?.id); // Keep current user ID check
     const onlineUserIds = useChatStore((state) => state.onlineUserIds); // Get online users
+    const activeConversationId = useChatStore((state) => state.activeConversationId);
 
+    // Fetch conversations instead of connections
     useEffect(() => {
-        const fetchContacts = async () => {
-            if (!currentUserId) {
-                // Might happen briefly before auth store hydration
-                // setIsLoading(false); // Optionally stop loading if definitely not logged in
-                return;
-            }
+        const fetchConversations = async () => {
+            // No need to check currentUserId here, fetchAuthenticated handles token
             setIsLoading(true);
             setError(null);
             try {
-                const response = await fetchAuthenticated('/connections/accepted');
-                const connections: Connection[] = await response.json();
-
-                // Extract the *other* user from each connection
-                const otherUsers = connections.map(conn => {
-                    return conn.requester_id === currentUserId ? conn.recipient : conn.requester;
-                });
-
-                setContacts(otherUsers);
+                // Fetch user's conversations
+                const response = await fetchAuthenticated('/chat/conversations');
+                const fetchedConversations: ConversationInfo[] = await response.json();
+                setConversations(fetchedConversations);
             } catch (err: any) {
-                console.error("Failed to fetch contacts:", err);
-                setError(err.message || "Could not load contacts.");
+                console.error("Failed to fetch conversations:", err);
+                setError(err.message || "Could not load conversations.");
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchContacts();
-    }, [currentUserId]); // Re-fetch if currentUserId changes (e.g., after login)
+        fetchConversations();
+    }, []); // Fetch only on initial mount
+
+    // Effect to handle selecting conversation based on activeConversationId from store
+    useEffect(() => {
+        if (activeConversationId === null || conversations.length === 0) {
+            return;
+        }
+        const activeConv = conversations.find(conv => conv.id === activeConversationId);
+        if (activeConv) {
+            if (selectedUser?.id !== activeConv.other_user.id) {
+                console.log(`[ContactList] Active conversation ID ${activeConversationId} detected, selecting user ${activeConv.other_user.id}`);
+                // Pass the whole conversation object when auto-selecting via activeConversationId
+                onSelectUser(activeConv); 
+            }
+        } else {
+             console.warn(`[ContactList] Active conversation ID ${activeConversationId} not found in the current list.`);
+        }
+    }, [activeConversationId, conversations, onSelectUser, selectedUser]); // Dependencies
 
     return (
         <div className="h-full w-full p-2 flex flex-col">
-            <h2 className="text-lg font-semibold mb-2 flex-shrink-0">Contacts</h2>
+            <h2 className="text-lg font-semibold mb-2 flex-shrink-0">Chats</h2> {/* Changed title */} 
             <div className="flex-grow overflow-y-auto">
                 {isLoading && (
                     <ul className="space-y-2">
@@ -91,22 +105,30 @@ export function ContactList({ onSelectUser, selectedUser }: ContactListProps) {
                         <AlertDescription>{error}</AlertDescription>
                     </Alert>
                 )}
-                {!isLoading && !error && contacts.length === 0 && (
-                    <p className="text-sm text-muted-foreground p-2">No contacts found.</p>
+                {!isLoading && !error && conversations.length === 0 && (
+                    <p className="text-sm text-muted-foreground p-2">No active chats.</p> // Changed text
                 )}
-                {!isLoading && !error && contacts.length > 0 && (
+                {!isLoading && !error && conversations.length > 0 && (
                     <ul>
-                        {contacts.map(user => {
-                            const isOnline = onlineUserIds.has(user.id);
+                        {/* Map over conversations */} 
+                        {conversations.map(conv => {
+                            const participant = conv.other_user;
+                            const isOnline = onlineUserIds.has(participant.id);
                             return (
-                                <li key={user.id} 
-                                    onClick={() => onSelectUser(user)} 
+                                <li key={conv.id} 
+                                    // Pass the whole conversation object on click
+                                    onClick={() => onSelectUser(conv)} 
                                     className={`p-2 hover:bg-accent cursor-pointer rounded flex items-center justify-between ${
-                                        selectedUser?.id === user.id ? 'bg-accent font-semibold' : ''
+                                        selectedUser?.id === participant.id ? 'bg-accent font-semibold' : ''
                                     }`}
                                 >
-                                    <span>{user.full_name}</span>
-                                    {isOnline && <span className="h-2.5 w-2.5 rounded-full bg-green-500" title="Online"></span>}
+                                    <span className={`flex items-center ${conv.has_unread_messages ? 'font-bold' : ''}`}>
+                                        {conv.has_unread_messages && (
+                                            <span className="h-2 w-2 bg-blue-500 rounded-full mr-2" title="Unread messages"></span>
+                                        )}
+                                        {participant.full_name}
+                                    </span>
+                                    {isOnline && <span className="h-2.5 w-2.5 rounded-full bg-green-500 ml-2" title="Online"></span>}
                                 </li>
                             );
                         })}
