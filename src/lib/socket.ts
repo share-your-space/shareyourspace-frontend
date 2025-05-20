@@ -1,16 +1,25 @@
 import { io, Socket } from 'socket.io-client';
+import { ReactionUpdatedEventPayload } from '@/store/chatStore';
+
+// Placeholder for ChatMessageData, ideally this would be imported from a shared types file
+// For now, using 'any' to resolve linter errors quickly.
+// Consider moving the ChatMessageData interface from MessageArea.tsx to a shared location.
+// type ChatMessageData = any; 
 
 // Define the shape of Server-to-Client events (optional but recommended)
 interface ServerToClientEvents {
   noArg: () => void;
   basicEmit: (a: number, b: string, c: Buffer) => void;
   withAck: (d: string, callback: (e: number) => void) => void;
-  receive_message: (message: any) => void; // Add expected events like receive_message
+  receive_message: (message: ChatMessageData) => void;
   connect_error: (err: Error) => void;
-  messages_read: (data: { reader_id: number; conversation_partner_id: number; count: number }) => void; // New event
-  user_online: (data: { user_id: number }) => void; // New
-  user_offline: (data: { user_id: number }) => void; // New
-  online_users_list: (userIds: number[]) => void; // New
+  messages_read: (data: { reader_id: number; conversation_partner_id: number; count: number }) => void;
+  user_online: (data: { user_id: number }) => void;
+  user_offline: (data: { user_id: number }) => void;
+  online_users_list: (userIds: number[]) => void;
+  reaction_updated: (payload: ReactionUpdatedEventPayload) => void;
+  message_updated: (payload: ChatMessageData) => void;
+  message_deleted: (payload: ChatMessageData) => void;
   // Add other expected server events here
 }
 

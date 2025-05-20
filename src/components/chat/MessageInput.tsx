@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, Smile, Paperclip, XCircle } from 'lucide-react';
+import { Send, Smile, Paperclip, XCircle, FileText, Image as ImageIcon } from 'lucide-react';
 import { socket } from '@/lib/socket';
 import {
   Popover,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/popover";
 import { fetchAuthenticated } from '@/lib/api';
 import { toast } from "sonner";
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 
 // Placeholder type
 interface User {
@@ -38,6 +39,7 @@ export function MessageInput({ selectedUser }: MessageInputProps) {
     const [attachment, setAttachment] = useState<AttachmentMetadata | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [showEmojiPopover, setShowEmojiPopover] = useState(false);
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -107,10 +109,9 @@ export function MessageInput({ selectedUser }: MessageInputProps) {
         }
     };
 
-    const emojis = ['😀', '😂', '😍', '🤔', '😢', '👍', '🎉', '❤️'];
-
-    const handleEmojiClick = (emoji: string) => {
-        setMessageContent(prev => prev + emoji);
+    const handleEmojiClick = (emojiData: EmojiClickData) => {
+        setMessageContent(prev => prev + emojiData.emoji);
+        setShowEmojiPopover(false);
     };
 
     const removeAttachment = () => {
@@ -121,13 +122,37 @@ export function MessageInput({ selectedUser }: MessageInputProps) {
     };
 
     return (
-        <div className="p-2 border-t">
+        <div className="p-4 border-t bg-background">
             {attachment && (
-                <div className="mb-2 p-2 border rounded-md bg-muted text-sm flex justify-between items-center">
-                    <span>Attached: {attachment.original_filename} ({attachment.content_type})</span>
-                    <Button variant="ghost" size="icon" onClick={removeAttachment} className="h-6 w-6">
-                        <XCircle size={16} />
+                <div className="mb-2 p-2 pr-1 border rounded-lg bg-muted/70 dark:bg-muted/30 text-sm flex justify-between items-center group">
+                    <div className="flex items-center space-x-2 overflow-hidden">
+                        {attachment.content_type.startsWith('image/') ? (
+                            <img 
+                                src={attachment.attachment_url} 
+                                alt={attachment.original_filename}
+                                className="h-10 w-10 rounded object-cover flex-shrink-0"
+                            />
+                        ) : (
+                            <FileText size={24} className="text-muted-foreground flex-shrink-0" />
+                        )}
+                        <div className="overflow-hidden">
+                            <p className="font-medium truncate text-foreground">{attachment.original_filename}</p>
+                            <p className="text-xs text-muted-foreground truncate">{attachment.content_type}</p>
+                        </div>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={removeAttachment} className="h-7 w-7 text-muted-foreground hover:text-destructive flex-shrink-0 opacity-70 group-hover:opacity-100 transition-opacity">
+                        <XCircle size={18} />
                     </Button>
+                </div>
+            )}
+            {isUploading && (
+                <div className="mb-2 text-sm text-muted-foreground flex items-center">
+                    {/* You can use a proper spinner component here from ShadCN/UI if available, or a simple text like below */} 
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Uploading file...
                 </div>
             )}
             <div className="flex w-full items-center space-x-2">
@@ -148,26 +173,18 @@ export function MessageInput({ selectedUser }: MessageInputProps) {
                 >
                     <Paperclip className="h-5 w-5" />
                 </Button>
-                <Popover>
+                <Popover open={showEmojiPopover} onOpenChange={setShowEmojiPopover}>
                     <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" disabled={!selectedUser} className="flex-shrink-0">
+                        <Button variant="ghost" size="icon" disabled={!selectedUser} className="flex-shrink-0" onClick={() => setShowEmojiPopover(prev => !prev)}>
                             <Smile className="h-5 w-5" />
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-2">
-                        <div className="grid grid-cols-4 gap-1">
-                            {emojis.map(emoji => (
-                                <Button 
-                                    key={emoji} 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    onClick={() => handleEmojiClick(emoji)}
-                                    className="text-xl"
-                                >
-                                    {emoji}
-                                </Button>
-                            ))}
-                        </div>
+                    <PopoverContent className="p-0 w-auto border-none shadow-xl">
+                        <EmojiPicker 
+                            onEmojiClick={handleEmojiClick} 
+                            height={350}
+                            width={300}
+                        />
                     </PopoverContent>
                 </Popover>
                 <Input 

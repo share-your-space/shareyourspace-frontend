@@ -87,4 +87,33 @@ export async function fetchAuthenticated(path: string, options: RequestInit = {}
 
 // Example usage:
 // const data = await fetchAuthenticated('/users/me').then(res => res.json());
-// await fetchAuthenticated('/some/path', { method: 'POST', body: JSON.stringify({ key: 'value' }) }); 
+// await fetchAuthenticated('/some/path', { method: 'POST', body: JSON.stringify({ key: 'value' }) });
+
+// Assuming ChatMessageData type is defined elsewhere or we can define a basic one here
+// For example:
+// export interface ChatMessageData {
+//   id: number;
+//   sender_id: number;
+//   conversation_id?: number;
+//   content: string;
+//   created_at: string; // or Date
+//   updated_at?: string; // or Date
+//   is_deleted?: boolean;
+//   sender: { id: number; full_name: string; }; // Basic sender info
+//   reactions: any[]; // Define more strictly if needed
+// }
+
+export async function editChatMessage(messageId: number, content: string): Promise<any> { // Replace 'any' with ChatMessageData if defined
+  const response = await fetchAuthenticated(`/chat/messages/${messageId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ content }),
+  });
+  return response.json();
+}
+
+export async function deleteChatMessage(messageId: number): Promise<any> { // Replace 'any' with ChatMessageData if defined
+  const response = await fetchAuthenticated(`/chat/messages/${messageId}`, {
+    method: 'DELETE',
+  });
+  return response.json();
+} 

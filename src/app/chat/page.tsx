@@ -132,10 +132,12 @@ export default function ChatPage() {
                   selectedUser={selectedUser} 
                 />
               </div>
-              {/* Input Area */} 
-              <div className="p-4 border-t">
-                <MessageInput selectedUser={selectedUser} />
-              </div>
+              {/* Conditionally render Input Area */} 
+              {selectedUser && (
+                <div className="border-t bg-background"> {/* Removed p-4, MessageInput now has its own p-4 */}
+                  <MessageInput selectedUser={selectedUser} />
+                </div>
+              )}
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>

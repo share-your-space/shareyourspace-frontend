@@ -13,6 +13,7 @@ interface ChatState {
   setActiveConversationId: (conversationId: number | null) => void;
   loadMessagesForConversation: (conversationId: number, messages: Message[], hasMore: boolean) => void;
   updateMessageReaction: (payload: ReactionUpdatedEventPayload) => void;
+  updateMessage: (updatedMessage: Message) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -104,6 +105,29 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
     return { conversations };
   }),
+  updateMessage: (updatedMessage) => set((state) => {
+    const conversations = state.conversations.map((conv) => {
+      if (conv.id === updatedMessage.conversation_id) {
+        // Ensure reactions array exists on the updated message
+        const messageWithReactions = { ...updatedMessage, reactions: updatedMessage.reactions || [] };
+        
+        // Update the message within the messages array
+        const updatedMessages = conv.messages.map((msg) => 
+          msg.id === messageWithReactions.id ? messageWithReactions : msg
+        );
+
+        // Also update the last_message if it's the one being updated/deleted
+        let updatedLastMessage = conv.last_message;
+        if (conv.last_message && conv.last_message.id === messageWithReactions.id) {
+          updatedLastMessage = messageWithReactions;
+        }
+        
+        return { ...conv, messages: updatedMessages, last_message: updatedLastMessage };
+      }
+      return conv;
+    });
+    return { conversations };
+  }),
 }));
 
 export interface MessageReaction {
@@ -131,8 +155,9 @@ export interface Message {
   conversation_id: number;
   content: string;
   created_at: string; // ISO date string
-  updated_at: string; // ISO date string
+  updated_at?: string | null; // ISO date string - Make optional as it might be null
   read_at?: string | null; // ISO date string
+  is_deleted: boolean;      // Add field for soft deletion
   sender: User; // Assuming User type is defined elsewhere or inline here
   reactions: MessageReaction[]; // Array of reactions
 }

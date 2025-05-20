@@ -7,6 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton"; // For loading state
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
 import { useChatStore } from '@/store/chatStore'; // Import chat store
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // ADDED
+import { formatDistanceToNow, parseISO } from 'date-fns'; // ADDED for timestamp formatting
 
 // Define structure for the User (matching backend schema)
 interface User {
@@ -86,9 +88,9 @@ export function ContactList({ onSelectUser, selectedUser }: ContactListProps) {
     }, [activeConversationId, conversations, onSelectUser, selectedUser]); // Dependencies
 
     return (
-        <div className="h-full w-full p-2 flex flex-col">
-            <h2 className="text-lg font-semibold mb-2 flex-shrink-0">Chats</h2> {/* Changed title */} 
-            <div className="flex-grow overflow-y-auto">
+        <div className="h-full w-full p-3 flex flex-col border-r bg-muted/20 dark:bg-muted/10">
+            <h2 className="text-xl font-semibold mb-3 px-1 flex-shrink-0">Chats</h2>
+            <div className="flex-grow overflow-y-auto space-y-0.5"> {/* Removed space-y-2, items will manage their own padding/margin */} 
                 {isLoading && (
                     <ul className="space-y-2">
                         {[...Array(5)].map((_, i) => (
@@ -109,26 +111,63 @@ export function ContactList({ onSelectUser, selectedUser }: ContactListProps) {
                     <p className="text-sm text-muted-foreground p-2">No active chats.</p> // Changed text
                 )}
                 {!isLoading && !error && conversations.length > 0 && (
-                    <ul>
-                        {/* Map over conversations */} 
+                    <ul className="divide-y divide-muted/40">
                         {conversations.map(conv => {
                             const participant = conv.other_user;
                             const isOnline = onlineUserIds.has(participant.id);
+                            const isSelected = selectedUser?.id === participant.id;
+
+                            // Basic initials for AvatarFallback
+                            const getInitials = (name: string) => {
+                                const names = name.split(' ');
+                                if (names.length > 1) {
+                                    return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+                                }
+                                return name.substring(0, 2).toUpperCase();
+                            };
+
                             return (
                                 <li key={conv.id} 
-                                    // Pass the whole conversation object on click
                                     onClick={() => onSelectUser(conv)} 
-                                    className={`p-2 hover:bg-accent cursor-pointer rounded flex items-center justify-between ${
-                                        selectedUser?.id === participant.id ? 'bg-accent font-semibold' : ''
-                                    }`}
+                                    className={`flex items-center space-x-3 p-2.5 rounded-lg cursor-pointer transition-colors duration-150 
+                                                hover:bg-muted/60 dark:hover:bg-muted/30 
+                                                ${isSelected ? 'bg-accent text-accent-foreground' : ''}`}
+                                    data-selected={isSelected}
                                 >
-                                    <span className={`flex items-center ${conv.has_unread_messages ? 'font-bold' : ''}`}>
-                                        {conv.has_unread_messages && (
-                                            <span className="h-2 w-2 bg-blue-500 rounded-full mr-2" title="Unread messages"></span>
+                                    <div className="relative flex-shrink-0">
+                                        <Avatar className="h-10 w-10 border border-muted/20">
+                                            <AvatarImage src={participant.profile_picture_url} alt={participant.full_name} />
+                                            <AvatarFallback>{getInitials(participant.full_name)}</AvatarFallback>
+                                        </Avatar>
+                                        {isOnline && (
+                                            <span 
+                                                className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-green-500 border-2 border-background ring-1 ring-green-500/50 shadow-md"
+                                                title="Online"
+                                            />
                                         )}
-                                        {participant.full_name}
-                                    </span>
-                                    {isOnline && <span className="h-2.5 w-2.5 rounded-full bg-green-500 ml-2" title="Online"></span>}
+                                    </div>
+                                    <div className="flex-grow overflow-hidden">
+                                        <div className="flex justify-between items-baseline">
+                                            <h3 className={`text-sm font-medium truncate ${isSelected ? 'text-accent-foreground' : 'text-foreground'} ${conv.has_unread_messages ? 'font-semibold' : ''}`}>
+                                                {participant.full_name}
+                                            </h3>
+                                            {conv.last_message && (
+                                                <span className={`text-xs whitespace-nowrap ${isSelected ? 'text-accent-foreground/80' : 'text-muted-foreground/90'}`}>
+                                                    {formatDistanceToNow(parseISO(conv.last_message.created_at), { addSuffix: true })}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <p className={`text-xs truncate ${isSelected ? 'text-accent-foreground/70' : 'text-muted-foreground'} ${conv.has_unread_messages ? 'font-semibold text-foreground dark:text-slate-100' : ''}`}>
+                                                {conv.last_message ? 
+                                                    (conv.last_message.sender_id === currentUserId ? "You: " : "") + conv.last_message.content 
+                                                    : "No messages yet"}
+                                            </p>
+                                            {conv.has_unread_messages && (
+                                                <span className="flex-shrink-0 ml-2 h-2.5 w-2.5 bg-primary rounded-full" title="Unread messages"></span>
+                                            )}
+                                        </div>
+                                    </div>
                                 </li>
                             );
                         })}
