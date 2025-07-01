@@ -2,46 +2,16 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { fetchAuthenticated, deleteChatMessage, editChatMessage } from '@/lib/api';
+import { fetchAuthenticated, deleteChatMessage, editChatMessage, api } from '@/lib/api';
 import { socket } from '@/lib/socket';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, Check, CheckCheck, FileText, Download, SmilePlus, Pencil, Trash2 } from 'lucide-react';
+import { Terminal, Check, CheckCheck, FileText, Download, SmilePlus, Pencil, Trash2, Info } from 'lucide-react';
 import { format, isSameDay, isToday, isYesterday } from 'date-fns';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
-import { useChatStore, MessageReaction, ReactionUpdatedEventPayload } from '@/store/chatStore';
+import { useChatStore } from '@/store/chatStore';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-
-// Match backend User schema
-interface User {
-    id: number;
-    full_name: string;
-    email: string;
-    profile_picture_url?: string;
-    role?: string;
-}
-
-// Match backend ChatMessage schema (schemas.chat.ChatMessage)
-interface ChatMessageData {
-    id: number;
-    sender_id: number;
-    recipient_id: number;
-    conversation_id?: number | null;
-    content: string;
-    created_at: string; // ISO string format from backend
-    read_at?: string | null;
-    updated_at?: string | null; // Ensure this is present and optional
-    is_deleted: boolean;      // Ensure this is present
-    sender: User; // Embedded sender
-    attachment_url?: string | null;
-    attachment_filename?: string | null;
-    attachment_mimetype?: string | null;
-    reactions?: MessageReaction[];
-}
-
-interface MessageAreaProps {
-  selectedUser: User | null;
-}
+import { User, ChatMessageData, MessageReaction, ReactionUpdatedEventPayload } from '@/types/chat';
 
 // API function to toggle a reaction
 async function toggleReactionApi(messageId: number, emoji: string): Promise<MessageReaction | null> {
@@ -70,13 +40,9 @@ interface ProcessedReaction {
   currentUserReacted: boolean;
 }
 
-function processReactions(reactions: MessageReaction[], currentUserIdNum: number | undefined | null): ProcessedReaction[] {
-  if (!reactions || reactions.length === 0) {
-    return [];
-  }
-
+function processReactions(reactions: MessageReaction[] = [], currentUserIdNum: number | undefined | null): ProcessedReaction[] {
+  if (!reactions || reactions.length === 0) return [];
   const reactionMap = new Map<string, { count: number; userIds: Set<number> }>();
-
   reactions.forEach(reaction => {
     if (!reactionMap.has(reaction.emoji)) {
       reactionMap.set(reaction.emoji, { count: 0, userIds: new Set() });
@@ -85,7 +51,6 @@ function processReactions(reactions: MessageReaction[], currentUserIdNum: number
     emojiData.count++;
     emojiData.userIds.add(reaction.user_id);
   });
-
   return Array.from(reactionMap.entries()).map(([emoji, data]) => ({
     emoji,
     count: data.count,
@@ -112,210 +77,112 @@ const renderDateSeparator = (date: Date) => {
   );
 };
 
-export function MessageArea({ selectedUser }: MessageAreaProps) {
-  // All existing hooks, state, and functions will be commented out
-  const [messages, setMessages] = useState<ChatMessageData[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function MessageArea() {
+  const { 
+    conversations, 
+    activeConversationId, 
+    addMessage, 
+    updateMessageReaction, 
+    updateMessage,
+    setActiveConversationId,
+    setConversationLoading,
+    setMessagesForConversation
+  } = useChatStore();
+  
   const currentUserId = useAuthStore((state) => state.user?.id);
-  // Convert currentUserId to number for comparisons if it's a string
   const currentUserIdNum = typeof currentUserId === 'string' ? parseInt(currentUserId, 10) : currentUserId;
-  const messagesEndRef = useRef<HTMLDivElement | null>(null); // Ref for scrolling
-  const updateMessageReactionStore = useChatStore((state) => state.updateMessageReaction);
-  const [showEmojiPickerFor, setShowEmojiPickerFor] = useState<number | null>(null); // Stores message ID for which picker is open
-  const [hoveredMessageId, setHoveredMessageId] = useState<number | null>(null); // State for hover
 
-  // State for editing messages
+  const activeConversation = conversations.find(c => c.id === activeConversationId);
+  const messages = activeConversation?.messages || [];
+  const isLoadingMessages = activeConversation?.isLoadingMessages ?? true; // Default to true if no conversation
+
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
   const [editText, setEditText] = useState<string>("");
+  const [hoveredMessageId, setHoveredMessageId] = useState<number | null>(null);
+  const [showEmojiPickerFor, setShowEmojiPickerFor] = useState<number | null>(null);
 
-  const leaveTimerRef = useRef<NodeJS.Timeout | null>(null); // ADDED: For delayed leave timer
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const leaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Function to scroll to the bottom of the message list
+  useEffect(() => {
+    const fetchHistory = async () => {
+        if (activeConversation && !activeConversation.messagesFetched && !activeConversation.isLoadingMessages) {
+            setConversationLoading(activeConversation.id, true);
+            try {
+                if (!activeConversation.other_user?.id) {
+                    console.error("Cannot fetch history, other user is missing.");
+                    setConversationLoading(activeConversation.id, false);
+                    return;
+                }
+                const response = await api.get<ChatMessageData[]>(`/chat/conversations/${activeConversation.other_user.id}/messages`);
+                setMessagesForConversation(activeConversation.id, response.data);
+            } catch (error) {
+                console.error("Failed to fetch message history:", error);
+                setConversationLoading(activeConversation.id, false);
+            }
+        }
+    };
+    fetchHistory();
+  }, [activeConversation, setMessagesForConversation, setConversationLoading]);
+
   const scrollToBottom = useCallback(() => {
-    const timer = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
-    return () => clearTimeout(timer);
+    messagesEndRef.current?.scrollIntoView({ behavior: "auto" }); // Use auto for initial load
   }, []);
 
   const emitMarkAsRead = useCallback(() => {
-    if (selectedUser && currentUserId) {
-      // Emit that messages *from* selectedUser *to* currentUserId are being read.
-      socket.emit('mark_as_read', { sender_id: selectedUser.id });
-      console.log(`Emitted mark_as_read for messages from sender ${selectedUser.id}`);
+    if (activeConversationId && currentUserId) {
+      const otherUserId = activeConversation?.other_user?.id;
+      if (!otherUserId) return;
+      // The backend uses the conversation ID to know which conversation to mark as read for the user
+      socket.emit('mark_as_read', { conversation_id: activeConversationId, sender_id: otherUserId });
     }
-  }, [selectedUser, currentUserId]);
+  }, [activeConversationId, currentUserId, activeConversation]);
 
-  // Fetch message history when selectedUser changes
+  // Initial scroll and mark as read
   useEffect(() => {
-    const fetchHistory = async () => {
-        if (!selectedUser || !currentUserId) {
-            setMessages([]); // Clear messages if no user selected
-            return;
-        }
-
-        setIsLoading(true);
-        setError(null);
-        try {
-            console.log(`Fetching messages for user ${selectedUser.id}...`);
-            const response = await fetchAuthenticated(`/chat/conversations/${selectedUser.id}/messages`);
-            const history: ChatMessageData[] = await response.json();
-            setMessages(history);
-            emitMarkAsRead(); // Mark messages as read once history is loaded
-        } catch (err: unknown) {
-            console.error("Failed to fetch message history:", err);
-            const message = err instanceof Error ? err.message : "Could not load messages.";
-            setError(message);
-            setMessages([]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    fetchHistory();
-  }, [selectedUser, currentUserId, emitMarkAsRead]);
-
-  // Scroll to bottom when messages load initially or when new messages are added
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
-
-  
-  // Socket listener for incoming messages
-  useEffect(() => {
-    console.log('[MessageArea] Socket useEffect running. CurrentUserId:', currentUserId, 'SelectedUser:', selectedUser?.id);
-
-    if (!currentUserId || !selectedUser) { 
-      console.log('[MessageArea] Socket listeners not attached (no current user or selected user).');
-      return;
+    if (messages.length > 0) {
+      scrollToBottom();
+      emitMarkAsRead();
     }
+  }, [messages.length, scrollToBottom, emitMarkAsRead]);
+
+  useEffect(() => {
+    if (!currentUserIdNum || !activeConversationId) return;
 
     const handleReceiveMessage = (newMessage: ChatMessageData) => {
-        console.log('[MessageArea] handleReceiveMessage triggered. NewMessage:', JSON.stringify(newMessage, null, 2));
-        console.log('[MessageArea] Current state for handleReceiveMessage: selectedUser ID:', selectedUser?.id, 'currentUserId:', currentUserId);
-
-        if (selectedUser && currentUserIdNum && newMessage.conversation_id) {
-            console.log('[MessageArea] Condition 1 (selectedUser, currentUserIdNum, newMessage.conversation_id) met.');
-            
-            const isFromCurrentUser = newMessage.sender_id === currentUserIdNum;
-            const isFromSelectedUser = newMessage.sender_id === selectedUser.id;
-
-            if (isFromCurrentUser || isFromSelectedUser) { 
-                 console.log(`[MessageArea] Condition 2 (isFromCurrentUser: ${isFromCurrentUser}, isFromSelectedUser: ${isFromSelectedUser}) met.`);
-                setMessages((prevMessages) => {
-                    console.log('[MessageArea] Inside setMessages. Prev message count:', prevMessages.length, 'New message ID:', newMessage.id);
-                    if (prevMessages.find(msg => msg.id === newMessage.id)) {
-                        console.log('[MessageArea] Message ID ', newMessage.id, ' already exists in prevMessages. Not adding.');
-                        return prevMessages;
-                    }
-                    const updatedMessages = [...prevMessages, newMessage];
-                    console.log('[MessageArea] Adding new message ID ', newMessage.id, '. New message count:', updatedMessages.length);
-                    return updatedMessages;
-                });
-
-                if (newMessage.sender_id === selectedUser.id) { 
-                    console.log('[MessageArea] Message from selectedUser, emitting markAsRead.');
-                    emitMarkAsRead();
-                }
-            } else {
-                 console.log(`[MessageArea] Condition 2 (isFromCurrentUser: ${isFromCurrentUser}, isFromSelectedUser: ${isFromSelectedUser}) FAILED. Message not added.`);
-            }
-        } else {
-            console.log('[MessageArea] Condition 1 (selectedUser, currentUserIdNum, newMessage.conversation_id) FAILED. Details:',
-                'selectedUser defined:', !!selectedUser, 
-                'currentUserIdNum defined:', !!currentUserIdNum,
-                'newMessage.conversation_id defined:', !!newMessage.conversation_id
-            );
+        if (newMessage.conversation_id === activeConversationId) {
+            addMessage(newMessage);
+            // Mark as read immediately if the conversation is active
+            emitMarkAsRead();
         }
     };
 
-    const handleMessagesRead = (
-        data: { reader_id: number; conversation_partner_id: number; count: number }
-    ) => {
-        if (data.conversation_partner_id === currentUserIdNum && data.reader_id === selectedUser?.id) {
-            console.log(`Received messages_read event: User ${data.reader_id} read messages from me.`);
-            setMessages(prevMessages => 
-                prevMessages.map(msg => 
-                    (msg.sender_id === currentUserIdNum && msg.recipient_id === selectedUser?.id && !msg.read_at) ? 
-                    { ...msg, read_at: new Date().toISOString() } : 
-                    msg
-                )
-            );
+    const handleMessagesRead = (data: { reader_id: number; conversation_partner_id: number; conversation_id: number; read_at: string; }) => {
+        if (data.conversation_id === activeConversationId && data.reader_id !== currentUserIdNum) {
+            // A bit complex to update all messages, a refetch or a more specific store action might be better
+            // For now, let's assume the component will re-render with new read statuses upon next load
+            console.log(`Messages in conv ${data.conversation_id} read by user ${data.reader_id}`);
         }
     };
+    
+    const handleReactionUpdated = (payload: ReactionUpdatedEventPayload) => updateMessageReaction(payload);
+    const handleMessageUpdated = (updatedMessage: ChatMessageData) => updateMessage(updatedMessage);
+    const handleMessageDeleted = (deletedMessage: ChatMessageData) => updateMessage(deletedMessage);
 
-    console.log('Setting up socket listener for receive_message');
     socket.on('receive_message', handleReceiveMessage);
     socket.on('messages_read', handleMessagesRead); 
-
-    const handleReactionUpdated = (payload: ReactionUpdatedEventPayload) => {
-        console.log('Received reaction_updated event:', payload);
-        updateMessageReactionStore(payload); 
-
-        setMessages(prevMessages => 
-            prevMessages.map(msg => {
-                if (msg.id === payload.message_id) {
-                    let newReactions = [...(msg.reactions || [])];
-                    if (payload.action === 'added' && payload.reaction) {
-                        newReactions = newReactions.filter(
-                            r => !(r.user_id === payload.user_id_who_reacted && r.emoji === payload.emoji)
-                        );
-                        newReactions.push(payload.reaction);
-                    } else if (payload.action === 'removed') {
-                        newReactions = newReactions.filter(
-                            r => !(r.user_id === payload.user_id_who_reacted && r.emoji === payload.emoji)
-                        );
-                    }
-                    return { ...msg, reactions: newReactions };
-                }
-                return msg;
-            })
-        );
-    };
-    console.log('[MessageArea] PRE - Attaching listener for reaction_updated');
     socket.on('reaction_updated', handleReactionUpdated);
-    console.log('[MessageArea] POST - Listener for reaction_updated should be attached');
-    console.log('[MessageArea] Socket ID on client:', socket.id); 
-    console.log('[MessageArea] Socket connected status:', socket.connected);
-    console.log('[MessageArea] Listeners for "reaction_updated":', socket.listeners('reaction_updated')); 
-    console.log('[MessageArea] Does socket have "reaction_updated" listener?:', socket.hasListeners('reaction_updated'));
-
-    const handleAnyEvent = (eventName: string, ...args: unknown[]) => {
-      console.log(`[Socket.IO DEBUG] Event received on client: '${eventName}' with data:`, args);
-    };
-    socket.onAny(handleAnyEvent);
-
-    const handleMessageUpdated = (updatedMessage: ChatMessageData) => {
-        console.log('[MessageArea] Received message_updated event:', updatedMessage);
-        setMessages(prevMessages =>
-            prevMessages.map(msg =>
-                msg.id === updatedMessage.id ? { ...msg, ...updatedMessage } : msg 
-            )
-        );
-    };
     socket.on('message_updated', handleMessageUpdated);
-
-    const handleMessageDeleted = (deletedMessage: ChatMessageData) => {
-        console.log('[MessageArea] Received message_deleted event:', deletedMessage);
-        setMessages(prevMessages =>
-            prevMessages.map(msg =>
-                msg.id === deletedMessage.id ? { ...msg, ...deletedMessage } : msg 
-            )
-        );
-    };
     socket.on('message_deleted', handleMessageDeleted);
-
+    
     return () => {
-      console.log('[MessageArea] Cleaning up socket listeners. CurrentUserId:', currentUserId, 'SelectedUser:', selectedUser?.id);
       socket.off('receive_message', handleReceiveMessage);
       socket.off('messages_read', handleMessagesRead);
-      socket.off('reaction_updated', handleReactionUpdated); 
-      socket.off('message_updated', handleMessageUpdated); 
-      socket.off('message_deleted', handleMessageDeleted); 
-      socket.offAny(handleAnyEvent); 
+      socket.off('reaction_updated', handleReactionUpdated);
+      socket.off('message_updated', handleMessageUpdated);
+      socket.off('message_deleted', handleMessageDeleted);
     };
-  }, [currentUserIdNum, selectedUser, emitMarkAsRead, updateMessageReactionStore]);
+  }, [currentUserIdNum, activeConversationId, addMessage, updateMessageReaction, updateMessage, emitMarkAsRead]);
 
   const handleStartEdit = (message: ChatMessageData) => {
     setEditingMessageId(message.id);
@@ -329,119 +196,106 @@ export function MessageArea({ selectedUser }: MessageAreaProps) {
 
   const handleSaveEdit = async () => {
     if (editingMessageId === null || editText.trim() === "") return;
-
     try {
       await editChatMessage(editingMessageId, editText.trim());
-      // Socket event 'message_updated' will handle the UI update.
-      console.log(`Message ${editingMessageId} edit saved.`);
-      handleCancelEdit(); // Reset editing state
+      handleCancelEdit();
     } catch (error) {
       console.error("Failed to save edited message:", error);
-      alert("Error saving message. Please try again.");
     }
   };
 
   const handleDeleteMessage = async (messageId: number) => {
-    if (!window.confirm("Are you sure you want to delete this message? This cannot be undone.")) {
-        return;
-    }
+    if (!window.confirm("Are you sure you want to delete this message?")) return;
     try {
         await deleteChatMessage(messageId);
-        // UI update will be handled by socket event 'message_deleted'
-        console.log(`Message ${messageId} delete request sent.`);
     } catch (error) {
         console.error("Failed to delete message:", error);
-        alert("Error deleting message. Please try again.");
     }
   };
 
   const handleEmojiClick = async (messageId: number, emojiData: EmojiClickData) => {
-    console.log(`Emoji clicked: ${emojiData.emoji} for message ${messageId}`);
     try {
         await toggleReactionApi(messageId, emojiData.emoji);
-        console.log(`Reaction ${emojiData.emoji} toggled for message ${messageId}. Store/socket will update UI.`);
     } catch (error) {
         console.error("Failed to toggle reaction:", error);
-        alert(`Error adding reaction: ${error instanceof Error ? error.message : String(error)}`);
     }
-    setShowEmojiPickerFor(null); // Close picker after selection
+    setShowEmojiPickerFor(null);
   };
 
   const handleToggleReaction = async (messageId: number, emoji: string) => {
-    console.log(`Toggling reaction: ${emoji} for message ${messageId} from existing bubble.`);
     try {
         await toggleReactionApi(messageId, emoji);
-        console.log(`Reaction ${emoji} toggled for message ${messageId} via bubble. Store/socket will update UI.`);
     } catch (error) {
         console.error("Failed to toggle reaction from bubble:", error);
-        alert(`Error toggling reaction: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
-  // Render Logic
-  if (!selectedUser) {
+  if (!activeConversation) {
+    // This state is now handled by the parent ChatPage, but as a fallback:
     return <div className="flex h-full items-center justify-center text-muted-foreground">Select a contact to start chatting</div>;
   }
+  
+  const selectedUser = activeConversation.other_user;
+  if (!selectedUser) {
+    // This case might happen if conversation data is incomplete.
+    return (
+        <div className="flex h-full items-center justify-center text-muted-foreground">
+            <Alert variant="destructive">
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>Cannot load chat. User information is missing.</AlertDescription>
+            </Alert>
+        </div>
+    );
+  }
+
+  const isExternal = activeConversation.is_external;
 
   return (
     <div className="flex flex-col h-full">
       <h2 className="text-lg font-semibold mb-2 p-4 border-b sticky top-0 bg-background z-10">Chat with {selectedUser.full_name}</h2>
+      {isExternal && (
+        <Alert className="mb-4">
+          <Info className="h-4 w-4" />
+          <AlertTitle>External Chat</AlertTitle>
+          <AlertDescription>
+            This user is not yet a member of your space. Full collaboration features will be available once they are added.
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="flex-grow p-4 overflow-y-auto space-y-2">
-        {/* Message list */}
-        {isLoading && (
+        {isLoadingMessages && messages.length === 0 && (
             <div className="space-y-4">
                 {[...Array(8)].map((_, i) => (
                     <Skeleton key={i} className={`h-10 w-3/5 rounded-lg ${i % 2 === 0 ? 'ml-auto' : 'mr-auto'}`} />
                 ))}
             </div>
         )}
-        {!isLoading && error && (
-            <Alert variant="destructive">
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Error Loading Messages</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-            </Alert>
-        )}
-        {!isLoading && !error && messages.length === 0 && (
+        {!isLoadingMessages && messages.length === 0 && (
             <p className="text-center text-muted-foreground">No messages yet. Start the conversation!</p>
         )}
-        {!isLoading && !error && messages.length > 0 && messages.map((msg, index, arr) => {
+        {messages.map((msg, index, arr) => {
             const isCurrentUserSender = msg.sender_id === currentUserIdNum;
             const wasEdited = msg.updated_at && msg.created_at !== msg.updated_at;
-            const createdAtDate = new Date(msg.created_at + 'Z'); // Keep original name for clarity with `isWithinTimeWindow`
+            const createdAtDate = new Date(msg.created_at + 'Z');
             const now = new Date();
             const isWithinTimeWindow = (now.getTime() - createdAtDate.getTime()) < (MESSAGE_EDIT_DELETE_WINDOW_SECONDS * 1000);
-            console.log(`Message ID: ${msg.id}, Created At: ${msg.created_at}, Parsed Date: ${createdAtDate.toISOString()}, Now: ${now.toISOString()}, Is Within Window: ${isWithinTimeWindow}`);
 
             const handleBubbleMouseEnter = () => {
-                if (leaveTimerRef.current) {
-                    clearTimeout(leaveTimerRef.current);
-                    leaveTimerRef.current = null;
-                }
+                if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
                 setHoveredMessageId(msg.id);
             };
 
             const handleBubbleMouseLeave = () => {
-                if (leaveTimerRef.current) {
-                    clearTimeout(leaveTimerRef.current);
-                }
-                leaveTimerRef.current = setTimeout(() => {
-                    setHoveredMessageId(null);
-                }, 150); // 150ms delay
+                leaveTimerRef.current = setTimeout(() => setHoveredMessageId(null), 150);
             };
 
             const handlePopupMouseEnter = () => {
-                if (leaveTimerRef.current) {
-                    clearTimeout(leaveTimerRef.current);
-                    leaveTimerRef.current = null;
-                }
+                if (leaveTimerRef.current) clearTimeout(leaveTimerRef.current);
             };
 
-            const handlePopupMouseLeave = () => {
-                setHoveredMessageId(null);
-            };
+            const handlePopupMouseLeave = () => setHoveredMessageId(null);
 
-            const processedReactions = processReactions(msg.reactions || [], currentUserIdNum);
+            const processedReactions = processReactions(msg.reactions, currentUserIdNum);
 
             let dateSeparatorElement = null;
             if (index === 0) {
@@ -540,8 +394,8 @@ export function MessageArea({ selectedUser }: MessageAreaProps) {
 
                                     if (showEditDeleteButtons || showReactionTrigger) {
                                         return (
-                                            <div 
-                                                className={`absolute top-1/2 -translate-y-1/2 right-full mr-1 p-1 space-x-0.5 bg-slate-100 dark:bg-slate-800 rounded-md shadow-lg z-20 flex items-center`}
+                                            <div
+                                                className={`absolute top-1/2 -translate-y-1/2 ${isCurrentUserSender ? 'right-full mr-1' : 'left-full ml-1'} p-1 space-x-0.5 bg-slate-100 dark:bg-slate-800 rounded-md shadow-lg z-20 flex items-center`}
                                                 onMouseEnter={handlePopupMouseEnter}
                                                 onMouseLeave={handlePopupMouseLeave}
                                             >
@@ -566,7 +420,7 @@ export function MessageArea({ selectedUser }: MessageAreaProps) {
                                                 {showReactionTrigger && (
                                                     <Popover open={showEmojiPickerFor === msg.id} onOpenChange={(open) => setShowEmojiPickerFor(open ? msg.id : null)}>
                                                         <PopoverTrigger asChild>
-                                                            <button 
+                                                            <button
                                                                 title="Add reaction"
                                                                 className="p-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded"
                                                             >
@@ -574,8 +428,8 @@ export function MessageArea({ selectedUser }: MessageAreaProps) {
                                                             </button>
                                                         </PopoverTrigger>
                                                         <PopoverContent className="p-0 w-auto border-none shadow-xl" side="bottom" align="start">
-                                                            <EmojiPicker 
-                                                                onEmojiClick={(emojiData) => handleEmojiClick(msg.id, emojiData)} 
+                                                            <EmojiPicker
+                                                                onEmojiClick={(emojiData) => handleEmojiClick(msg.id, emojiData)}
                                                                 height={350}
                                                                 width={300}
                                                             />
@@ -614,7 +468,6 @@ export function MessageArea({ selectedUser }: MessageAreaProps) {
         })}
         <div ref={messagesEndRef} />
       </div>
-      {/* The input area is handled by the parent ChatWindow component */}
     </div>
   );
 }

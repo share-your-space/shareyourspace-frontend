@@ -6,13 +6,25 @@ import { useRouter, usePathname } from 'next/navigation'; // Import useRouter an
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Bell, Check, X, Loader2, MailQuestion, LogOut } from "lucide-react" // Add LogOut icon
+import {
+    Bell, Check, X, Loader2, MailQuestion, LogOut, UserCheck, User as UserIcon, Settings, Home, Users, MessageSquare, ShieldCheck, ExternalLink, Briefcase
+} from "lucide-react"
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { api } from "@/lib/api"; // Import api client
 import { type Connection } from '@/types/connection'; // Import Connection type
+import {
+    DropdownMenu, 
+    DropdownMenuContent, 
+    DropdownMenuItem, 
+    DropdownMenuLabel, 
+    DropdownMenuSeparator, 
+    DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { UserSimpleInfo } from '@/types/user';
 
 // Define Frontend Notification Type (matching backend schema)
 interface Notification {
@@ -25,6 +37,7 @@ interface Notification {
   created_at: string; // Assuming ISO string format
   link?: string | null; // Added for navigation
   reference?: string | null; // Added for context
+  sender?: UserSimpleInfo | null;
 }
 
 // --- Mock Auth Hook (Replace with actual logic later) ---
@@ -46,23 +59,25 @@ const Navbar = () => {
   const logout = useAuthStore(state => state.logout); // Get logout action from store
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
+  const [errorNotifications, setErrorNotifications] = useState<string | null>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
 
-  const fetchNotifications = async () => {
-    if (!token) return;
-    setIsLoading(true);
-    setError(null);
+  const fetchNotifications = async (isPopoverOpen = false) => {
+    if (!token || !user) return; // Do not fetch if user object isn't loaded yet
+    if (!isPopoverOpen) { // Only show main loader when not opening popover
+        setIsLoadingNotifications(true);
+    }
+    setErrorNotifications(null);
     try {
-      // Use api client
-      const response = await api.get<Notification[]>('/notifications/?limit=10&include_read=true');
+      const response = await api.get<Notification[]>('/notifications/?limit=20&include_read=true');
       setNotifications(response.data);
+      
     } catch (err: any) { 
-      setError(err.response?.data?.detail || err.message || 'Could not load notifications.');
+      setErrorNotifications(err.response?.data?.detail || err.message || 'Could not load notifications.');
       console.error("Fetch notifications error:", err);
     } finally {
-      setIsLoading(false);
+      setIsLoadingNotifications(false);
     }
   };
 
@@ -77,25 +92,44 @@ const Navbar = () => {
 
   // Refetch notifications specifically when popover opens (for refresh)
   useEffect(() => {
-    if (popoverOpen && isAuthenticated && token) {
-        console.log("Popover opened, fetching notifications..."); // Debug log
-        fetchNotifications();
-    }
+    const handlePopoverOpen = async () => {
+        if (popoverOpen && isAuthenticated && token) {
+            console.log("Popover opened, fetching notifications..."); // Debug log
+            await fetchNotifications(true); // Pass true to indicate it's a popover refresh
+
+            // After fetching, check for relevant unread workstation notifications
+            const unreadWorkstationNotifications = notifications.some(
+                (n) => 
+                    !n.is_read && 
+                    (n.type === 'WORKSTATION_ASSIGNED' || n.type === 'WORKSTATION_UNASSIGNED')
+            );
+
+            if (unreadWorkstationNotifications) {
+                console.log("Unread workstation notification found, refreshing current user...");
+                useAuthStore.getState().refreshCurrentUser();
+            }
+        }
+    };
+    handlePopoverOpen();
     // Depends on popoverOpen to trigger only when it changes to true
-  }, [popoverOpen, isAuthenticated, token]); // Keep this one separate
+  }, [popoverOpen, isAuthenticated, token]); // Keep notifications out of dep array to avoid loop with its own update
 
   // --- Action Handlers ---
   const handleMarkRead = async (notificationId: number) => {
-    if (!token) return; // Should not happen if button is visible, but good practice
+    if (!token) return;
+    // Reverted: Allow marking any notification type as read via this general handler.
+    // The specific handling for member_request lifecycle is now on the backend 
+    // and how the Corp Admin's "Member Requests" list is populated and actioned.
     try {
-      // Use api client
       await api.post(`/notifications/${notificationId}/read`);
+      // Optimistically update UI, then refetch for consistency
       setNotifications(prev => 
         prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
       );
+      toast.success("Notification marked as read.");
+      fetchNotifications(); // Refetch to ensure consistency if needed, esp. for counts
     } catch (err: any) {
       toast.error(err.response?.data?.detail || 'Failed to mark as read.');
-      console.error("Mark read error:", err);
     }
   };
 
@@ -105,15 +139,13 @@ const Navbar = () => {
         return;
     }
     try {
-        // Use api client
         await api.put<Connection>(`/connections/${connectionId}/accept`);
         toast.success("Connection accepted!");
-        await handleMarkRead(notificationId); // Mark as read after accepting
-        fetchNotifications(); // Refetch for popover
-        useAuthStore.getState().triggerConnectionUpdate(); // Trigger global update
+        await handleMarkRead(notificationId);
+        fetchNotifications();
+        useAuthStore.getState().triggerConnectionUpdate();
     } catch (err: any) {
         toast.error(err.response?.data?.detail || 'Accept failed.');
-        console.error("Accept connection error:", err);
     }
   };
 
@@ -123,189 +155,261 @@ const Navbar = () => {
         return;
     }
     try {
-        // Use api client
          await api.put<Connection>(`/connections/${connectionId}/decline`);
          toast.info("Connection declined.");
-         await handleMarkRead(notificationId); // Mark as read after declining
-         fetchNotifications(); // Refetch for popover
-         useAuthStore.getState().triggerConnectionUpdate(); // Trigger global update
+         await handleMarkRead(notificationId);
+         fetchNotifications();
+         useAuthStore.getState().triggerConnectionUpdate();
     } catch (err: any) {
         toast.error(err.response?.data?.detail || 'Decline failed.');
-        console.error("Decline connection error:", err);
     }
   };
 
   const handleMarkAllRead = async () => {
       if (!token) return;
       try {
-          // Use api client
+          // Reverted: Call the /read-all endpoint directly.
+          // Backend should handle marking all relevant (non-action-specific) notifications as read.
           await api.post('/notifications/read-all');
           toast.success("All notifications marked as read.");
-          setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+          fetchNotifications(); // Refetch to get the true state from backend
       } catch (err: any) {
           toast.error(err.response?.data?.detail || 'Failed to mark all as read.');
-          console.error("Mark all read error:", err);
       }
   };
 
   const handleLogout = () => {
-    logout(); // Call the logout action from the store
+    logout();
     toast.success("Logged out successfully.");
-    router.push('/'); // Redirect to home/login page
+    router.push('/');
   };
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   // Helper to render notification content, possibly as a link
   const renderNotificationContent = (notification: Notification) => {
-    const content = (
+    const isExternal = notification.type === 'new_message' && notification.sender?.space_id !== user?.space_id;
+
+    const commonContent = (
       <>
         <span className="mt-1">
           {/* TODO: Consider different icons based on notification.type */} 
+          {notification.type === 'connection_request' ? 
+            <UserCheck className="w-4 h-4 text-blue-500"/> : 
+          notification.type === 'WORKSTATION_ASSIGNED' || notification.type === 'WORKSTATION_UNASSIGNED' || notification.type === 'WORKSTATION_STATUS_UPDATED' || notification.type === 'WORKSTATION_DETAILS_CHANGED' ?
+            <Briefcase className="w-4 h-4 text-purple-500" /> : // Icon for workstation notifications
           <MailQuestion className="w-4 h-4 text-muted-foreground"/>
+          }
         </span>
         <div className="flex-grow">
-          <p className="text-xs leading-tight">{notification.message}</p>
+          <p className="text-xs leading-tight">{notification.message}
+            {isExternal && <span className="text-blue-500 font-semibold ml-1">(External)</span>}
+          </p>
           <p className="text-xs text-muted-foreground">{new Date(notification.created_at).toLocaleString()}</p>
         </div>
       </>
     );
 
-    if (notification.link) {
-      return (
+    const contentWithPossibleLink = notification.link ? (
         <Link 
             href={notification.link} 
-            className="flex items-start space-x-3 w-full" 
-            onClick={() => setPopoverOpen(false)} // Close popover on link click
+          className="flex items-start space-x-3 w-full hover:bg-accent/50 rounded-md p-2" // Added padding and hover
+          onClick={(e) => {
+            // Allow navigation but also mark as read if not a connection action
+            if (notification.type !== 'connection_request') {
+                handleMarkRead(notification.id);
+            }
+            // Refresh user data if it's a workstation assignment/unassignment notification
+            if (notification.type === 'WORKSTATION_ASSIGNED' || notification.type === 'WORKSTATION_UNASSIGNED') {
+                useAuthStore.getState().refreshCurrentUser();
+            }
+            // setPopoverOpen(false); // Keep popover open if actions are inside
+          }}
         >
-          {content}
+        {commonContent}
         </Link>
+    ) : (
+      <div className="flex items-start space-x-3 w-full p-2">
+        {commonContent}
+      </div>
+    );
+
+    // Add Accept/Decline buttons for connection requests
+    if (notification.type === 'connection_request' && !notification.is_read) { // Show actions only if unread
+      return (
+        <div className="p-2 hover:bg-accent/50 rounded-md">
+            <div className="flex items-start space-x-3 w-full">
+                {commonContent}
+            </div>
+            <div className="flex justify-end space-x-2 mt-2 pr-2">
+                <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDecline(notification.related_entity_id, notification.id)}
+                >
+                    <X className="mr-1 h-3 w-3" /> Decline
+                </Button>
+                <Button 
+                    size="sm"
+                    onClick={() => handleAccept(notification.related_entity_id, notification.id)}
+                >
+                    <Check className="mr-1 h-3 w-3"/> Accept
+                </Button>
+            </div>
+        </div>
       );
+    } else if (notification.type === 'connection_request' && notification.is_read) {
+        // Optionally show a different state for already actioned connection requests
+        return (
+            <div className="p-2">
+                <div className="flex items-start space-x-3 w-full text-muted-foreground">
+                    {commonContent} 
+                    {/* <span className="text-xs italic ml-auto">(Responded)</span> */} 
+                </div>
+            </div>
+        );
     }
-    return content;
+
+    return contentWithPossibleLink;
   };
+
+  const mainNavLinks = [
+    { href: "/dashboard", label: "Dashboard", icon: Home },
+    { href: "/discover", label: "Discover", icon: Users },
+    { href: "/browse-spaces", label: "Browse Spaces", icon: Briefcase },
+    { href: "/connections", label: "Connections", icon: ExternalLink }, // Changed icon for variety
+    { href: "/chat", label: "Chat", icon: MessageSquare },
+  ];
 
   return (
     <nav className="bg-background border-b sticky top-0 z-50">
       <div className="container mx-auto px-4 md:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Logo/Brand Name */}
-        <Link href="/" className="text-lg font-bold">
+        <Link href="/" className="text-xl font-bold text-primary">
           ShareYourSpace
         </Link>
 
-        {/* Navigation Links (Placeholder) - Hidden below md breakpoint */}
-        <div className="hidden md:flex space-x-4 lg:space-x-6">
-          <Link href="/#benefits" className="text-sm lg:text-base text-muted-foreground hover:text-foreground transition-colors">
-            Benefits
-          </Link>
-          {/* Conditionally show Discover link? */}
+        {/* Main Navigation Links for Authenticated Users */}
           {isAuthenticated && (
-            <Link href="/discover" className="text-sm lg:text-base text-muted-foreground hover:text-foreground transition-colors">
-              Discover
+            <div className="hidden md:flex items-center space-x-2 lg:space-x-4">
+                {mainNavLinks.map((item) => (
+                    <Button variant="ghost" asChild key={item.label}>
+                        <Link 
+                            href={item.href}
+                            className={`text-sm font-medium transition-colors hover:text-primary ${
+                                pathname.startsWith(item.href) ? 'text-primary' : 'text-muted-foreground'
+                            }`}
+                        >
+                           {/* <item.icon className="mr-2 h-4 w-4" /> */}{/* Icons can be too much for top nav */}
+                            {item.label}
             </Link>
-          )}
-          {isAuthenticated && (
-              <Link href="/connections" className="text-sm lg:text-base text-muted-foreground hover:text-foreground transition-colors">
-                Connections
-              </Link>
-          )}
-          {isAuthenticated && (
-              <Link href="/profile" className="text-sm lg:text-base text-muted-foreground hover:text-foreground transition-colors">
-                My Profile
-            </Link>
-          )}
-          {/* Add more links as needed */}
-        </div>
+                    </Button>
+                ))}
+            </div>
+        )}
 
-        {/* Right Side: Actions */}
-        <div className="flex items-center space-x-3 lg:space-x-4">
+        <div className="flex items-center space-x-2 md:space-x-4">
           <ThemeToggle />
-
-          {isAuthenticated ? (
+          {isAuthenticated && (
             <>
-              {/* Notification Bell */}
               <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="relative rounded-full"> {/* Add relative positioning */}
+                    <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-5 w-5" />
                     {unreadCount > 0 && (
-                        <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full transform translate-x-1/2 -translate-y-1/2">
+                        <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
                            {unreadCount}
                         </span>
                     )}
-                     {/* <span className={cn("absolute top-1 right-1 block h-2 w-2 rounded-full bg-primary ring-background ring-offset-2", { hidden: unreadCount === 0 })} /> */}
-                    <span className="sr-only">Notifications</span>
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-0" align="end">
-                  <div className="flex justify-between items-center p-4 font-medium border-b">
-                    <span>
-                        Notifications
-                        {unreadCount > 0 && (
-                            <span className="text-xs text-muted-foreground ml-2">({unreadCount} unread)</span>
+                <PopoverContent className="w-80 p-0">
+                    <div className="p-4 border-b">
+                        <h4 className="font-medium">Notifications</h4>
+                        {notifications.length > 0 && unreadCount > 0 && (
+                            <Button variant="link" size="sm" className="text-xs text-blue-500 p-0 h-auto mt-1" onClick={handleMarkAllRead}>
+                                Mark all as read
+                            </Button>
                         )}
-                    </span>
-                    <Button 
-                        variant="link" 
-                        size="sm" 
-                        className="text-xs h-auto p-0" 
-                        onClick={handleMarkAllRead}
-                        disabled={unreadCount === 0}
-                    >
-                        Mark all read
-                    </Button>
                     </div>
-                  <ScrollArea className="h-72">
-                    <div className="p-2 space-y-1"> {/* Reduced padding */} 
-                      {isLoading && <div className="flex justify-center py-4"><Loader2 className="animate-spin h-5 w-5"/></div>}
-                      {error && <p className="text-red-500 text-sm px-2 py-4 text-center">{error}</p>}
-                      {!isLoading && !error && notifications.length === 0 && (
-                        <p className="text-sm text-muted-foreground text-center py-4">No notifications yet.</p>
-                      )}
-                      {!isLoading && !error && notifications.map((n) => (
-                        <div 
-                            key={n.id} 
-                            className={cn(
-                                "p-2 rounded-lg hover:bg-muted/80", 
-                                !n.is_read ? "bg-muted/50" : "",
-                                n.link ? "cursor-pointer" : (!n.is_read ? "cursor-pointer" : "cursor-default") 
-                            )}
-                            // Mark as read if not a link and unread, or always if it's just a clickable div
-                            onClick={() => { 
-                                if (!n.is_read) handleMarkRead(n.id);
-                                // If it's not a link itself, and we want to close popover on any click:
-                                // if (!n.link) setPopoverOpen(false); 
-                            }}
-                        >
-                           <div className="flex items-start space-x-3">
-                                {renderNotificationContent(n)}
+                    {isLoadingNotifications ? (
+                        <div className="p-4 text-center text-sm text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin inline mr-2"/>Loading...
                            </div>
-                           {/* Action buttons for connection requests */} 
-                           {n.type === 'connection_request' && !n.is_read && (
-                               <div className="flex gap-2 mt-2 pl-7"> {/* Indent actions */} 
-                                   <Button size="sm" variant="default" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); handleAccept(n.related_entity_id, n.id); }}> 
-                                       <Check className="h-3 w-3 mr-1"/> Accept
-                                   </Button> 
-                                   <Button size="sm" variant="outline" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); handleDecline(n.related_entity_id, n.id); }}> 
-                                       <X className="h-3 w-3 mr-1"/> Decline
-                                   </Button> 
+                    ) : errorNotifications ? (
+                        <p className="p-4 text-center text-sm text-red-500">{errorNotifications}</p>
+                    ) : notifications.length > 0 ? (
+                        <ScrollArea className="h-[300px]">
+                        <div className="divide-y divide-border">
+                            {notifications.map((notification) => (
+                                <div key={notification.id} className={cn("p-0", !notification.is_read && "bg-accent/30")}>
+                                    {renderNotificationContent(notification)}
                                </div>
-                           )} 
+                            ))}
                         </div>
-                      ))}
+                        </ScrollArea>
+                    ) : (
+                        <p className="p-4 text-center text-sm text-muted-foreground">No new notifications.</p>
+                    )}
+                    <div className="p-2 border-t text-center">
+                        <Link href="/notifications" passHref>
+                             <Button variant="link" size="sm" className="text-xs w-full" onClick={() => setPopoverOpen(false)}>
+                                View all notifications
+                             </Button>
+                        </Link>
                     </div>
-                  </ScrollArea>
                 </PopoverContent>
               </Popover>
 
-              {/* Logout Button */}
-               <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout">
-                <LogOut className="h-5 w-5" />
-                <span className="sr-only">Logout</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+                    <Avatar className="h-8 w-8">
+                        <AvatarImage src={user?.profile?.profile_picture_url || undefined} alt={user?.full_name || user?.email} />
+                        <AvatarFallback>{user ? (user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()) : '...'}</AvatarFallback>
+                    </Avatar>
                </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  {user && (
+                    <>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user.full_name || user.email}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                    </>
+                  )}
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard"><Home className="mr-2 h-4 w-4" />Dashboard</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile"><UserIcon className="mr-2 h-4 w-4" />Profile</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                     <Link href="/settings"><Settings className="mr-2 h-4 w-4" />Settings</Link>
+                  </DropdownMenuItem>
+                  {user?.role === 'SYS_ADMIN' && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin"><ShieldCheck className="mr-2 h-4 w-4" />Admin Panel</Link>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600 focus:bg-red-50">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </>
-          ) : (
-            <Button onClick={() => router.push('/login')}>Login</Button>
+          )}
+          {!isLoadingAuth && !isAuthenticated && (
+            <Button asChild>
+              <Link href="/login">Login</Link>
+            </Button>
           )}
         </div>
       </div>

@@ -13,6 +13,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
+import UnauthenticatedLayout from '@/components/layout/UnauthenticatedLayout';
+import { requestPasswordReset } from "@/lib/api/auth";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -27,20 +29,7 @@ export default function ForgotPasswordPage() {
     setMessage(null);
 
     try {
-      // Adjust URL if needed
-      const response = await fetch("http://localhost:8000/api/auth/request-password-reset", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json(); // Even if it's just a success message
-
-      if (!response.ok) {
-        throw new Error(data.detail || "Failed to send reset link.");
-      }
+      await requestPasswordReset(email);
       
       // Display a generic success message regardless of whether the email exists 
       // to avoid revealing registered emails.
@@ -57,46 +46,48 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl">Forgot Password</CardTitle>
-          <CardDescription>
-            Enter your email address and we will send you a link to reset your
-            password.
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="grid gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-            {message && (
-              <p className="text-sm font-medium text-green-600">{message}</p>
-            )}
-            {error && (
-              <p className="text-sm font-medium text-destructive">{error}</p>
-            )}
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Sending..." : "Send Reset Link"}
-            </Button>
-            <Link href="/login" className="text-sm underline">
-                Back to Login
-            </Link>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
+    <UnauthenticatedLayout>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle className="text-2xl">Forgot Password</CardTitle>
+            <CardDescription>
+              Enter your email address and we will send you a link to reset your
+              password.
+            </CardDescription>
+          </CardHeader>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="m@example.com"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              {message && (
+                <p className="text-sm font-medium text-green-600">{message}</p>
+              )}
+              {error && (
+                <p className="text-sm font-medium text-destructive">{error}</p>
+              )}
+            </CardContent>
+            <CardFooter className="flex flex-col gap-4">
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Sending..." : "Send Reset Link"}
+              </Button>
+              <Link href="/login" className="text-sm underline">
+                  Back to Login
+              </Link>
+            </CardFooter>
+          </form>
+        </Card>
+      </div>
+    </UnauthenticatedLayout>
   );
 } 

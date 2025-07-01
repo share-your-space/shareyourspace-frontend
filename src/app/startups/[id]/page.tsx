@@ -1,114 +1,192 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation'; // Use next/navigation for App Router
-import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout'; // Import layout
-import StartupProfileDisplay from '@/components/organization/StartupProfileDisplay';
+import { useEffect, useState, useCallback } from 'react';
+import { useParams } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+import { getStartup, updateMyStartup } from '@/lib/api/organizations';
+import { Startup, StartupUpdate } from '@/types/organization';
 import { useAuthStore } from '@/store/authStore';
-import { Skeleton } from "@/components/ui/skeleton"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Terminal } from "lucide-react"
-import { api } from '@/lib/api'; // Import api client
+import { TeamSize } from '@/types/enums';
+import { toast } from 'sonner';
 
-// Define the expected structure matching the display component
-interface StartupData {
-  id: number;
-  name: string;
-  logo_url?: string | null;
-  industry_focus?: string | null;
-  description?: string | null;
-  mission?: string | null;
-  website?: string | null;
-  created_at: string;
-  updated_at?: string | null;
-}
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import StartupProfileDisplay from '@/components/organization/StartupProfileDisplay';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2, Edit, Save, X } from 'lucide-react';
+import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
 
-const StartupPage = () => {
+const startupSchema = z.object({
+  name: z.string().min(1, 'Startup name is required'),
+  website: z.string().url({ message: "Invalid URL" }).optional().or(z.literal('')),
+  pitch_deck_url: z.string().url({ message: "Invalid URL" }).optional().or(z.literal('')),
+  industry_focus: z.string().optional(),
+  team_size: z.nativeEnum(TeamSize).optional(),
+  mission: z.string().optional(),
+  description: z.string().optional(),
+});
+
+type StartupFormData = z.infer<typeof startupSchema>;
+
+const StartupProfilePage = () => {
   const params = useParams();
-  const startupId = params?.id;
-  const [startup, setStartup] = useState<StartupData | null>(null);
+  const { user, updateUser } = useAuthStore();
+  const [startup, setStartup] = useState<Startup | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const token = useAuthStore((state) => state.token);
+  const [isEditing, setIsEditing] = useState(false);
+
+  const startupId = Number(params.id);
+
+  const form = useForm<StartupFormData>({
+    resolver: zodResolver(startupSchema),
+    defaultValues: {},
+  });
+
+  const fetchStartup = useCallback(async () => {
+    if (isNaN(startupId)) {
+      setLoading(false);
+      return;
+    }
+    try {
+      setLoading(true);
+      const data = await getStartup(startupId);
+      setStartup(data);
+      form.reset({
+        name: data.name,
+        website: data.website || '',
+        pitch_deck_url: data.pitch_deck_url || '',
+        industry_focus: data.industry_focus || '',
+        team_size: data.team_size || undefined,
+        mission: data.mission || '',
+        description: data.description || '',
+      });
+    } catch (error) {
+      toast.error('Failed to fetch startup profile');
+      console.error('Failed to fetch startup profile', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [startupId, form]);
 
   useEffect(() => {
-    if (!startupId) { // ID is required
-       setError("Startup ID not found in URL.");
-       setLoading(false);
-       return;
-    }
-     if (!token) { // Token is required for API call
-        setError("Authentication required to view startup details.");
-        setLoading(false);
-        return;
-    }
-
-    const fetchStartup = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-         // Use api client
-        const response = await api.get<StartupData>(`/organizations/startups/${startupId}`);
-        setStartup(response.data);
-      } catch (err: any) {
-        console.error("Fetch startup error:", err);
-        if (err.response?.status === 404) {
-             setError('Startup not found.');
-        } else if (err.response?.status === 401 || err.response?.status === 403) {
-             setError('You are not authorized to view this startup profile.');
-        } else {
-            setError(err.response?.data?.detail || err.message || 'Failed to fetch startup data.');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchStartup();
-  }, [startupId, token]);
+  }, [fetchStartup]);
+  
+  const onSubmit = async (data: StartupFormData) => {
+    const promise = updateMyStartup(data).then((updatedStartup) => {
+      setStartup(updatedStartup);
+      setIsEditing(false);
+      if (user?.startup_id === updatedStartup.id && user.startup?.name !== updatedStartup.name) {
+          const updatedUser = { ...user, startup: { ...user.startup, name: updatedStartup.name }};
+          updateUser(updatedUser);
+      }
+    });
+
+    toast.promise(promise, {
+      loading: 'Updating profile...',
+      success: 'Profile updated successfully!',
+      error: 'Failed to update startup profile.',
+    });
+  };
+
+  const canEdit = user?.role === 'STARTUP_ADMIN' && user?.startup_id === startupId;
 
   if (loading) {
     return (
-      <AuthenticatedLayout> {/* Wrap content in layout */} 
-        <div className="flex justify-center items-center min-h-[calc(100vh-theme(space.16))]" > {/* Adjust height */} 
-             <Skeleton className="w-full max-w-2xl h-[300px]" />
-        </div>
-       </AuthenticatedLayout>
-    );
-  }
-
-  if (error) {
-    return (
-      <AuthenticatedLayout> {/* Wrap content in layout */} 
-      <div className="container mx-auto py-8">
-        <Alert variant="destructive" className="max-w-2xl mx-auto">
-          <Terminal className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      </div>
-       </AuthenticatedLayout>
+        <AuthenticatedLayout>
+            <div className="container mx-auto p-4">
+                <Skeleton className="h-48 w-full mb-6" />
+                <div className="space-y-4">
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-2/3" />
+                <Skeleton className="h-6 w-full" />
+                </div>
+            </div>
+        </AuthenticatedLayout>
     );
   }
 
   if (!startup) {
-     return (
-       <AuthenticatedLayout> {/* Wrap content in layout */} 
-        <div className="container mx-auto py-8 text-center">
-          <p>Startup data not available.</p>
-        </div>
-       </AuthenticatedLayout>
-     );
+    return <AuthenticatedLayout><div className="text-center py-10">Startup not found.</div></AuthenticatedLayout>;
   }
 
   return (
-    <AuthenticatedLayout> {/* Wrap content in layout */} 
-    <div className="container mx-auto py-8">
-      <StartupProfileDisplay startup={startup} />
-      {/* Future: Add section to list active members */}
-    </div>
+    <AuthenticatedLayout>
+        <div className="container mx-auto p-4 max-w-4xl">
+             {isEditing && canEdit ? (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Edit Startup Profile</CardTitle>
+                        <CardDescription>Update your startup's public information.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                        <FormField control={form.control} name="name" render={({ field }) => (
+                            <FormItem><FormLabel>Startup Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="website" render={({ field }) => (
+                           <FormItem><FormLabel>Website</FormLabel><FormControl><Input {...field} value={field.value || ''} placeholder="https://example.com" /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="pitch_deck_url" render={({ field }) => (
+                            <FormItem><FormLabel>Pitch Deck URL</FormLabel><FormControl><Input {...field} value={field.value || ''} placeholder="https://link-to-your-deck.com" /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="industry_focus" render={({ field }) => (
+                            <FormItem><FormLabel>Industry Focus</FormLabel><FormControl><Input {...field} value={field.value || ''}/></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="team_size" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Team Size</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Select team size" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        {Object.values(TeamSize).map((size) => <SelectItem key={size} value={size}>{size}</SelectItem>)}
+                                    </SelectContent>
+                                </Select><FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={form.control} name="mission" render={({ field }) => (
+                            <FormItem><FormLabel>Mission</FormLabel><FormControl><Textarea {...field} value={field.value || ''} placeholder="Our mission is to..." /></FormControl><FormMessage /></FormItem>
+                        )} />
+                        <FormField control={form.control} name="description" render={({ field }) => (
+                            <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea {...field} value={field.value || ''} placeholder="A brief description..." /></FormControl><FormMessage /></FormItem>
+                        )} />
+
+                        <div className="flex justify-end space-x-2">
+                            <Button type="button" variant="outline" onClick={() => setIsEditing(false)} disabled={form.formState.isSubmitting}>
+                                <X className="mr-2 h-4 w-4" /> Cancel
+                            </Button>
+                            <Button type="submit" disabled={!form.formState.isDirty || form.formState.isSubmitting}>
+                                {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                Save Changes
+                            </Button>
+                        </div>
+                        </form>
+                    </Form>
+                    </CardContent>
+                </Card>
+            ) : (
+                <>
+                    <div className="flex justify-end mb-4">
+                        {canEdit && (
+                        <Button onClick={() => setIsEditing(true)}>
+                            <Edit className="mr-2 h-4 w-4" /> Edit Profile
+                        </Button>
+                        )}
+                    </div>
+                    <StartupProfileDisplay startup={startup} />
+                </>
+            )}
+        </div>
     </AuthenticatedLayout>
   );
 };
 
-export default StartupPage; 
+export default StartupProfilePage; 

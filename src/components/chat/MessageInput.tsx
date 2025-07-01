@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, Smile, Paperclip, XCircle, FileText, Image as ImageIcon } from 'lucide-react';
+import { Send, Smile, Paperclip, XCircle, FileText } from 'lucide-react';
 import { socket } from '@/lib/socket';
 import {
   Popover,
@@ -13,28 +13,28 @@ import {
 import { fetchAuthenticated } from '@/lib/api';
 import { toast } from "sonner";
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
-
-// Placeholder type
-interface User {
-    id: number;
-    full_name: string;
-    email: string;
-    profile_picture_url?: string;
-    role?: string;
-}
-
-interface MessageInputProps {
-    selectedUser: User | null;
-}
+import { User, Conversation } from '@/types/chat';
+import { useChatStore } from '@/store/chatStore';
 
 interface AttachmentMetadata {
     attachment_url: string;
     original_filename: string;
     content_type: string;
-    new_filename: string;
 }
 
-export function MessageInput({ selectedUser }: MessageInputProps) {
+interface SendMessagePayload {
+    recipient_id: number;
+    content: string;
+    attachment_url?: string;
+    attachment_filename?: string;
+    attachment_mimetype?: string;
+}
+
+export function MessageInput() {
+    const { activeConversationId, conversations } = useChatStore();
+    const activeConversation = conversations.find(c => c.id === activeConversationId);
+    const selectedUser = activeConversation?.other_user;
+
     const [messageContent, setMessageContent] = useState('');
     const [attachment, setAttachment] = useState<AttachmentMetadata | null>(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -46,19 +46,17 @@ export function MessageInput({ selectedUser }: MessageInputProps) {
         if (!file) return;
 
         setIsUploading(true);
-        setAttachment(null); // Clear previous attachment
+        setAttachment(null);
 
         const formData = new FormData();
         formData.append('file', file);
 
         try {
-            // Ensure API_V1_STR is handled correctly, or use the full path
             const response = await fetchAuthenticated('/uploads/chat-attachment', {
                 method: 'POST',
                 body: formData,
-                // fetchAuthenticated should handle Content-Type for FormData correctly
             });
-            const result: AttachmentMetadata = await response.json();
+            const result = await response.json();
             if (!response.ok) {
                 throw new Error(result.detail || 'File upload failed');
             }
@@ -74,7 +72,6 @@ export function MessageInput({ selectedUser }: MessageInputProps) {
             setAttachment(null);
         } finally {
             setIsUploading(false);
-            // Reset file input to allow uploading the same file again if needed
             if (fileInputRef.current) {
                 fileInputRef.current.value = '';
             }
@@ -83,22 +80,22 @@ export function MessageInput({ selectedUser }: MessageInputProps) {
 
     const handleSend = () => {
         const content = messageContent.trim();
-        // A message can be just an attachment, or text, or both (though UI might guide one way)
         if ((content || attachment) && selectedUser) {
-            const payload: any = {
+            const payload: SendMessagePayload = {
                 recipient_id: selectedUser.id,
                 content: content,
             };
+
             if (attachment) {
                 payload.attachment_url = attachment.attachment_url;
-                payload.attachment_filename = attachment.original_filename; // Send original filename
+                payload.attachment_filename = attachment.original_filename;
                 payload.attachment_mimetype = attachment.content_type;
             }
 
             socket.emit('send_message', payload);
             
             setMessageContent('');
-            setAttachment(null); // Clear attachment after sending
+            setAttachment(null);
         }
     };
 
@@ -117,7 +114,7 @@ export function MessageInput({ selectedUser }: MessageInputProps) {
     const removeAttachment = () => {
         setAttachment(null);
         if (fileInputRef.current) {
-            fileInputRef.current.value = ''; // Clear the file input
+            fileInputRef.current.value = '';
         }
     };
 
@@ -147,7 +144,6 @@ export function MessageInput({ selectedUser }: MessageInputProps) {
             )}
             {isUploading && (
                 <div className="mb-2 text-sm text-muted-foreground flex items-center">
-                    {/* You can use a proper spinner component here from ShadCN/UI if available, or a simple text like below */} 
                     <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>

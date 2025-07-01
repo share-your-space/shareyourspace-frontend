@@ -8,8 +8,10 @@ import { api } from "@/lib/api"; // Import the api client
 import { type MatchResult } from '@/types/matching';
 import { type ConnectionStatusCheck } from '@/types/connection'; // Import ConnectionStatusCheck type
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Loader2, AlertTriangle, Info } from "lucide-react"
+import { Loader2, AlertTriangle, Info, Lock } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
+import Link from 'next/link'; // Import Link
+import { Button } from '@/components/ui/button'; // Import Button
 
 // Type for the status map
 type StatusMap = Record<number, ConnectionStatusCheck>;
@@ -19,9 +21,24 @@ export default function DiscoverPage() {
   const [connectionStatuses, setConnectionStatuses] = useState<StatusMap>({}); // State for statuses
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const token = useAuthStore((state) => state.token);
+
+  const user = useAuthStore((state) => state.user); // Get user from store
+  const token = useAuthStore((state) => state.token); // Token is still needed for API calls for non-waitlisted
+  const isLoadingAuth = useAuthStore((state) => state.isLoading); // Get auth loading state
 
   useEffect(() => {
+    // Wait for auth state to load and user to be defined
+    if (isLoadingAuth) {
+      return; // Don't do anything if auth is still loading
+    }
+
+    // If user is waitlisted, don't fetch matches
+    if (user?.status === 'WAITLISTED') {
+      setIsLoading(false); // Not loading matches
+      return;
+    }
+
+    // Proceed to fetch matches if user is not waitlisted and authenticated
     const fetchMatchesAndStatuses = async () => {
       setIsLoading(true);
       setError(null);
@@ -35,16 +52,18 @@ export default function DiscoverPage() {
       }
 
       try {
-        // 1. Fetch Matches
         const matchesResponse = await api.get<MatchResult[]>('/matching/discover');
         const fetchedMatches = matchesResponse.data;
+        
+        // Check for a profile completion message from the backend
+        if (fetchedMatches.length > 0 && fetchedMatches[0].message) {
+            setError(fetchedMatches[0].message);
+            setMatches([]); // Clear any potential stale matches
+        } else {
         setMatches(fetchedMatches);
-
-        // 2. Fetch Connection Statuses if matches exist
         if (fetchedMatches && fetchedMatches.length > 0) {
-          const userIds = fetchedMatches.map(m => m.profile.user_id);
-          
-          // Construct query parameters correctly for a list
+              const userIds = fetchedMatches.filter(m => m.profile).map(m => m.profile!.user_id);
+              if (userIds.length > 0) {
           const params = new URLSearchParams();
           userIds.forEach(id => params.append('user_id', id.toString()));
 
@@ -55,10 +74,12 @@ export default function DiscoverPage() {
             setConnectionStatuses(statusesResponse.data);
           } catch (statusError: any) {
             console.error("Fetch connection statuses error:", statusError);
-            // Don't block UI for status errors, just log and maybe show partial info
-            setError("Could not load connection statuses for all matches. Proceeding with available data."); 
+                  // Non-critical error, we can still display matches
+                }
+              }
           }
         }
+
       } catch (err: any) {
         console.error("Fetch matches error:", err);
         setError(err.response?.data?.detail || err.message || 'An unknown error occurred.');
@@ -67,8 +88,13 @@ export default function DiscoverPage() {
       }
     };
 
-    fetchMatchesAndStatuses();
-  }, [token]);
+    if (token && user && user.status !== 'WAITLISTED') { // Ensure user is defined and not waitlisted
+      fetchMatchesAndStatuses();
+    } else if (!token && !isLoadingAuth) { // If no token and auth isn't loading, set error or let AuthGuard handle
+      setError('Authentication required. Please log in.');
+      setIsLoading(false);
+    }
+  }, [token, user, isLoadingAuth]); // Depend on user and isLoadingAuth
 
   // Convert backend status string to MatchCard prop type
   const getInitialStatus = (userId: number): 'idle' | 'pending' | 'connected' => {
@@ -89,8 +115,7 @@ export default function DiscoverPage() {
   };
 
   const renderContent = () => {
-    if (isLoading) {
-      // Display skeleton loaders
+    if (isLoadingAuth || (isLoading && user?.status !== 'WAITLISTED')) { // Show skeletons if auth loading OR loading matches for non-waitlisted
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, index) => (
@@ -100,12 +125,60 @@ export default function DiscoverPage() {
       );
     }
 
-    if (error && !matches.length) { // Only show critical error if no matches loaded
+    // Handle waitlisted user state first
+    if (user?.status === 'WAITLISTED') {
       return (
-         <Alert variant="destructive">
+        <Alert variant="default" className="border-orange-500">
+          <Lock className="h-5 w-5 text-orange-600" />
+          <AlertTitle className="text-orange-700">Feature Locked: Discover Connections</AlertTitle>
+          <AlertDescription className="text-muted-foreground">
+            This feature will become available once you are actively assigned to a space.
+            Being part of a space allows you to discover and connect with other members within your community.
+            <br />
+            In the meantime, completing your profile will improve your visibility once you join a space.
+          </AlertDescription>
+          <div className="mt-4 flex items-center gap-x-4">
+            <Button asChild>
+              <Link href="/dashboard/profile/edit">Complete Your Profile</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/dashboard">Go to Dashboard</Link>
+            </Button>
+          </div>
+        </Alert>
+      );
+    }
+
+    // Handle case where user is not in a space
+    if (!user?.space_id) {
+        return (
+            <Alert>
+                <Info className="h-5 w-5" />
+                <AlertTitle>Start Your Journey!</AlertTitle>
+                <AlertDescription>
+                    The Discover feature is where you'll find other members inside your workspace.
+                    Since you're not part of a space yet, your next step is to explore potential spaces or get invited by a Corporate Admin.
+                    <br /><br />
+                    Keep your <Link href="/dashboard/profile/edit" className="text-primary hover:underline">profile</Link> updated to increase your chances of being discovered!
+                </AlertDescription>
+            </Alert>
+        );
+    }
+
+    // Existing logic for non-waitlisted users
+    if (error && !matches.length) {
+      return (
+         <Alert variant="warning">
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertTitle>Complete Your Profile to Discover Others</AlertTitle>
+            <AlertDescription>
+                {error}
+                <div className="mt-4">
+                    <Button asChild>
+                        <Link href="/dashboard/profile/edit">Go to Profile</Link>
+                    </Button>
+                </div>
+            </AlertDescription>
         </Alert>
       );
     }
@@ -133,13 +206,15 @@ export default function DiscoverPage() {
             </Alert>
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {matches.map((match, index) => (
+          {matches.map((match, index) => 
+            match.profile ? (
             <MatchCard 
               key={match.profile.user_id || index} 
               match={match} 
               initialConnectionStatus={getInitialStatus(match.profile.user_id)}
             />
-          ))}
+            ) : null
+          )}
         </div>
       </>
     );

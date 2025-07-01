@@ -46,7 +46,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, initialConnectionSt
     }
     setConnectionStatus('loading');
     try {
-      const response = await api.post<Connection>('/connections', {
+      const response = await api.post<Connection>('/connections/', {
         recipient_id: profile.user_id
       });
 

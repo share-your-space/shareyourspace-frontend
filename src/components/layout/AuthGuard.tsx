@@ -1,34 +1,40 @@
+'use client';
+
 import React, { useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 interface AuthGuardProps {
   children: React.ReactNode;
 }
 
 const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const isLoading = useAuthStore((state) => state.isLoading); // Optional: check if auth state is still loading
+  const { isAuthenticated, isLoading } = useAuthStore();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    // Only run check after initial loading is complete (if applicable)
-    if (!isLoading && !isAuthenticated) {
+    if (isLoading) {
+      return; // Wait until authentication state is loaded
+    }
+
+    // If auth state is loaded and user is not authenticated, redirect to login.
+    if (!isAuthenticated) {
       router.push('/login');
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, router, pathname]);
 
   // Optional: Show a loading spinner while checking auth state
   if (isLoading) {
     return <div>Loading...</div>; // Replace with a proper loading component
   }
 
-  // Render children only if authenticated
+  // If user is authenticated, render the children.
   if (isAuthenticated) {
     return <>{children}</>;
   }
 
-  // Return null or a loader while redirecting
+  // Return null or a loader while redirecting or if not authenticated.
   return null;
 };
 

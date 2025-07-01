@@ -1,57 +1,87 @@
 import React from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-
-// Define the expected structure of the Company data
-interface CompanyData {
-  id: number;
-  name: string;
-  logo_url?: string | null;
-  industry_focus?: string | null;
-  description?: string | null;
-  website?: string | null;
-  created_at: string; // Assuming ISO string format from backend
-  updated_at?: string | null;
-}
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Link as LinkIcon, Building, Users, ExternalLink, Calendar, Info } from 'lucide-react';
+import { Company } from '@/types/organization';
+import Link from 'next/link';
 
 interface CompanyProfileDisplayProps {
-  company: CompanyData;
+  company: Company;
 }
 
-const CompanyProfileDisplay: React.FC<CompanyProfileDisplayProps> = ({ company }) => {
+const CompanyProfileDisplay = ({ company }: CompanyProfileDisplayProps) => {
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <div className="flex items-center space-x-4">
-          <Avatar className="h-16 w-16">
-            <AvatarImage src={company.logo_url || undefined} alt={`${company.name} logo`} />
-            <AvatarFallback>{company.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-          </Avatar>
-          <div>
-            <CardTitle className="text-2xl">{company.name}</CardTitle>
-            {company.industry_focus && (
-              <CardDescription>Industry: {company.industry_focus}</CardDescription>
+    <Card className="shadow-xl">
+        <CardHeader className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6 bg-slate-50 dark:bg-slate-800 p-6 rounded-t-lg">
+            <Avatar className="h-24 w-24 md:h-32 md:w-32 border-4 border-white dark:border-slate-700 shadow-lg rounded-md">
+                <AvatarImage src={company.logo_url || undefined} alt={company.name || "Company Logo"} className="rounded-md" />
+                <AvatarFallback className="text-4xl rounded-md">
+                    {company.name ? company.name.charAt(0).toUpperCase() : <Building />}
+                </AvatarFallback>
+            </Avatar>
+            <div className="flex-grow">
+                <CardTitle className="text-3xl font-bold text-slate-800 dark:text-slate-100">{company.name}</CardTitle>
+                <CardDescription className="text-lg text-slate-600 dark:text-slate-400">{company.industry_focus || 'Industry not specified'}</CardDescription>
+                {company.website && (
+                    <div className="flex items-center space-x-2 mt-2">
+                        <LinkIcon className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                        <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline dark:text-blue-400">
+                            {company.website}
+                        </a>
+                    </div>
+                )}
+            </div>
+        </CardHeader>
+
+        <CardContent className="p-6 space-y-6">
+            {company.description && (
+                <div>
+                    <h3 className="text-xl font-semibold mb-2 text-slate-700 dark:text-slate-200 flex items-center"><Info className="mr-2 h-5 w-5 text-blue-500" />About the Company</h3>
+                    <p className="text-slate-600 dark:text-slate-300 whitespace-pre-wrap">{company.description}</p>
+                </div>
             )}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {company.description && (
-          <div>
-            <h3 className="font-semibold mb-1">Description</h3>
-            <p className="text-sm text-muted-foreground">{company.description}</p>
-          </div>
-        )}
-        {company.website && (
-          <div>
-            <h3 className="font-semibold mb-1">Website</h3>
-            <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
-              {company.website}
-            </a>
-          </div>
-        )}
-        {/* Add other fields as needed */}
-      </CardContent>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="bg-slate-50 dark:bg-slate-800/50">
+                    <CardHeader><CardTitle className="flex items-center text-lg"><Users className="mr-2 h-5 w-5 text-green-500"/>Team Size</CardTitle></CardHeader>
+                    <CardContent><p className="font-medium text-slate-700 dark:text-slate-200">{company.team_size || 'N/A'}</p></CardContent>
+                </Card>
+                {company.admin && (
+                     <Card className="bg-slate-50 dark:bg-slate-800/50">
+                        <CardHeader><CardTitle className="flex items-center text-lg"><Building className="mr-2 h-5 w-5 text-indigo-500"/>Administrator</CardTitle></CardHeader>
+                        <CardContent>
+                            <Link href={`/users/${company.admin.id}`} className="font-medium text-blue-600 hover:underline dark:text-blue-400">
+                                {company.admin.full_name}
+                            </Link>
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
+
+            {company.looking_for && company.looking_for.length > 0 && (
+                <div>
+                    <h3 className="text-xl font-semibold mb-2 text-slate-700 dark:text-slate-200">Seeking Talent</h3>
+                    <div className="flex flex-wrap gap-2">
+                        {company.looking_for.map(item => <Badge key={item} variant="secondary" className="text-md">{item}</Badge>)}
+                    </div>
+                </div>
+            )}
+            
+            {company.social_media_links && Object.keys(company.social_media_links).length > 0 && (
+                 <div>
+                    <h3 className="text-xl font-semibold mb-2 text-slate-700 dark:text-slate-200">Follow Us</h3>
+                    <div className="flex flex-wrap gap-4 items-center">
+                        {Object.entries(company.social_media_links).map(([platform, url]) => (
+                             <a key={platform} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center text-blue-600 hover:underline dark:text-blue-400">
+                                <ExternalLink className="mr-2 h-4 w-4" />
+                                {platform.charAt(0).toUpperCase() + platform.slice(1)}
+                            </a>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </CardContent>
     </Card>
   );
 };

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
@@ -8,140 +8,152 @@ import { ContactList } from '@/components/chat/ContactList';
 import { MessageArea } from '@/components/chat/MessageArea';
 import { MessageInput } from '@/components/chat/MessageInput';
 import { useChatStore } from '@/store/chatStore';
-import { fetchAuthenticated } from '@/lib/api';
+import { useAuthStore } from '@/store/authStore';
+import { api } from '@/lib/api';
+import { Conversation } from '@/types/chat';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2, Lock, MessageSquare } from "lucide-react";
+import Link from 'next/link';
 
-// Placeholder types - replace with actual types/interfaces later
-interface User {
-  id: number;
-  full_name: string;
-  email: string;
-  profile_picture_url?: string;
-  role?: string;
-}
-
-interface ConversationInfo {
-  id: number; 
-  other_user: User;
-  last_message: {
-    id: number;
-    content: string;
-    created_at: string;
-    sender_id: number;
-    read_at?: string | null; 
-    // Add other fields from ChatMessageSchema if available/needed by frontend logic
-    // e.g., reactions: any[]; // or a more specific Reaction[] type
-  } | null; 
-  has_unread_messages: boolean;
-}
-
-export default function ChatPage() {
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [conversations, setConversations] = useState<ConversationInfo[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [initialLoadDone, setInitialLoadDone] = useState(false);
-
+function ChatPageContent() {
+  const { 
+    conversations, 
+    setConversations, 
+    activeConversationId, 
+    setActiveConversationId,
+    addOrUpdateConversation
+  } = useChatStore();
+  const { user: currentUser, isLoading: isLoadingAuth } = useAuthStore();
   const searchParams = useSearchParams();
-  const setActiveConversationId = useChatStore((state) => state.setActiveConversationId);
 
+  const activeConversation = conversations.find(c => c.id === activeConversationId);
+
+  // Effect to fetch all initial conversations
   useEffect(() => {
-    const fetchConversations = async () => {
-      setIsLoading(true);
-      setError(null);
+    if (isLoadingAuth || !currentUser) return;
+    
+    let isMounted = true;
+
+    const fetchInitialConversations = async () => {
       try {
-        const response = await fetchAuthenticated('/chat/conversations');
-        const fetchedConversations: ConversationInfo[] = await response.json();
-        setConversations(fetchedConversations);
-      } catch (err: any) {
+        const response = await api.get<Conversation[]>('/chat/conversations');
+        if (isMounted) {
+            setConversations(response.data);
+        }
+      } catch (err) {
         console.error("Failed to fetch conversations:", err);
-        setError(err.message || "Could not load conversations.");
-      } finally {
-        setIsLoading(false);
-        setInitialLoadDone(true);
       }
     };
-    fetchConversations();
-  }, []);
 
-  const handleSelectUser = useCallback(async (conversation: ConversationInfo) => {
-    if (!conversation || !conversation.other_user) return;
-    
-    console.log(`[ChatPage] Selecting conversation ${conversation.id} with user ${conversation.other_user.full_name}`);
-    setSelectedUser(conversation.other_user);
-    setActiveConversationId(conversation.id);
+    fetchInitialConversations();
 
-    if (conversation.has_unread_messages) {
-      console.log(`[ChatPage] Marking conversation ${conversation.id} as read.`);
-      try {
-        await fetchAuthenticated(`/chat/conversations/${conversation.id}/read`, { method: 'POST' });
-        setConversations(prevConvs => 
-          prevConvs.map(conv => 
-            conv.id === conversation.id ? { ...conv, has_unread_messages: false } : conv
-          )
-        );
-      } catch (err) {
-        console.error(`[ChatPage] Failed to mark conversation ${conversation.id} as read:`, err);
-      }
-    }
-  }, [setActiveConversationId]);
+    return () => { isMounted = false; };
+  }, [currentUser, isLoadingAuth, setConversations]);
 
+  // Effect to handle conversation specified in URL
   useEffect(() => {
-    if (!initialLoadDone || conversations.length === 0) return;
-
     const queryConvId = searchParams.get('conversationId');
-    if (queryConvId) {
-      const convId = parseInt(queryConvId, 10);
-      if (!isNaN(convId)) {
-        const targetConversation = conversations.find(conv => conv.id === convId);
-        if (targetConversation) {
-          if (selectedUser?.id !== targetConversation.other_user.id) {
-             console.log(`[ChatPage] Selecting conversation ${convId} from query parameter.`);
-             handleSelectUser(targetConversation);
-          }
-        } else {
-           console.warn(`[ChatPage] Conversation ID ${convId} from query parameter not found in the list.`);
+    if (!queryConvId) return;
+
+    const convId = parseInt(queryConvId, 10);
+    if (isNaN(convId)) return;
+    
+    let isMounted = true;
+
+    const handleUrlConversation = async () => {
+        // Only set active if it's not already the active one
+        if (convId !== activeConversationId) {
+            const existingConv = conversations.find(c => c.id === convId);
+            if (existingConv) {
+                setActiveConversationId(convId);
+            } else {
+                // If conversation is not in the store, fetch it
+                try {
+                    const response = await api.get<Conversation>(`/chat/conversations/${convId}`);
+                    if (isMounted) {
+                        addOrUpdateConversation(response.data);
+                        setActiveConversationId(convId);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch specific conversation:", error);
+                    // Maybe redirect or show an error
+                }
+            }
         }
-      }
-    }
-  }, [searchParams, conversations, handleSelectUser, initialLoadDone, selectedUser]);
+    };
+    
+    handleUrlConversation();
+
+    return () => { isMounted = false; };
+  }, [searchParams, conversations, activeConversationId, setActiveConversationId, addOrUpdateConversation]);
+
+  if (isLoadingAuth) {
+    return (
+        <div className="flex h-[calc(100vh-var(--header-height))] items-center justify-center">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        </div>
+    );
+  }
+
+  if (currentUser?.status === 'WAITLISTED' && conversations.length === 0) {
+    return (
+        <div className="container mx-auto py-8 px-4 md:px-6 flex flex-col items-center justify-center h-[calc(100vh-var(--header-height))]">
+            <Alert variant="default" className="border-orange-500 max-w-lg">
+                <Lock className="h-5 w-5 text-orange-600" />
+                <AlertTitle className="text-orange-700 mt-[-2px]">Feature Locked: Chat</AlertTitle>
+                <AlertDescription className="text-muted-foreground mt-2">
+                    You can only chat with Space Admins who have contacted you.
+                    Full chat features will be available once you are accepted into a space.
+                    <br />
+                    Please check your <Link href="/dashboard" className="text-primary hover:underline">dashboard</Link> for status updates.
+                </AlertDescription>
+            </Alert>
+        </div>
+    );
+  }
 
   return (
-    <AuthenticatedLayout>
-      <div className="flex h-[calc(100vh-var(--header-height))] border"> {/* Adjust height based on your layout header */} 
+      <div className="flex h-[calc(100vh-var(--header-height))] border">
         <ResizablePanelGroup direction="horizontal" className="rounded-lg border">
-          {/* Column 1: Contact List */}
           <ResizablePanel defaultSize={25} maxSize={30} minSize={20}>
             <div className="flex h-full items-center justify-center p-2">
-              <ContactList 
-                conversations={conversations}
-                isLoading={isLoading}
-                error={error}
-                onSelectUser={handleSelectUser} 
-                selectedUser={selectedUser} 
-              />
+              <ContactList />
             </div>
           </ResizablePanel>
           <ResizableHandle withHandle />
-          {/* Column 2 & 3: Message Area & Input */}
           <ResizablePanel defaultSize={75}>
-            <div className="flex flex-col h-full">
-              {/* Message Area */} 
-              <div className="flex-grow overflow-y-auto">
-                <MessageArea 
-                  key={selectedUser ? selectedUser.id : 'empty-chat'} 
-                  selectedUser={selectedUser} 
-                />
-              </div>
-              {/* Conditionally render Input Area */} 
-              {selectedUser && (
-                <div className="border-t bg-background"> {/* Removed p-4, MessageInput now has its own p-4 */}
-                  <MessageInput selectedUser={selectedUser} />
+            {activeConversation ? (
+                <div className="flex flex-col h-full">
+                    <div className="flex-grow overflow-y-auto">
+                        <MessageArea />
+                    </div>
+                    <div className="border-t bg-background">
+                        <MessageInput />
+                    </div>
                 </div>
-              )}
-            </div>
+            ) : (
+                <div className="flex flex-col h-full items-center justify-center text-center text-muted-foreground bg-muted/20">
+                    <MessageSquare className="h-12 w-12 mb-4" />
+                    <h2 className="text-xl font-semibold">Select a conversation</h2>
+                    <p className="text-sm">Choose a contact from the list to start chatting.</p>
+                </div>
+            )}
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
-    </AuthenticatedLayout>
   );
+}
+
+export default function ChatPage() {
+    return (
+        <AuthenticatedLayout>
+            <Suspense fallback={
+                <div className="flex h-[calc(100vh-var(--header-height))] items-center justify-center">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                </div>
+            }>
+                <ChatPageContent />
+            </Suspense>
+        </AuthenticatedLayout>
+    )
 } 

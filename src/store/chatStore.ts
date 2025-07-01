@@ -1,5 +1,11 @@
 import { create } from 'zustand';
-import { User } from './userStore'; // Assuming User type is imported from userStore or similar
+import { useAuthStore } from './authStore'; // Import auth store
+// import { User } from './userStore'; // Assuming User type is imported from userStore or similar - NO, now from @/types/chat
+import { User, Message, Conversation, MessageReaction, ReactionUpdatedEventPayload, ConversationData } from '@/types/chat'; // Added import
+
+interface AuthState {
+  //...
+}
 
 interface ChatState {
   onlineUserIds: Set<number>;
@@ -9,11 +15,14 @@ interface ChatState {
   conversations: Conversation[];
   activeConversationId: number | null;
   setConversations: (conversations: Conversation[]) => void;
+  addOrUpdateConversation: (conversation: ConversationData, currentUserId: string | number) => void;
   addMessage: (message: Message) => void;
   setActiveConversationId: (conversationId: number | null) => void;
   loadMessagesForConversation: (conversationId: number, messages: Message[], hasMore: boolean) => void;
   updateMessageReaction: (payload: ReactionUpdatedEventPayload) => void;
   updateMessage: (updatedMessage: Message) => void;
+  setConversationLoading: (conversationId: number, isLoading: boolean) => void;
+  setMessagesForConversation: (conversationId: number, messages: Message[]) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -29,23 +38,101 @@ export const useChatStore = create<ChatState>((set, get) => ({
       newSet.delete(userId);
       return { onlineUserIds: newSet };
     }),
-  setConversations: (conversations) => set({ conversations }),
+  setConversations: (conversations) => {
+      const conversationsWithDefaults = conversations.map(c => ({
+          ...c,
+          messages: c.messages || [],
+          isLoadingMessages: false,
+          hasMoreMessages: true,
+          messagesFetched: false,
+      }));
+      set({ conversations: conversationsWithDefaults });
+  },
+  addOrUpdateConversation: (conversation, currentUserId) => set(state => {
+    // Ensure conversation has the 'other_user' field if it has 'participants'
+    let conversationToProcess: Conversation = { ...conversation };
+    if ('participants' in conversationToProcess && !conversationToProcess.other_user) {
+        const participants = (conversationToProcess as ConversationData).participants;
+        // The user ID from auth store can be a string, participants have number IDs
+        const otherUser = participants.find(p => p.id.toString() !== currentUserId.toString());
+        if (otherUser) {
+            conversationToProcess.other_user = otherUser;
+        }
+        delete (conversationToProcess as Partial<ConversationData>).participants;
+    }
+
+    const existingConvIndex = state.conversations.findIndex(c => c.id === conversationToProcess.id);
+    const newConversations = [...state.conversations];
+    
+    const conversationWithDefaults = {
+        ...conversationToProcess,
+        messages: conversationToProcess.messages || [],
+        isLoadingMessages: false,
+        hasMoreMessages: true,
+        messagesFetched: !!(existingConvIndex > -1 && newConversations[existingConvIndex].messagesFetched),
+    };
+
+    if (existingConvIndex > -1) {
+        // Merge messages to prevent overwriting loaded history
+        const existingMessages = newConversations[existingConvIndex].messages || [];
+        const newMessages = conversationWithDefaults.messages || [];
+        const combinedMessages = [...existingMessages];
+        const existingMessageIds = new Set(existingMessages.map(m => m.id));
+        newMessages.forEach(msg => {
+            if (!existingMessageIds.has(msg.id)) {
+                combinedMessages.push(msg);
+            }
+        });
+        // Sort messages by creation time
+        combinedMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+        newConversations[existingConvIndex] = { ...newConversations[existingConvIndex], ...conversationWithDefaults, messages: combinedMessages };
+    } else {
+        newConversations.unshift(conversationWithDefaults);
+    }
+    return { conversations: newConversations };
+  }),
   addMessage: (message) => set((state) => {
+    let conversationExists = false;
     const conversations = state.conversations.map((conv) => {
       if (conv.id === message.conversation_id) {
-        // Add reactions array if it's not already part of the message object construction
+        conversationExists = true;
+        // Avoid duplicating messages
+        if (conv.messages.some(m => m.id === message.id)) {
+          return conv;
+        }
         const messageWithReactions = { ...message, reactions: message.reactions || [] };
         return {
           ...conv,
           messages: [...conv.messages, messageWithReactions],
-          last_message: messageWithReactions, // Also update last_message
+          last_message: messageWithReactions,
+          unread_count: (conv.unread_count || 0) + 1,
         };
       }
       return conv;
     });
+
+    // If conversation doesn't exist, we can't properly add the message
+    // as we lack context (participants, etc.). This should be handled
+    // by fetching the conversation first.
+    // For now, we log this case. A better approach might be to trigger a fetch.
+    if (!conversationExists) {
+        console.warn("Received message for a conversation not in store:", message);
+    }
+
     return { conversations };
   }),
-  setActiveConversationId: (conversationId) => set({ activeConversationId: conversationId }),
+  setActiveConversationId: (conversationId) => {
+    set((state) => {
+        const conversations = state.conversations.map(c => {
+            if (c.id === conversationId) {
+                return { ...c, unread_count: 0 };
+            }
+            return c;
+        });
+        return { activeConversationId: conversationId, conversations };
+    });
+  },
   loadMessagesForConversation: (conversationId, messages, hasMore) => set((state) => {
     const conversations = state.conversations.map((conv) => {
       if (conv.id === conversationId) {
@@ -53,7 +140,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         return {
           ...conv,
           // Prepend older messages, ensure reactions are initialized
-          messages: [...messagesWithReactions, ...conv.messages],
+          messages: [...messagesWithReactions, ...conv.messages.filter(m => !messages.some(nm => nm.id === m.id))],
           isLoadingMessages: false,
           hasMoreMessages: hasMore,
         };
@@ -62,6 +149,25 @@ export const useChatStore = create<ChatState>((set, get) => ({
     });
     return { conversations };
   }),
+  setConversationLoading: (conversationId, isLoading) => set(state => ({
+    conversations: state.conversations.map(conv => 
+      conv.id === conversationId ? { ...conv, isLoadingMessages: isLoading } : conv
+    )
+  })),
+  setMessagesForConversation: (conversationId, messages) => set(state => ({
+    conversations: state.conversations.map(conv => {
+        if (conv.id === conversationId) {
+            return {
+                ...conv,
+                messages: messages,
+                messagesFetched: true,
+                isLoadingMessages: false,
+                hasMoreMessages: messages.length >= 100, // Assuming pagination limit is 100
+            };
+        }
+        return conv;
+    }),
+  })),
   updateMessageReaction: (payload) => set((state) => {
     const conversations = state.conversations.map((conv) => {
       if (conv.id === payload.conversation_id) {
@@ -129,48 +235,5 @@ export const useChatStore = create<ChatState>((set, get) => ({
     return { conversations };
   }),
 }));
-
-export interface MessageReaction {
-  id: number;
-  emoji: string;
-  message_id: number;
-  user_id: number;
-  created_at: string; // ISO date string
-  // user?: User; // Optional: if you plan to include user details directly
-}
-
-export interface ReactionUpdatedEventPayload {
-  message_id: number;
-  conversation_id: number;
-  reaction: MessageReaction | null; // Reaction object if added, null if removed by toggle
-  user_id_who_reacted: number;
-  emoji: string; // The emoji that was acted upon
-  action: "added" | "removed";
-}
-
-// Modify the existing Message interface to include reactions
-export interface Message {
-  id: number;
-  sender_id: number;
-  conversation_id: number;
-  content: string;
-  created_at: string; // ISO date string
-  updated_at?: string | null; // ISO date string - Make optional as it might be null
-  read_at?: string | null; // ISO date string
-  is_deleted: boolean;      // Add field for soft deletion
-  sender: User; // Assuming User type is defined elsewhere or inline here
-  reactions: MessageReaction[]; // Array of reactions
-}
-
-export interface Conversation {
-  id: number;
-  // other_user: User; // This was in your backend schema, adapt as needed for frontend state
-  participants: User[]; // Representing all participants including current user
-  last_message: Message | null;
-  unread_count: number;
-  messages: Message[];
-  isLoadingMessages: boolean;
-  hasMoreMessages: boolean;
-}
 
 export default useChatStore; 

@@ -11,9 +11,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
+import UnauthenticatedLayout from '@/components/layout/UnauthenticatedLayout';
+import { resetPassword } from "@/lib/api/auth";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -50,20 +52,7 @@ function ResetPasswordForm() {
     setMessage(null);
 
     try {
-      // Adjust URL if needed
-      const response = await fetch("http://localhost:8000/api/auth/reset-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ token, new_password: password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "Failed to reset password.");
-      }
+      await resetPassword(token, password);
 
       setMessage("Password reset successfully! You can now log in.");
       // Optional: Redirect to login after a short delay
@@ -89,24 +78,24 @@ function ResetPasswordForm() {
           <CardContent className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="password">New Password</Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isLoading || !token || !!message} // Disable if loading, no token, or success
+                autoComplete="new-password"
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="confirm-password">Confirm New Password</Label>
-              <Input
+              <PasswordInput
                 id="confirm-password"
-                type="password"
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 disabled={isLoading || !token || !!message}
+                autoComplete="new-password"
               />
             </div>
              {message && (
@@ -139,8 +128,10 @@ function ResetPasswordForm() {
 // Wrap with Suspense because useSearchParams() needs it during initial render
 export default function ResetPasswordPage() {
     return (
+      <UnauthenticatedLayout>
         <Suspense fallback={<div>Loading...</div>}> 
             <ResetPasswordForm />
         </Suspense>
+      </UnauthenticatedLayout>
     );
 } 
