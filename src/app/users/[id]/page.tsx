@@ -6,7 +6,7 @@ import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
 import AuthGuard from "@/components/layout/AuthGuard";
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, AlertTriangle, ArrowLeft, UserCheck, Check } from 'lucide-react';
+import { Loader2, AlertTriangle, ArrowLeft, UserCheck, Check, MessageSquare } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
@@ -89,6 +89,11 @@ const UserProfilePage = () => {
     }
   };
 
+  const handleMessage = () => {
+    if (!userDetail) return;
+    router.push(`/chat?userId=${userDetail.id}`);
+  };
+
     if (isLoading) {
     return (
       <AuthenticatedLayout>
@@ -133,7 +138,11 @@ const UserProfilePage = () => {
                 connectButtonRender = <Button disabled variant="outline"><Check className="mr-2 h-4 w-4" /> Request Sent</Button>;
                 break;
             case 'connected':
-                connectButtonRender = <Button disabled variant="outline"><UserCheck className="mr-2 h-4 w-4" /> Connected</Button>;
+                connectButtonRender = (
+                    <Button onClick={handleMessage}>
+                        <MessageSquare className="mr-2 h-4 w-4" /> Message
+                    </Button>
+                );
                 break;
             case 'error': // Offer retry
             case 'idle':

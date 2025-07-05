@@ -92,6 +92,19 @@ export interface WorkstationUnassignRequest {
   workstation_id: number;
 }
 
+// Based on app.schemas.space.BrowseableSpace
+export interface BrowsableSpace {
+  id: number;
+  name: string;
+  address: string | null;
+  headline: string | null;
+  cover_image_url: string | null;
+  total_workstations: number;
+  company_name: string;
+  company_id: number | null;
+  interest_status: string;
+}
+
 // Based on app.schemas.space.WorkstationStatusUpdateRequest
 export interface WorkstationStatusUpdateRequest {
   status: WorkstationStatus;
@@ -102,7 +115,6 @@ export interface WorkstationStatusUpdateRequest {
 // but for now, let's assume it returns a list of BasicUser.
 // If it's the full User schema from app.schemas.user.User, we might need a more detailed interface.
 // For simplicity now, reusing BasicUser:
-export type EmployeeListResponse = BasicUser[];
 
 // Generic message response (app.schemas.message.Message)
 export interface MessageResponse {
@@ -125,6 +137,7 @@ export interface SpaceConnectionStatsResponse {
 export interface BasicCompany {
   id: number;
   name: string;
+  logo_url?: string | null;
 }
 
 // Basic Space Information
@@ -152,6 +165,7 @@ export interface WorkstationUpdate {
 
 import { User } from '../types/auth';
 import { Startup } from '../types/organization';
+import { UserRole } from './enums';
 
 export interface Interest {
     id: number;
@@ -159,4 +173,80 @@ export interface Interest {
     status: string;
     startup?: Startup;
     created_at: string;
+} 
+
+export interface Space {
+  id: number;
+  name: string;
+  address: string | null;
+  company_id: number | null;
+  total_workstations: number;
+  headline: string | null;
+  amenities: string[] | null;
+  house_rules: string | null;
+  vibe: string | null;
+  opening_hours?: any;
+  key_highlights: string[] | null;
+  neighborhood_description: string | null;
+  description: string | null;
+}
+
+export interface SpaceImage {
+  id: number;
+  image_url: string;
+  description?: string;
+}
+
+export interface SpaceProfile {
+  id: number;
+  name: string;
+  address?: string;
+  headline?: string;
+  description?: string;
+  amenities?: string[];
+  house_rules?: string;
+  vibe?: string;
+  key_highlights?: string[];
+  images: SpaceImage[];
+  company?: BasicCompany | null;
+}
+
+export interface SpaceProfileUpdate {
+  name?: string;
+  address?: string;
+  headline?: string;
+  description?: string;
+  amenities?: string[];
+  house_rules?: string;
+  vibe?: string;
+  key_highlights?: string[];
+}
+
+export interface SpaceCreate {
+  name: string;
+  address: string;
+  total_workstations: number;
+  corporate_admin_id?: number;
+  company_id?: number | null;
+}
+
+interface WaitlistedMember {
+  id: number;
+  role: UserRole;
+  full_name?: string;
+}
+
+export interface WaitlistedUser {
+  id: number;
+  name?: string; // For startups
+  full_name?: string; // For freelancers
+  type: 'freelancer' | 'startup';
+  expressed_interest: boolean;
+  interest_id?: number;
+  entity_type: 'user' | 'startup';
+  direct_members?: WaitlistedMember[];
+} 
+
+export interface AddUserToSpaceRequest {
+  user_id: number;
 } 

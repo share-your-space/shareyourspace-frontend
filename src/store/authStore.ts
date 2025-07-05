@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { api } from '@/lib/api';
+import { UserRole } from '@/types/enums';
 
 export interface UserAuthInfo {
   id: number;
   email: string;
   full_name: string | null;
-  role: 'FREELANCER' | 'STARTUP_ADMIN' | 'STARTUP_MEMBER' | 'CORP_ADMIN' | 'SYS_ADMIN' | null;
+  role: UserRole | null;
   status: string;
   company_id?: number | null;
   startup_id?: number | null;

@@ -1,5 +1,6 @@
 import { TeamSize, StartupStage, UserStatus } from './enums';
 import { UserSimpleInfo } from './connection';
+import { User } from './user';
 
 interface OrganizationBase {
   name: string;
@@ -12,11 +13,17 @@ interface OrganizationBase {
   social_media_links?: { [key: string]: string } | null;
 }
 
-export interface Company extends OrganizationBase {
+export interface Company {
   id: number;
-  created_at: string;
-  updated_at: string;
-  admin?: UserSimpleInfo | null;
+  name: string;
+  logo_url?: string;
+  website?: string;
+  industry_focus?: string;
+  team_size?: TeamSize;
+  description?: string;
+  mission?: string;
+  // This can be expanded based on what the backend provides
+  direct_members?: User[];
 }
 
 export interface Startup extends OrganizationBase {

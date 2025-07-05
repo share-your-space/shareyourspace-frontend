@@ -15,6 +15,8 @@ export interface UserProfile {
   linkedin_profile_url?: string | null;
   profile_picture_url?: string | null; // Blob name
   profile_picture_signed_url?: string | null; // Temporary signed URL
+  cover_photo_url?: string | null; // Blob name for cover photo
+  cover_photo_signed_url?: string | null; // Temporary signed URL for cover
 }
 
 // Fields that can be updated for a user profile
@@ -28,5 +30,6 @@ export interface UserProfileUpdateRequest {
   collaboration_preferences?: string[] | null;
   tools_technologies?: string[] | null;
   linkedin_profile_url?: string | null;
+  cover_photo_url?: string | null;
   // profile_picture_url is typically handled by a separate upload endpoint
 } 

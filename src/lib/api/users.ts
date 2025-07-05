@@ -11,7 +11,7 @@ const USERS_API_BASE = "/users";
 export const getUserDetailedProfile = async (userId: number): Promise<UserDetail> => {
   try {
     const response = await apiClient.get<UserDetail>(
-      `${USERS_API_BASE}/${userId}/detailed-profile`
+      `${USERS_API_BASE}/${userId}`
     );
     return response.data;
   } catch (error) {
@@ -25,8 +25,11 @@ export const getUserDetailedProfile = async (userId: number): Promise<UserDetail
  */
 export const getMyProfile = async (): Promise<UserProfile> => {
   try {
-    const response = await apiClient.get<UserProfile>(`${USERS_API_BASE}/me/profile`);
-    return response.data;
+    const response = await apiClient.get<UserDetail>(`${USERS_API_BASE}/me`);
+    if (!response.data.profile) {
+      throw new Error("User profile is not available.");
+    }
+    return response.data.profile;
   } catch (error) {
     console.error("Error fetching current user's profile:", error);
     throw error;
@@ -39,7 +42,7 @@ export const getMyProfile = async (): Promise<UserProfile> => {
  */
 export const updateMyProfile = async (profileData: UserProfileUpdateRequest): Promise<UserProfile> => {
   try {
-    const response = await apiClient.put<UserProfile>(`${USERS_API_BASE}/me/profile`, profileData);
+    const response = await apiClient.put<UserProfile>(`${USERS_API_BASE}/me`, profileData);
     return response.data;
   } catch (error) {
     console.error("Error updating current user's profile:", error);
@@ -57,7 +60,7 @@ export const uploadMyProfilePicture = async (file: File): Promise<UserProfile> =
 
   try {
     const response = await apiClient.post<UserProfile>(
-      `${USERS_API_BASE}/me/profile/picture`,
+      `${USERS_API_BASE}/me/picture`,
       formData,
       {
         headers: {
@@ -68,6 +71,31 @@ export const uploadMyProfilePicture = async (file: File): Promise<UserProfile> =
     return response.data;
   } catch (error) {
     console.error("Error uploading profile picture:", error);
+    throw error;
+  }
+};
+
+/**
+ * Uploads a cover photo for the currently authenticated user.
+ * @param file The image file to upload.
+ */
+export const uploadCoverPhoto = async (file: File): Promise<UserProfile> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const response = await apiClient.post<UserProfile>(
+      `${USERS_API_BASE}/me/cover-photo`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error uploading cover photo:", error);
     throw error;
   }
 };

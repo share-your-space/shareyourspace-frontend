@@ -1,4 +1,5 @@
-import { api as apiClient } from "../api"; // Adjusted path
+import { apiClient } from "./base";
+import { Space, SpaceProfile } from "@/types/space";
 import type {
   ManagedSpaceDetail,
   EmployeeListResponse,
@@ -18,7 +19,11 @@ import type {
   WorkstationCreate,
   WorkstationUpdate
 } from '../../types/space';
-import { Space, SpaceCreate, SpaceUpdate, SpaceUser, SpaceUserListResponse, BasicStartup } from "@/types/space";
+import { SpaceCreate, SpaceUpdate, SpaceUser, SpaceUserListResponse, BasicStartup } from "@/types/space";
+
+// Note: This file will be updated to include public-facing space functions,
+// such as fetching a space's public profile, listing available spaces, etc.
+// Admin-specific functionality has been moved to corp-admin.ts and sys-admin.ts.
 
 const API_BASE_URL = '/spaces'; // Correct base path for space-related APIs
 
@@ -127,21 +132,23 @@ export const getStartupsInMySpace = async (): Promise<BasicStartup[]> => {
   }
 }; 
 
-// --- System Admin level space management ---
-
 /**
- * [Admin] Fetches a list of all spaces in the system.
+ * Fetches the public profile of a specific space.
+ * This is a public endpoint.
+ * @param spaceId The ID of the space.
  */
-export const adminGetAllSpaces = async (): Promise<Space[]> => {
-    const response = await apiClient.get<Space[]>('/admin/spaces');
+export const getSpaceProfile = async (spaceId: string): Promise<SpaceProfile> => {
+  const response = await apiClient.get<SpaceProfile>(`/spaces/${spaceId}/profile`);
     return response.data;
 };
 
 /**
- * [Admin] Creates a new space.
- * @param spaceData - The data for the new space, including company_id.
+ * Fetches a list of all publicly browsable spaces.
  */
-export const adminCreateSpace = async (spaceData: SpaceCreate): Promise<Space> => {
-    const response = await apiClient.post<Space>('/admin/spaces', spaceData);
+export const listBrowsableSpaces = async (): Promise<Space[]> => {
+  const response = await apiClient.get<Space[]>('/spaces');
     return response.data;
 };
+
+// Add other public-facing space-related API functions here, for example:
+// - expressInterestInSpace

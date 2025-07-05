@@ -120,3 +120,19 @@
     @apply bg-background text-foreground;
   }
 }
+
+@tailwind utilities;
+
+.embla {
+  overflow: hidden;
+  height: 100%;
+}
+.embla__container {
+  display: flex;
+  height: 100%;
+}
+.embla__slide {
+  position: relative;
+  flex: 0 0 100%;
+  min-width: 0;
+}

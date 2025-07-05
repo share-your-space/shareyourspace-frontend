@@ -40,4 +40,10 @@ export enum StartupStage {
     GROWTH = "Growth",
 }
 
+export enum WorkstationStatus {
+    AVAILABLE = "AVAILABLE",
+    OCCUPIED = "OCCUPIED",
+    MAINTENANCE = "MAINTENANCE",
+}
+
 // Add other shared enums here 

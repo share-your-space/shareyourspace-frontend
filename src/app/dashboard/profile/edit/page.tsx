@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, ChangeEvent } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,14 +11,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from 'sonner';
 import { UserProfile, UserProfileUpdateRequest } from '@/types/userProfile';
 import { ContactVisibility } from '@/types/enums';
-import { getMyProfile, updateMyProfile, uploadMyProfilePicture } from '@/lib/api/users';
+import { getMyProfile, updateMyProfile, uploadMyProfilePicture, uploadCoverPhoto } from '@/lib/api/users';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, UploadCloud } from 'lucide-react';
+import { ArrowLeft, UploadCloud, Edit } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { ProfileHeader } from '@/components/profile/ProfileHeader';
+import { Separator } from '@/components/ui/separator';
+import { EditableSection } from '@/components/corp-admin/space-profile/EditableSection';
+import { TagInput } from '@/components/ui/TagInput';
+import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
 
 const profileFormSchema = z.object({
   title: z.string().max(100, "Title too long").optional().nullable(),
@@ -34,289 +39,187 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-const TagInput = ({ value: tags = [], onChange, placeholder }: { value?: string[] | null, onChange: (tags: string[]) => void, placeholder: string }) => {
-    const [inputValue, setInputValue] = useState('');
-
-    const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-        setInputValue(e.target.value);
-    };
-
-    const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter' || e.key === ',') {
-            e.preventDefault();
-            const newTag = inputValue.trim();
-            if (newTag && !tags.includes(newTag)) {
-                onChange([...tags, newTag]);
-            }
-            setInputValue('');
-        }
-    };
-
-    const removeTag = (tagToRemove: string) => {
-        onChange(tags.filter(tag => tag !== tagToRemove));
-    };
-
-    return (
-        <div>
-            <div className="flex flex-wrap gap-2 mb-2">
-                {tags.map((tag, index) => (
-                    <div key={index} className="flex items-center bg-muted text-muted-foreground rounded-full px-3 py-1 text-sm">
-                        {tag}
-                        <button type="button" onClick={() => removeTag(tag)} className="ml-2 text-muted-foreground hover:text-foreground">
-                            &times;
-                        </button>
-                    </div>
-                ))}
-            </div>
-            <Input
-                value={inputValue}
-                onChange={handleInputChange}
-                onKeyDown={handleInputKeyDown}
-                placeholder={placeholder}
-            />
-        </div>
-    );
-};
-
-export default function EditProfilePage() {
+const EditProfilePage = () => {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [profileData, setProfileData] = useState<UserProfile | null>(null);
+  const authIsLoading = useAuthStore((state) => state.isLoading);
+  const [isPageLoading, setIsPageLoading] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
-  const { toast } = useToast();
 
-  const form = useForm<ProfileFormValues>({
+  const { control, reset, getValues } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
-    defaultValues: {},
+    defaultValues: {
+      title: '',
+      bio: '',
+      skills_expertise: [],
+      industry_focus: [],
+      tools_technologies: [],
+      linkedin_profile_url: '',
+    }
   });
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      setIsLoading(true);
-      try {
-        const data = await getMyProfile();
-        setProfileData(data);
-        form.reset({
-          title: data.title || '',
-          bio: data.bio || '',
-          contact_info_visibility: data.contact_info_visibility || undefined,
-          skills_expertise: data.skills_expertise || [],
-          industry_focus: data.industry_focus || [],
-          project_interests_goals: data.project_interests_goals || '',
-          collaboration_preferences: data.collaboration_preferences || [],
-          tools_technologies: data.tools_technologies || [],
-          linkedin_profile_url: data.linkedin_profile_url || '',
-        });
-        if (data.profile_picture_signed_url) {
-          setPreviewImageUrl(data.profile_picture_signed_url);
-        }
-      } catch (error) {
-        toast({ title: "Error", description: "Failed to load your profile data.", variant: "destructive" });
-        router.push('/dashboard');
-      } finally {
-        setIsLoading(false);
+  const fetchProfile = useCallback(async () => {
+    setIsPageLoading(true);
+    try {
+      const fetchedProfile = await getMyProfile();
+      setProfile(fetchedProfile);
+      reset({
+        title: fetchedProfile.title || '',
+        bio: fetchedProfile.bio || '',
+        contact_info_visibility: fetchedProfile.contact_info_visibility || undefined,
+        skills_expertise: fetchedProfile.skills_expertise || [],
+        industry_focus: fetchedProfile.industry_focus || [],
+        project_interests_goals: fetchedProfile.project_interests_goals || '',
+        collaboration_preferences: fetchedProfile.collaboration_preferences || [],
+        tools_technologies: fetchedProfile.tools_technologies || [],
+        linkedin_profile_url: fetchedProfile.linkedin_profile_url || '',
+      });
+      if (fetchedProfile.profile_picture_signed_url) {
+        setPreviewImageUrl(fetchedProfile.profile_picture_signed_url);
       }
-    };
-    if (user) {
-      fetchProfile();
-    } else if (!isLoading) { // If still loading user from store, wait. If store loaded and no user, redirect.
-      // This check might need refinement depending on auth store behavior
-      // router.push('/login'); 
+    } catch (error) {
+      toast.error("Failed to load your profile data.");
+      router.push('/dashboard');
+    } finally {
+      setIsPageLoading(false);
     }
-  }, [user]);
+  }, [reset, router]);
+
+  useEffect(() => {
+    if (!authIsLoading && user) {
+      fetchProfile();
+    } else if (!authIsLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authIsLoading, fetchProfile, router]);
   
-  const handlePictureChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setProfilePictureFile(file);
-      const tempUrl = URL.createObjectURL(file);
-      setPreviewImageUrl(tempUrl);
-      // Clean up object URL when component unmounts or file changes
-      return () => URL.revokeObjectURL(tempUrl);
+  const handleProfilePictureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      try {
+        const updatedProfile = await uploadMyProfilePicture(e.target.files[0]);
+        setProfile(updatedProfile);
+        setPreviewImageUrl(updatedProfile.profile_picture_signed_url);
+        setProfilePictureFile(null);
+        toast.success("Profile picture updated!");
+      } catch (error) {
+        toast.error("Failed to upload profile picture.");
+      }
     }
   };
 
-  async function onSubmit(values: ProfileFormValues) {
+  const handleCoverPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      try {
+        const updatedProfile = await uploadCoverPhoto(e.target.files[0]);
+        setProfile(updatedProfile);
+        toast.success("Cover photo updated!");
+      } catch (error) {
+        toast.error("Failed to upload cover photo.");
+      }
+    }
+  };
+
+  const handleSave = async (fields: (keyof ProfileFormValues)[]) => {
     if (!user) {
-      toast({ title: "Error", description: "User not authenticated.", variant: "destructive" });
+      toast.error("User not authenticated.");
       return;
     }
-    setIsSubmitting(true);
     try {
-      let currentProfile = profileData;
-      if (profilePictureFile) {
-        const pictureUploadResponse = await uploadMyProfilePicture(profilePictureFile);
-        currentProfile = pictureUploadResponse;
-        setProfileData(pictureUploadResponse);
-        setPreviewImageUrl(pictureUploadResponse.profile_picture_signed_url); 
-        setProfilePictureFile(null);
-        toast({ title: "Success", description: "Profile picture updated!" });
-      }
-
-      const updateRequest: UserProfileUpdateRequest = {
-        ...values,
-        linkedin_profile_url: values.linkedin_profile_url || null,
-        // Ensure array fields are always sent as arrays
-        skills_expertise: values.skills_expertise || [],
-        industry_focus: values.industry_focus || [],
-      };      
-      const response = await updateMyProfile(updateRequest);
-      
-      setProfileData(response);
-      form.reset({
-        title: response.title || '',
-        bio: response.bio || '',
-        contact_info_visibility: response.contact_info_visibility || undefined,
-        skills_expertise: response.skills_expertise || [],
-        industry_focus: response.industry_focus || [],
-        project_interests_goals: response.project_interests_goals || '',
-        collaboration_preferences: response.collaboration_preferences || [],
-        tools_technologies: response.tools_technologies || [],
-        linkedin_profile_url: response.linkedin_profile_url || '',
+      const dataToSave: Partial<UserProfileUpdateRequest> = {};
+      fields.forEach(field => {
+        dataToSave[field] = getValues(field);
       });
-      if (response.profile_picture_signed_url) { // Ensure preview is updated if only text was changed but pic exists
-          setPreviewImageUrl(response.profile_picture_signed_url);
-      }
-
-      toast({ title: "Profile Updated", description: "Your profile has been successfully updated." });
+      const updatedProfile = await updateMyProfile(dataToSave);
+      setProfile(updatedProfile);
+      toast.success("Profile Updated");
       router.push(`/dashboard/users/${user.id}`);
     } catch (error: any) {
       const msg = error.response?.data?.detail || error.message || "Failed to update profile.";
-      toast({ title: "Update Failed", description: msg, variant: "destructive" });
-    } finally {
-      setIsSubmitting(false);
+      toast.error(msg);
     }
-  }
+  };
 
-  if (isLoading || !user && isLoading) { // Show loading if initial user or profile fetch is in progress
+  if (isPageLoading || authIsLoading) {
     return <div className="container mx-auto p-4 flex justify-center items-center min-h-screen"><p>Loading profile editor...</p></div>;
   }
-  if (!user && !isLoading) { // If loading finished and still no user, likely an auth issue
-     router.push('/login'); // Or a more graceful handling
-     return <div className="container mx-auto p-4 flex justify-center items-center min-h-screen"><p>Redirecting to login...</p></div>;
+  
+  if (!user || !profile) {
+    return <div className="container mx-auto p-4 flex justify-center items-center min-h-screen"><p>Could not load profile.</p></div>;
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-8 max-w-3xl">
-      <Button variant="outline" onClick={() => router.back()} className="mb-6">
-        <ArrowLeft className="mr-2 h-4 w-4" /> Cancel
-      </Button>
-      <Card className="shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-2xl">Edit Your Profile</CardTitle>
-          <CardDescription>Update your personal and professional information.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <FormItem>
-                <FormLabel>Profile Picture</FormLabel>
-                <div className="flex items-center space-x-4">
-                  <Avatar className="h-24 w-24 border">
-                    <AvatarImage src={previewImageUrl || undefined} alt="Profile Preview" />
-                    <AvatarFallback><UploadCloud /></AvatarFallback>
-                  </Avatar>
-                  <FormControl>
-                     <Input type="file" accept="image/*" onChange={handlePictureChange} className="max-w-xs"/>
-                  </FormControl>
-                </div>
-                <FormMessage /> 
-              </FormItem>
+    <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8">
+      <ProfileHeader 
+        profile={profile}
+        isEditing={isEditing}
+        onProfilePictureUpload={handleProfilePictureUpload}
+        onCoverPhotoUpload={handleCoverPhotoUpload}
+      />
+      
+      <div className="pt-12">
+        <div className="flex justify-between items-center">
+          <div className="text-center flex-grow">
+            <h1 className="text-3xl font-bold">{profile.full_name}</h1>
+            <p className="text-md text-gray-500">{profile.title}</p>
+          </div>
+          <Button variant="outline" onClick={() => setIsEditing(!isEditing)}>
+            <Edit className="h-4 w-4 mr-2" />
+            {isEditing ? 'Cancel' : 'Edit Profile'}
+          </Button>
+        </div>
+      </div>
+      
+      <Separator />
 
-              <FormField control={form.control} name="title" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Title / Headline</FormLabel>
-                  <FormControl><Input placeholder="e.g., Software Engineer, Founder" {...field} value={field.value || ''} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="md:col-span-2 space-y-4">
+          <EditableSection title="About" isEditing={isEditing} onSave={() => handleSave(['bio'])} editContent={
+            <Controller name="bio" control={control} render={({ field }) => <Textarea {...field} rows={5} placeholder="Tell us about yourself..." />} />
+          }>
+            <p className="text-gray-600 prose">{profile.bio || 'Tell us about yourself...'}</p>
+          </EditableSection>
+          
+          <EditableSection title="Skills & Expertise" isEditing={isEditing} onSave={() => handleSave(['skills_expertise'])} editContent={
+            <Controller name="skills_expertise" control={control} render={({ field }) => <TagInput {...field} placeholder="Add a skill..." />} />
+          }>
+            <div className="flex flex-wrap gap-2">
+              {profile.skills_expertise?.map(skill => <div key={skill} className="bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-1 text-sm font-medium">{skill}</div>)}
+            </div>
+          </EditableSection>
 
-              <FormField control={form.control} name="bio" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Bio / About Me</FormLabel>
-                  <FormControl><Textarea placeholder="Tell us a bit about yourself..." {...field} value={field.value || ''} rows={5} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              
-              <FormField control={form.control} name="skills_expertise" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Skills & Expertise</FormLabel>
-                  <FormControl><TagInput value={field.value} onChange={field.onChange} placeholder="Add a skill and press Enter..."/></FormControl>
-                  <FormDescription>Enter a skill and press Enter or comma to add it as a tag.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )} />
+          <EditableSection title="Industry Focus" isEditing={isEditing} onSave={() => handleSave(['industry_focus'])} editContent={
+            <Controller name="industry_focus" control={control} render={({ field }) => <TagInput {...field} placeholder="Add an industry..." />} />
+          }>
+            <div className="flex flex-wrap gap-2">
+              {profile.industry_focus?.map(industry => <div key={industry} className="bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-1 text-sm font-medium">{industry}</div>)}
+            </div>
+          </EditableSection>
 
-              <FormField control={form.control} name="industry_focus" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Industry Focus</FormLabel>
-                   <FormControl><TagInput value={field.value} onChange={field.onChange} placeholder="Add an industry and press Enter..."/></FormControl>
-                   <FormDescription>Enter an industry and press Enter or comma to add it as a tag.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )} />
+          <EditableSection title="Tools & Technologies" isEditing={isEditing} onSave={() => handleSave(['tools_technologies'])} editContent={
+            <Controller name="tools_technologies" control={control} render={({ field }) => <TagInput {...field} placeholder="Add a tool..." />} />
+          }>
+            <div className="flex flex-wrap gap-2">
+              {profile.tools_technologies?.map(tool => <div key={tool} className="bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-1 text-sm font-medium">{tool}</div>)}
+            </div>
+          </EditableSection>
+          
+          <EditableSection title="LinkedIn" isEditing={isEditing} onSave={() => handleSave(['linkedin_profile_url'])} editContent={
+             <Controller name="linkedin_profile_url" control={control} render={({ field }) => <Input {...field} placeholder="https://linkedin.com/in/yourprofile" />} />
+          }>
+            <a href={profile.linkedin_profile_url} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">{profile.linkedin_profile_url}</a>
+          </EditableSection>
 
-              <FormField control={form.control} name="tools_technologies" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tools & Technologies</FormLabel>
-                  <FormControl><TagInput value={field.value} onChange={field.onChange} placeholder="Add a tool and press Enter..."/></FormControl>
-                  <FormDescription>Enter a tool/tech and press Enter or comma to add it as a tag.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              
-              <FormField control={form.control} name="project_interests_goals" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Project Interests & Goals</FormLabel>
-                  <FormControl><Textarea placeholder="What are you passionate about?" {...field} value={field.value || ''} rows={3}/></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+        </div>
 
-              <FormField control={form.control} name="collaboration_preferences" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Collaboration Preferences</FormLabel>
-                  <FormControl><TagInput value={field.value} onChange={field.onChange} placeholder="Add a preference and press Enter..."/></FormControl>
-                  <FormDescription>How do you like to collaborate? Add tags by pressing Enter or comma.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              
-              <FormField control={form.control} name="linkedin_profile_url" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>LinkedIn Profile URL</FormLabel>
-                  <FormControl><Input placeholder="https://linkedin.com/in/yourprofile" {...field} value={field.value || ''} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-
-              <FormField control={form.control} name="contact_info_visibility" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Contact Info Visibility</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || undefined} defaultValue={field.value || undefined}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select visibility" /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      {Object.values(ContactVisibility).map(val => (
-                        <SelectItem key={val} value={val}>{val.charAt(0).toUpperCase() + val.slice(1)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>Who can see your contact details?</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              
-              <Button type="submit" disabled={isSubmitting || isLoading} className="w-full md:w-auto">
-                {isSubmitting ? "Saving Profile..." : "Save Changes"}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+        <div className="md:col-span-1 space-y-4">
+          <ProfileSidebar />
+        </div>
+      </div>
     </div>
   );
-} 
+};
+
+export default EditProfilePage; 
