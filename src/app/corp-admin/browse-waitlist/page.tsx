@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { getRankedWaitlist, addTenantToSpace } from '@/lib/api/corp-admin';
-import { AdminUserView as WaitlistedUser, Startup as WaitlistedStartup } from '@/types/admin';
+import { AdminUserView as WaitlistedUser } from '@/types/admin';
+import { Startup as WaitlistedStartup } from '@/types/organization';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
