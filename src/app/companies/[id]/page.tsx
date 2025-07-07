@@ -31,7 +31,7 @@ type CompanyFormValues = z.infer<typeof companyFormSchema>;
 
 const CompanyProfilePage = () => {
   const params = useParams();
-  const { user, updateUser } = useAuthStore();
+  const { user, refreshCurrentUser } = useAuthStore();
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -69,14 +69,22 @@ const CompanyProfilePage = () => {
     fetchCompany();
   }, [fetchCompany]);
 
-  const handleSave = async (field: keyof CompanyFormValues) => {
+  const handleSave = async (field: keyof CompanyUpdate) => {
+    const values = form.getValues();
     try {
-      const value = getValues(field);
-      const updatedCompany = await updateMyCompany({ [field]: value });
-      setCompany(updatedCompany);
-      toast.success('Profile updated!');
+      await updateMyCompany({ [field]: values[field] });
+      toast.success('Profile updated successfully!');
+      
+      // Refetch company data to show updated info
+      fetchCompany(companyId as string);
+
+      // Also refresh the user's auth context if their own company name changed
+      if (user?.company_id === parseInt(companyId as string, 10)) {
+        await refreshCurrentUser();
+      }
+
     } catch (error) {
-       toast.error('Failed to update profile.');
+      toast.error('Failed to update profile.');
     }
   };
 
