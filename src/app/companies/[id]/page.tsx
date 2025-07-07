@@ -69,20 +69,20 @@ const CompanyProfilePage = () => {
     fetchCompany();
   }, [fetchCompany]);
 
-  const handleSave = async (field: keyof CompanyUpdate) => {
+  const handleSave = async () => {
     const values = form.getValues();
     try {
-      await updateMyCompany({ [field]: values[field] });
+      await updateMyCompany(values);
       toast.success('Profile updated successfully!');
       
       // Refetch company data to show updated info
-      fetchCompany(companyId as string);
+      fetchCompany();
 
       // Also refresh the user's auth context if their own company name changed
-      if (user?.company_id === parseInt(companyId as string, 10)) {
+      if (user?.company_id === companyId) {
         await refreshCurrentUser();
       }
-
+      setIsEditing(false); // Exit editing mode on successful save
     } catch (error) {
       toast.error('Failed to update profile.');
     }
