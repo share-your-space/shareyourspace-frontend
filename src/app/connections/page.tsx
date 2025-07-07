@@ -1,18 +1,18 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
-import AuthGuard from "@/components/layout/AuthGuard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription as AlertDesc } from "@/components/ui/alert";
-import { Loader2, AlertTriangle, UserPlus, UserCheck, UserX, Inbox, Send, LinkIcon, Trash2, MessageSquare, Lock } from 'lucide-react';
+import { Loader2, AlertTriangle, UserCheck, UserX, Inbox, Send, LinkIcon, Trash2, MessageSquare, Lock } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
+import AuthGuard from '@/components/layout/AuthGuard';
+import { AxiosError } from 'axios';
 
 // Types (should ideally be in @/types/connection.ts and imported)
 interface UserReference {
@@ -147,9 +147,9 @@ const ConnectionsPage = () => {
             if (type === 'incoming') setIncoming(response.data);
             else if (type === 'sent') setSent(response.data);
             else if (type === 'active') setActive(response.data);
-        } catch (err: any) {
+        } catch (err) {
             console.error(`Error fetching ${type} connections:`, err);
-            setError(prev => ({ ...prev, [type]: err.response?.data?.detail || `Failed to fetch ${type} connections.` }));
+            setError(prev => ({ ...prev, [type]: (err as Error).message || `Failed to fetch ${type} connections.` }));
         } finally {
             setIsLoading(prev => ({ ...prev, [type]: false }));
         }
@@ -197,9 +197,13 @@ const ConnectionsPage = () => {
             fetchData('sent');
             fetchData('active');
             useAuthStore.getState().triggerConnectionUpdate(); // Notify other components like Navbar
-        } catch (err: any) {
+        } catch (err) {
             console.error(`Error performing action ${action}:`, err);
-            toast.error(err.response?.data?.detail || `Failed to ${action} connection.`);
+            if (err instanceof AxiosError) {
+                toast.error(err.response?.data?.detail || `Failed to ${action} connection.`);
+            } else {
+                toast.error(`An unexpected error occurred while trying to ${action} connection.`);
+            }
         } finally {
             setIsProcessingAction(prev => ({ ...prev, [connectionId]: false }));
         }
@@ -238,41 +242,36 @@ const ConnectionsPage = () => {
   // Handle overall loading state based on auth status as well
   if (isLoadingAuth) {
     return (
-        <AuthenticatedLayout>
-            <div className="flex justify-center items-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
-        </AuthenticatedLayout>
+        <div className="flex justify-center items-center py-20"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>
     );
   }
 
   // If user is waitlisted, show the specific message
   if (currentUser?.status === 'WAITLISTED') {
     return (
-        <AuthenticatedLayout>
-            <div className="container mx-auto py-8 px-4 md:px-6">
-                <Alert variant="default" className="border-orange-500 mt-10">
-                    <Lock className="h-5 w-5 text-orange-600" />
-                    <CardTitle className="text-orange-700 mt-[-2px]">Feature Locked: Manage Connections</CardTitle>
-                    <AlertDesc className="text-muted-foreground mt-2">
-                        Managing connections, sending requests, and viewing your network will be available once you are actively assigned to a space.
-                        This feature is integral to interacting with the community within your workspace.
-                        <br />
-                        In the meantime, ensure your <Link href="/profile" className="text-primary hover:underline">profile</Link> is up-to-date.
-                    </AlertDesc>
-                    <div className="mt-4">
-                        <Button asChild variant="outline">
-                            <Link href="/dashboard">Go to Dashboard</Link>
-                        </Button>
-                    </div>
-                </Alert>
-            </div>
-        </AuthenticatedLayout>
+        <div className="container mx-auto py-8 px-4 md:px-6">
+            <Alert variant="default" className="border-orange-500 mt-10">
+                <Lock className="h-5 w-5 text-orange-600" />
+                <CardTitle className="text-orange-700 mt-[-2px]">Feature Locked: Manage Connections</CardTitle>
+                <AlertDesc className="text-muted-foreground mt-2">
+                    Managing connections, sending requests, and viewing your network will be available once you are actively assigned to a space.
+                    This feature is integral to interacting with the community within your workspace.
+                    <br />
+                    In the meantime, ensure your <Link href="/profile" className="text-primary hover:underline">profile</Link> is up-to-date.
+                </AlertDesc>
+                <div className="mt-4">
+                    <Button asChild variant="outline">
+                        <Link href="/dashboard">Go to Dashboard</Link>
+                    </Button>
+                </div>
+            </Alert>
+        </div>
     );
   }
 
   // Regular content for non-waitlisted users
   return (
         <AuthGuard>
-    <AuthenticatedLayout>
       <div className="container mx-auto py-8 px-4 md:px-6">
                     <h1 className="text-3xl font-bold tracking-tight mb-8">Manage Connections</h1>
                     <Tabs defaultValue="incoming" className="w-full">
@@ -292,7 +291,6 @@ const ConnectionsPage = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </AuthenticatedLayout>
         </AuthGuard>
   );
 };

@@ -5,6 +5,10 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { User } from '@/types/auth';
+import { UserRole } from '@/types/enums';
+import { initiateChatWithSpaceAdmin } from '@/lib/api/chat';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 interface UserDashboardProps {
   user: User;
@@ -12,6 +16,18 @@ interface UserDashboardProps {
 
 const UserDashboard = ({ user }: UserDashboardProps) => {
   const isWaitlisted = user.status === 'WAITLISTED';
+  const router = useRouter();
+
+  const handleChatWithAdmin = async () => {
+    try {
+      const conversation = await initiateChatWithSpaceAdmin();
+      toast.success("Chat with space admin initiated.");
+      router.push(`/chat?conversationId=${conversation.id}`);
+    } catch (error: any) {
+        const errorMessage = error.response?.data?.detail || "Failed to initiate chat.";
+        toast.error(errorMessage);
+    }
+  };
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -56,6 +72,19 @@ const UserDashboard = ({ user }: UserDashboardProps) => {
           </CardContent>
         </Card>
       </div>
+
+      {user.space_id && user.role !== UserRole.CORP_ADMIN && (
+        <div className="mt-8">
+          <h2 className="text-2xl font-semibold mb-4">My Space</h2>
+          <Card>
+            <CardContent className="pt-6">
+              <h3 className="text-lg font-medium mb-2">Connect with your Space Admin</h3>
+              <p className="text-sm text-muted-foreground mb-3">Have questions about the space? Get in touch with your space admin directly.</p>
+              <Button onClick={handleChatWithAdmin}>Chat with Space Admin</Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Other role-specific sections like Startup Admin panels can be added here as separate components */}
     </div>

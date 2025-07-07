@@ -13,7 +13,7 @@ import { registerFreelancer } from '@/lib/api/auth';
 import { toast } from 'sonner';
 
 const freelancerSchema = z.object({
-  fullName: z.string().min(2, 'Full name must be at least 2 characters'),
+  full_name: z.string().min(2, 'Full name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
 });
@@ -27,7 +27,7 @@ export default function FreelancerSignUpPage() {
   const form = useForm<FreelancerFormValues>({
     resolver: zodResolver(freelancerSchema),
     defaultValues: {
-      fullName: '',
+      full_name: '',
       email: '',
       password: '',
     },
@@ -61,7 +61,7 @@ export default function FreelancerSignUpPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="fullName"
+                name="full_name"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Full Name</FormLabel>

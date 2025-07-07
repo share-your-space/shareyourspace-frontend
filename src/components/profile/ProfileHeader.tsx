@@ -28,8 +28,9 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         <Image
           src={profile.cover_photo_signed_url}
           alt="Cover photo"
-          layout="fill"
-          objectFit="cover"
+          fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          style={{ objectFit: 'cover' }}
           className="rounded-lg"
         />
       )}

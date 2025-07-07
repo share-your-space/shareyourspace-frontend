@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { getRankedWaitlist, approveInterest } from '@/lib/api/corp-admin';
-import { WaitlistedUser } from '@/types/space';
+import { getRankedWaitlist, addTenantToSpace } from '@/lib/api/corp-admin';
+import { WaitlistedUser, WaitlistedStartup } from '@/types/admin';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -11,19 +11,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useDebounce } from '@/hooks/use-debounce';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { useSpace } from '@/context/SpaceContext';
 import { useRouter } from 'next/navigation';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, PlusCircle } from 'lucide-react';
 import { UserRole } from '@/types/enums';
+import { initiateExternalChat } from '@/lib/api/chat';
+import { AddTenantDialog } from '@/components/corp-admin/AddTenantDialog';
+import { useSpace } from '@/context/SpaceContext';
+
+type WaitlistItem = WaitlistedUser | WaitlistedStartup;
 
 const BrowseWaitlistPage = () => {
-  const [waitlist, setWaitlist] = useState<WaitlistedUser[]>([]);
+  const [waitlist, setWaitlist] = useState<WaitlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('interest');
   const [typeFilter, setTypeFilter] = useState('all');
-  const { selectedSpace } = useSpace();
   const router = useRouter();
+  const { selectedSpace } = useSpace();
+  
+  const [isAddTenantDialogOpen, setIsAddTenantDialogOpen] = useState(false);
+  const [selectedTenant, setSelectedTenant] = useState<WaitlistItem | null>(null);
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
@@ -31,7 +38,7 @@ const BrowseWaitlistPage = () => {
     setLoading(true);
     try {
       const apiTypeFilter = typeFilter === 'all' ? undefined : typeFilter;
-      const data = await getRankedWaitlist(debouncedSearchTerm, apiTypeFilter, sortBy);
+      const data = await getRankedWaitlist(debouncedSearchTerm, apiTypeFilter, sortBy, selectedSpace?.id);
       setWaitlist(data);
     } catch (error) {
       toast.error("Failed to load waitlist.");
@@ -43,32 +50,58 @@ const BrowseWaitlistPage = () => {
 
   useEffect(() => {
     fetchWaitlist();
-  }, [debouncedSearchTerm, typeFilter, sortBy]);
+  }, [debouncedSearchTerm, typeFilter, sortBy, selectedSpace]);
 
-  const handleApprove = async (interestId: number) => {
-    if (!selectedSpace) {
-      toast.error("Please select a space first.");
-      return;
-    }
+  const handleOpenAddDialog = (tenant: WaitlistItem) => {
+    setSelectedTenant(tenant);
+    setIsAddTenantDialogOpen(true);
+  };
+
+  const handleCloseAddDialog = () => {
+    setSelectedTenant(null);
+    setIsAddTenantDialogOpen(false);
+  };
+
+  const handleConfirmAddTenant = async (spaceId: number) => {
+    if (!selectedTenant) return;
+
     try {
-      await approveInterest(selectedSpace.id, interestId);
-      toast.success("Interest approved successfully!");
-      fetchWaitlist(); // Refetch the list to remove the approved item
+      const tenantData = {
+        userId: selectedTenant.type === 'freelancer' ? selectedTenant.id : undefined,
+        startupId: selectedTenant.type === 'startup' ? selectedTenant.id : undefined,
+      };
+      await addTenantToSpace(spaceId, tenantData);
+
+      const successMessage = selectedTenant.expressed_interest
+        ? `${selectedTenant.name || selectedTenant.full_name} added to space successfully!`
+        : `Invitation sent to ${selectedTenant.name || selectedTenant.full_name}.`;
+      toast.success(successMessage);
+
+      fetchWaitlist(); // Refresh the list
     } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || "Failed to approve interest.";
+      const errorMessage = error.response?.data?.detail || "Failed to add tenant.";
       toast.error(errorMessage);
-      console.error(error);
+    } finally {
+      handleCloseAddDialog();
     }
   };
 
-  const handleMessage = (userId: number) => {
-    router.push(`/chat?userId=${userId}`);
+  const handleMessage = async (userId: number) => {
+    try {
+      toast.info("Initiating chat...");
+      const conversation = await initiateExternalChat(userId);
+      router.push(`/chat?conversationId=${conversation.id}`);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.detail || "Failed to initiate chat.";
+      toast.error(errorMessage);
+      console.error("Failed to initiate chat", error);
+    }
   };
 
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-bold">Browse Potential Tenants</h2>
+        <h2 className="text-2xl font-bold">Browse Tenants</h2>
         <div className="flex items-center gap-4">
           <Input
             placeholder="Search by name or email..."
@@ -113,11 +146,13 @@ const BrowseWaitlistPage = () => {
           </TableHeader>
           <TableBody>
             {waitlist.map((item) => {
-              const startupAdmin = item.type === 'startup' ? item.direct_members?.find(member => member.role === UserRole.STARTUP_ADMIN) : null;
+              const isAdmin = (member: any) => member.role === UserRole.STARTUP_ADMIN;
+              const startupAdmin = 'direct_members' in item ? item.direct_members?.find(isAdmin) : null;
               const messageUserId = item.type === 'freelancer' ? item.id : startupAdmin?.id;
+              const entityType = item.type === 'freelancer' ? 'users' : 'startups';
 
               return (
-                <TableRow key={`${item.entity_type}-${item.id}`}>
+                <TableRow key={`${item.type}-${item.id}`}>
                   <TableCell>{item.name || item.full_name}</TableCell>
                   <TableCell className="capitalize">{item.type}</TableCell>
                   <TableCell>
@@ -126,18 +161,17 @@ const BrowseWaitlistPage = () => {
                     )}
                   </TableCell>
                   <TableCell className="text-right space-x-2">
-                    <Link href={`/${item.entity_type}s/${item.id}`} passHref>
+                    <Link href={`/${entityType}/${item.id}`} passHref>
                       <Button variant="outline" size="sm">View Profile</Button>
                     </Link>
-                    {item.expressed_interest && item.interest_id && (
-                      <Button 
-                        size="sm"
-                        onClick={() => handleApprove(item.interest_id!)}
-                        disabled={!selectedSpace}
-                      >
-                        Approve
-                      </Button>
-                    )}
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenAddDialog(item)}
+                    >
+                      <PlusCircle className="h-4 w-4 mr-2" />
+                      Add to Space
+                    </Button>
                     {messageUserId && (
                       <Button 
                         variant="secondary"
@@ -153,6 +187,16 @@ const BrowseWaitlistPage = () => {
             })}
           </TableBody>
         </Table>
+      )}
+
+      {selectedTenant && (
+        <AddTenantDialog
+          isOpen={isAddTenantDialogOpen}
+          onClose={handleCloseAddDialog}
+          onConfirm={handleConfirmAddTenant}
+          tenantName={selectedTenant.name || selectedTenant.full_name || 'this tenant'}
+          hasExpressedInterest={selectedTenant.expressed_interest}
+        />
       )}
     </div>
   );

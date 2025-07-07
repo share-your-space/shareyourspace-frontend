@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { CreateSpaceDialog } from "@/components/corp-admin/CreateSpaceDialog";
 import { Space } from "@/types/space";
 import { toast } from "sonner";
+import { DialogProvider, useDialog } from "@/context/DialogContext";
 
 const CorpAdminDashboard = ({ children }: { children: React.ReactNode }) => {
   const { 
@@ -21,7 +22,7 @@ const CorpAdminDashboard = ({ children }: { children: React.ReactNode }) => {
     showOnboarding, 
     refetchSpaces 
   } = useSpace();
-  const [isCreateSpaceDialogOpen, setCreateSpaceDialogOpen] = useState(false);
+  const { isSpaceCreateDialogOpen, setSpaceCreateDialogOpen } = useDialog();
   const pathname = usePathname();
 
   useEffect(() => {
@@ -30,7 +31,7 @@ const CorpAdminDashboard = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (showOnboarding) {
-      setCreateSpaceDialogOpen(true);
+      setSpaceCreateDialogOpen(true);
     }
   }, [showOnboarding]);
 
@@ -38,7 +39,7 @@ const CorpAdminDashboard = ({ children }: { children: React.ReactNode }) => {
     refetchSpaces().then(() => {
       setSelectedSpaceId(newSpace.id.toString());
       toast.success(`Space "${newSpace.name}" created and selected.`);
-      setCreateSpaceDialogOpen(false);
+      setSpaceCreateDialogOpen(false);
     });
   };
 
@@ -48,7 +49,7 @@ const CorpAdminDashboard = ({ children }: { children: React.ReactNode }) => {
     { href: "/corp-admin/tenants", label: "Tenants" },
     { href: "/corp-admin/workstations", label: "Workstations" },
     { href: "/corp-admin/users", label: "All Users" },
-    { href: "/corp-admin/browse-waitlist", label: "Waitlist" },
+    { href: "/corp-admin/browse-waitlist", label: "Browse Tenants" },
     { href: "/corp-admin/invite-admin", label: "Invite Admin" },
   ];
 
@@ -63,8 +64,8 @@ const CorpAdminDashboard = ({ children }: { children: React.ReactNode }) => {
         <h1 className="text-2xl font-bold mb-2">Welcome to ShareYourSpace!</h1>
         <p className="text-muted-foreground mb-4">Let's create your first space to get started.</p>
         <CreateSpaceDialog
-          isOpen={isCreateSpaceDialogOpen}
-          onOpenChange={setCreateSpaceDialogOpen}
+          isOpen={isSpaceCreateDialogOpen}
+          onOpenChange={setSpaceCreateDialogOpen}
           onSpaceCreated={handleSpaceCreated}
           title="Create Your First Space"
         />
@@ -92,13 +93,13 @@ const CorpAdminDashboard = ({ children }: { children: React.ReactNode }) => {
           ) : (
             !loading && <p>No spaces found for your company.</p>
           )}
-          <Button onClick={() => setCreateSpaceDialogOpen(true)}>Create New Space</Button>
+          <Button onClick={() => setSpaceCreateDialogOpen(true)}>Create New Space</Button>
         </div>
       </div>
 
       <CreateSpaceDialog
-        isOpen={isCreateSpaceDialogOpen && !showOnboarding}
-        onOpenChange={setCreateSpaceDialogOpen}
+        isOpen={isSpaceCreateDialogOpen && !showOnboarding}
+        onOpenChange={setSpaceCreateDialogOpen}
         onSpaceCreated={handleSpaceCreated}
         title="Create a New Space"
       />
@@ -136,7 +137,9 @@ export default function CorpAdminLayout({ children }: { children: React.ReactNod
   return (
     <AuthGuard allowedRoles={[UserRole.CORP_ADMIN]}>
       <SpaceProvider>
-        <CorpAdminDashboard>{children}</CorpAdminDashboard>
+        <DialogProvider>
+          <CorpAdminDashboard>{children}</CorpAdminDashboard>
+        </DialogProvider>
       </SpaceProvider>
     </AuthGuard>
   );

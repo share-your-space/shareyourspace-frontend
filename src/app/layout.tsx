@@ -1,28 +1,37 @@
-import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import MainLayout from "@/components/layout/MainLayout";
 import ClientProviders from "@/components/layout/ClientProviders";
 import { Toaster } from "@/components/ui/sonner";
+import { DialogProvider } from "@/context/DialogContext";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export const metadata: Metadata = {
-  title: "ShareYourSpace 2.0",
-  description: "Connecting Corporates with Startups & Freelancers",
+export const metadata = {
+  title: "ShareYourSpace",
+  description: "A platform to connect and share spaces.",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <ClientProviders>
-          <MainLayout>{children}</MainLayout>
-          <Toaster />
+          <DialogProvider>
+            <div className="flex flex-col min-h-screen bg-white dark:bg-black text-gray-900 dark:text-white">
+              <Navbar />
+              <main className="flex-grow">
+                {children}
+              </main>
+              <Footer />
+            </div>
+            <Toaster />
+          </DialogProvider>
         </ClientProviders>
       </body>
     </html>

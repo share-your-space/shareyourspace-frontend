@@ -12,20 +12,45 @@ import { Button } from '@/components/ui/button';
 import { BrowsableSpace } from '@/types/space';
 import Image from 'next/image';
 import { PLACEHOLDER_IMAGE_URL } from '@/lib/constants';
+import { Badge } from '@/components/ui/badge';
 
 interface SpaceCardProps {
   space: BrowsableSpace;
   onExpressInterest: (spaceId: string) => void;
   canExpressInterest: boolean;
+  isCurrentUserSpace: boolean;
 }
 
 export const SpaceCard: React.FC<SpaceCardProps> = ({
   space,
   onExpressInterest,
   canExpressInterest,
+  isCurrentUserSpace,
 }) => {
+  const isInterestButtonDisabled =
+    isCurrentUserSpace ||
+    space.interest_status === 'PENDING' ||
+    space.interest_status === 'APPROVED';
+
+  const getInterestButtonText = () => {
+    if (isCurrentUserSpace) return 'Your Space';
+    switch (space.interest_status) {
+      case 'PENDING':
+        return 'Pending';
+      case 'APPROVED':
+        return 'Joined';
+      default:
+        return 'Express Interest';
+    }
+  };
+
   return (
-    <Card className="flex flex-col overflow-hidden">
+    <Card className="flex flex-col overflow-hidden relative">
+      {isCurrentUserSpace && (
+        <Badge className="absolute top-2 left-2 z-10 bg-primary text-primary-foreground">
+          Your Current Space
+        </Badge>
+      )}
       <CardHeader className="p-0 relative">
         <div className="aspect-square w-full relative">
           <Image
@@ -59,8 +84,11 @@ export const SpaceCard: React.FC<SpaceCardProps> = ({
             <Button variant="outline">View Profile</Button>
           </Link>
           {canExpressInterest && (
-            <Button onClick={() => onExpressInterest(space.id.toString())}>
-              Express Interest
+            <Button
+              onClick={() => onExpressInterest(space.id.toString())}
+              disabled={isInterestButtonDisabled}
+            >
+              {getInterestButtonText()}
             </Button>
           )}
         </div>

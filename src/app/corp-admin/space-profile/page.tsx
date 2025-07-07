@@ -73,17 +73,24 @@ const SpaceProfilePage = () => {
     fetchProfile();
   }, [fetchProfile]);
   
-  const handleSave = async (field: keyof ProfileFormValues) => {
+  const handleSave = async (data: ProfileFormValues) => {
     if (!selectedSpace) return;
+
+    const payload: Partial<ProfileFormValues> = {
+      ...data,
+      house_rules: data.houseRules, 
+    };
+    
+    // remove houseRules from payload
+    delete (payload as any).houseRules;
+
     try {
-      const value = getValues(field);
-      const payload = { [field]: value };
-      
       const updatedProfile = await updateSpaceProfile(selectedSpace.id, payload);
       setProfile(updatedProfile);
-      toast.success(`${field.charAt(0).toUpperCase() + field.slice(1)} updated!`);
+      toast.success(`Profile updated!`);
+      setIsEditing(false);
     } catch (error) {
-      toast.error(`Failed to update ${field}.`);
+      toast.error(`Failed to update profile.`);
     }
   };
 
@@ -155,43 +162,51 @@ const SpaceProfilePage = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
         <div className="md:col-span-2">
-          <EditableSection 
-            title="About this space" 
-            isEditing={isEditing} 
-            onSave={() => handleSave('description')}
-            editContent={
-              <div className="space-y-4">
-                <Controller name="description" control={control} render={({ field }) => <Textarea {...field} placeholder="Tell everyone about your space..." rows={6} />} />
-                <Controller name="vibe" control={control} render={({ field }) => <Input {...field} placeholder="What's the vibe? (e.g., Collaborative, Focused)" />} />
-              </div>
-            }
-          >
-            <p>{profile.description}</p>
-            <div className="mt-4">
-                <h3 className="font-semibold">The Vibe</h3>
-                <p>{profile.vibe}</p>
-            </div>
-          </EditableSection>
-          
-          <EditableSection 
-            title="Amenities" 
-            isEditing={isEditing} 
-            onSave={() => handleSave('amenities')}
-            editContent={<Controller name="amenities" control={control} render={({ field }) => <TagInput {...field} placeholder="Add an amenity" />} />}
-          >
-             <ul className="grid grid-cols-2 gap-2">
-                {profile.amenities?.map(item => <li key={item}>{item}</li>)}
-            </ul>
-          </EditableSection>
+            <form onSubmit={handleSubmit(handleSave)}>
+              <EditableSection 
+                title="About this space" 
+                isEditing={isEditing} 
+                onSave={() => {}}
+                editContent={
+                  <div className="space-y-4">
+                    <Controller name="description" control={control} render={({ field }) => <Textarea {...field} placeholder="Tell everyone about your space..." rows={6} />} />
+                    <Controller name="vibe" control={control} render={({ field }) => <Input {...field} placeholder="What's the vibe? (e.g., Collaborative, Focused)" />} />
+                  </div>
+                }
+              >
+                <p>{profile.description}</p>
+                <div className="mt-4">
+                    <h3 className="font-semibold">The Vibe</h3>
+                    <p>{profile.vibe}</p>
+                </div>
+              </EditableSection>
+              
+              <EditableSection 
+                title="Amenities" 
+                isEditing={isEditing} 
+                onSave={() => {}}
+                editContent={<Controller name="amenities" control={control} render={({ field }) => <TagInput {...field} placeholder="Add an amenity" />} />}
+              >
+                 <ul className="grid grid-cols-2 gap-2">
+                    {profile.amenities?.map(item => <li key={item}>{item}</li>)}
+                </ul>
+              </EditableSection>
 
-          <EditableSection 
-            title="House Rules" 
-            isEditing={isEditing} 
-            onSave={() => handleSave('houseRules')}
-            editContent={<Controller name="houseRules" control={control} render={({ field }) => <Textarea {...field} placeholder="What are the rules?" rows={4} />} />}
-          >
-            <p>{profile.house_rules}</p>
-          </EditableSection>
+              <EditableSection 
+                title="House Rules" 
+                isEditing={isEditing} 
+                onSave={() => {}}
+                editContent={<Controller name="houseRules" control={control} render={({ field }) => <Textarea {...field} placeholder="What are the rules?" rows={4} />} />}
+              >
+                <p>{profile.house_rules}</p>
+              </EditableSection>
+
+              {isEditing && (
+                <div className="flex justify-end mt-4">
+                  <Button type="submit">Save Changes</Button>
+                </div>
+              )}
+            </form>
         </div>
         
         <div className="md:col-span-1">

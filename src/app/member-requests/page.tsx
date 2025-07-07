@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { api } from '@/lib/api';
-import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
+import AuthGuard from '@/components/layout/AuthGuard';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -24,7 +24,7 @@ interface JoinRequestNotification {
     } | null;
 }
 
-export default function MemberRequestsPage() {
+const MemberRequestsPage = () => {
     const [requests, setRequests] = useState<JoinRequestNotification[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -69,56 +69,46 @@ export default function MemberRequestsPage() {
         }
     };
 
+    if (isLoading) {
+        return <div className="text-center p-8">Loading member requests...</div>;
+    }
+
     return (
-        <AuthenticatedLayout>
-            <div className="container mx-auto py-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Member Join Requests</CardTitle>
-                        <CardDescription>Review and approve or decline requests from users who want to join your organization.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {isLoading ? (
-                            <div className="flex justify-center items-center py-10">
-                                <Loader2 className="h-8 w-8 animate-spin" />
-                            </div>
-                        ) : error ? (
-                            <p className="text-destructive text-center">{error}</p>
-                        ) : requests.length === 0 ? (
-                            <div className="text-center py-10">
-                                <MailQuestion className="mx-auto h-12 w-12 text-muted-foreground" />
-                                <h3 className="mt-2 text-sm font-medium text-muted-foreground">No pending requests</h3>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {requests.map(req => (
-                                    <div key={req.id} className="flex items-center justify-between p-4 border rounded-lg">
-                                        <div className="flex items-center space-x-4">
-                                            <Avatar>
-                                                <AvatarImage src={req.requesting_user?.profile?.profile_picture_url || undefined} />
-                                                <AvatarFallback>{req.requesting_user?.full_name?.charAt(0) || '?'}</AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <p className="font-semibold">{req.requesting_user?.full_name}</p>
-                                                <p className="text-sm text-muted-foreground">{req.requesting_user?.email}</p>
-                                                <p className="text-sm text-muted-foreground italic mt-1">"{req.message}"</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex space-x-2">
-                                            <Button size="sm" variant="outline" onClick={() => handleDecline(req.id)}>
-                                                <X className="h-4 w-4 mr-2" /> Decline
-                                            </Button>
-                                            <Button size="sm" onClick={() => handleApprove(req.id)}>
-                                                <Check className="h-4 w-4 mr-2" /> Approve
-                                            </Button>
-                                        </div>
+        <AuthGuard>
+            <div className="container mx-auto p-4">
+                <h1 className="text-2xl font-bold mb-6">Incoming Member Requests</h1>
+                {requests.length > 0 ? (
+                    <div className="space-y-4">
+                        {requests.map(req => (
+                            <div key={req.id} className="flex items-center justify-between p-4 border rounded-lg">
+                                <div className="flex items-center space-x-4">
+                                    <Avatar>
+                                        <AvatarImage src={req.requesting_user?.profile?.profile_picture_url || undefined} />
+                                        <AvatarFallback>{req.requesting_user?.full_name?.charAt(0) || '?'}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <p className="font-semibold">{req.requesting_user?.full_name}</p>
+                                        <p className="text-sm text-muted-foreground">{req.requesting_user?.email}</p>
+                                        <p className="text-sm text-muted-foreground italic mt-1">"{req.message}"</p>
                                     </div>
-                                ))}
+                                </div>
+                                <div className="flex space-x-2">
+                                    <Button size="sm" variant="outline" onClick={() => handleDecline(req.id)}>
+                                        <X className="h-4 w-4 mr-2" /> Decline
+                                    </Button>
+                                    <Button size="sm" onClick={() => handleApprove(req.id)}>
+                                        <Check className="h-4 w-4 mr-2" /> Approve
+                                    </Button>
+                                </div>
                             </div>
-                        )}
-                    </CardContent>
-                </Card>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-gray-500">No pending member requests.</p>
+                )}
             </div>
-        </AuthenticatedLayout>
+        </AuthGuard>
     );
-} 
+};
+
+export default MemberRequestsPage; 

@@ -19,6 +19,7 @@ import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api"; // Import the api client
 import UnauthenticatedLayout from '@/components/layout/UnauthenticatedLayout';
 import { type User } from "@/types/user";
+import { toast } from "react-hot-toast";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -58,12 +59,15 @@ export default function LoginPage() {
       // --- CRITICAL FIX: Set token in api client BEFORE making next request ---
       api.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
 
-      // --- Fetch User Details BEFORE calling login --- 
-      const userResponse = await api.get('/users/me');
+      // After getting the token, get user info and store it
+      // This ensures the user state is immediately populated on login
+      const userResponse = await api.get('/users/me/profile');
       
-      // --- Update Zustand Store --- 
-      login(data.access_token, userResponse.data as User);
-      console.log("Login Successful, Token and User stored.");
+      login(response.data.access_token, userResponse.data);
+
+      toast.success('Login successful!', {
+        duration: 3000,
+      });
 
       router.push("/dashboard"); // Redirect to dashboard
 

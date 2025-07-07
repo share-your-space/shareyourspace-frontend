@@ -135,7 +135,7 @@ const EditProfilePage = () => {
       const updatedProfile = await updateMyProfile(dataToSave);
       setProfile(updatedProfile);
       toast.success("Profile Updated");
-      router.push(`/dashboard/users/${user.id}`);
+      router.push(`/users/${user.id}`);
     } catch (error: any) {
       const msg = error.response?.data?.detail || error.message || "Failed to update profile.";
       toast.error(msg);

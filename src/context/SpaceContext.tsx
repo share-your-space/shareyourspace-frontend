@@ -1,8 +1,10 @@
 "use client";
 
-import React, { createContext, useContext, useState, useMemo, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { Space } from '@/types/space';
-import { getMyCompanySpaces } from '@/lib/api/corp-admin';
+import { getCompanySpaces } from '@/lib/api/corp-admin';
+import { useAuth } from './AuthContext';
+import { UserRole } from '@/types/enums';
 import { useAuthStore } from '@/store/authStore';
 import axios from 'axios';
 
@@ -19,7 +21,7 @@ interface SpaceContextType {
 
 const SpaceContext = createContext<SpaceContextType | undefined>(undefined);
 
-export const SpaceProvider = ({ children }: { children: ReactNode }) => {
+export const SpaceProvider = ({ children }: { children: React.ReactNode }) => {
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -27,13 +29,13 @@ export const SpaceProvider = ({ children }: { children: ReactNode }) => {
   const user = useAuthStore((state) => state.user);
 
   const refetchSpaces = useCallback(async () => {
-    if (user?.role !== 'CORP_ADMIN') {
-        setLoading(false);
-        return;
+    if (!user || user.role !== UserRole.CORP_ADMIN) {
+      setSpaces([]);
+      return;
     }
     setLoading(true);
     try {
-      const companySpaces = await getMyCompanySpaces();
+      const companySpaces = await getCompanySpaces();
       setSpaces(companySpaces);
       setShowOnboarding(companySpaces.length === 0);
       // If there's no selection or the current selection is invalid, select the first one.
@@ -53,12 +55,12 @@ export const SpaceProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  }, [user, selectedSpaceId]);
+  }, [user]);
 
   const selectedSpace = useMemo(() => {
     if (!selectedSpaceId) return null;
     return spaces.find(space => space.id.toString() === selectedSpaceId) ?? null;
-  }, [spaces, selectedSpaceId]);
+  }, [selectedSpaceId, spaces]);
 
   return (
     <SpaceContext.Provider value={{ 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
 import { ContactList } from '@/components/chat/ContactList';
@@ -25,6 +25,7 @@ function ChatPageContent() {
   } = useChatStore();
   const { user: currentUser, isLoading: isLoadingAuth } = useAuthStore();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const activeConversation = conversations.find(c => c.id === activeConversationId);
 
@@ -50,42 +51,74 @@ function ChatPageContent() {
     return () => { isMounted = false; };
   }, [currentUser, isLoadingAuth, setConversations]);
 
-  // Effect to handle conversation specified in URL
+  // Effect to handle conversation specified by userId or conversationId in URL
   useEffect(() => {
-    const queryConvId = searchParams.get('conversationId');
-    if (!queryConvId) return;
-
-    const convId = parseInt(queryConvId, 10);
-    if (isNaN(convId)) return;
-    
+    const userIdStr = searchParams.get('userId');
+    const convIdStr = searchParams.get('conversationId');
     let isMounted = true;
 
-    const handleUrlConversation = async () => {
-        // Only set active if it's not already the active one
-        if (convId !== activeConversationId) {
-            const existingConv = conversations.find(c => c.id === convId);
-            if (existingConv) {
-                setActiveConversationId(convId);
-            } else {
-                // If conversation is not in the store, fetch it
-                try {
-                    const response = await api.get<Conversation>(`/chat/conversations/${convId}`);
-                    if (isMounted) {
-                        addOrUpdateConversation(response.data);
-                        setActiveConversationId(convId);
-                    }
-                } catch (error) {
-                    console.error("Failed to fetch specific conversation:", error);
-                    // Maybe redirect or show an error
-                }
-            }
+    const getOrCreateConversation = async (otherUserId: number) => {
+      try {
+        const { conversations: currentConversations, activeConversationId: currentActiveId } = useChatStore.getState();
+        const existingConv = currentConversations.find(c => c.other_user && c.other_user.id === otherUserId);
+
+        if (existingConv) {
+          if (currentActiveId !== existingConv.id) {
+            setActiveConversationId(existingConv.id);
+          }
+          if (userIdStr) { // Only replace URL if we came from a userId url
+            router.replace(`/chat?conversationId=${existingConv.id}`, { scroll: false });
+          }
+          return;
         }
+
+        const response = await api.get<Conversation>(`/chat/conversations/with/${otherUserId}`);
+        if (isMounted) {
+          const newConversation = response.data;
+          addOrUpdateConversation(newConversation);
+          setActiveConversationId(newConversation.id);
+          router.replace(`/chat?conversationId=${newConversation.id}`, { scroll: false });
+        }
+      } catch (error) {
+        console.error("Failed to get or create conversation:", error);
+      }
     };
-    
-    handleUrlConversation();
+
+    const handleUrlConversation = async (convId: number) => {
+      const { activeConversationId: currentActiveId, conversations: currentConversations } = useChatStore.getState();
+      if (convId !== currentActiveId) {
+        const existingConv = currentConversations.find(c => c.id === convId);
+        if (existingConv) {
+          setActiveConversationId(convId);
+        } else {
+          try {
+            const response = await api.get<Conversation>(`/chat/conversations/${convId}`);
+            if (isMounted) {
+              addOrUpdateConversation(response.data);
+              setActiveConversationId(convId);
+            }
+          } catch (error) {
+            console.error("Failed to fetch specific conversation:", error);
+          }
+        }
+      }
+    };
+
+    if (userIdStr) {
+      const userId = parseInt(userIdStr, 10);
+      if (!isNaN(userId)) {
+        getOrCreateConversation(userId);
+      }
+    } else if (convIdStr) {
+      const convId = parseInt(convIdStr, 10);
+      if (!isNaN(convId)) {
+        handleUrlConversation(convId);
+      }
+    }
 
     return () => { isMounted = false; };
-  }, [searchParams, conversations, activeConversationId, setActiveConversationId, addOrUpdateConversation]);
+  }, [searchParams, router, setActiveConversationId, addOrUpdateConversation]);
+
 
   if (isLoadingAuth) {
     return (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { Loader2, AlertCircle, CheckCircle } from 'lucide-react';
@@ -13,6 +13,7 @@ function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Verifying your email, please wait...');
+  const verificationAttempted = useRef(false);
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -22,6 +23,11 @@ function VerifyEmailContent() {
       setMessage('Verification token not found in URL.');
       return;
     }
+
+    if (verificationAttempted.current) {
+      return;
+    }
+    verificationAttempted.current = true;
 
     const verifyToken = async () => {
       try {

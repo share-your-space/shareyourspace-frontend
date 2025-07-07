@@ -1,14 +1,20 @@
 'use client';
 
-import React from 'react';
 import { ThemeProvider } from 'next-themes';
 import { SocketConnectionManager } from '@/components/auth/SocketConnectionManager';
+import { useAuthStore } from "@/store/authStore";
+import AuthenticatedLayout from "./AuthenticatedLayout";
+import UnauthenticatedLayout from "./UnauthenticatedLayout";
 
-/**
- * Wrapper component for client-side providers like ThemeProvider
- * and components requiring client hooks like SocketConnectionManager.
- */
-export default function ClientProviders({ children }: { children: React.ReactNode }) {
+const ClientProviders = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isLoading } = useAuthStore();
+
+  if (isLoading) {
+    return <div>Loading...</div>; // Or a proper loading spinner
+  }
+
+  const Layout = isAuthenticated ? AuthenticatedLayout : UnauthenticatedLayout;
+
   return (
     <ThemeProvider
       attribute="class"
@@ -16,8 +22,10 @@ export default function ClientProviders({ children }: { children: React.ReactNod
       enableSystem
       disableTransitionOnChange
     >
-      <SocketConnectionManager /> {/* Socket manager needs to be inside providers that might influence it, but here is fine */}
-      {children} {/* Render the rest of the app */}
+      <SocketConnectionManager />
+      <Layout>{children}</Layout>
     </ThemeProvider>
-  );
-} 
+  )
+};
+
+export default ClientProviders; 

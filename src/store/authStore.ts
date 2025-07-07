@@ -2,6 +2,23 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { api } from '@/lib/api';
 import { UserRole } from '@/types/enums';
+import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+
+export interface UserProfile {
+  title?: string | null;
+  bio?: string | null;
+  skills_expertise?: string[] | null;
+  industry_focus?: string[] | null;
+  project_interests_goals?: string | null;
+  collaboration_preferences?: string[] | null;
+  tools_technologies?: string[] | null;
+  linkedin_profile_url?: string | null;
+  profile_picture_url?: string | null;
+  profile_picture_signed_url?: string | null;
+  cover_photo_url?: string | null;
+  cover_photo_signed_url?: string | null;
+  is_profile_complete?: boolean;
+}
 
 export interface UserAuthInfo {
   id: number;
@@ -13,14 +30,13 @@ export interface UserAuthInfo {
   startup_id?: number | null;
   space_id?: number | null;
   space_corporate_admin_id?: number | null;
+  is_profile_complete?: boolean;
   current_workstation?: {
     workstation_id: number;
     workstation_name: string;
     assignment_start_date: string;
   } | null;
-  profile?: {
-      profile_picture_url?: string | null;
-  };
+  profile?: UserProfile | null;
 }
 
 interface AuthState {
@@ -30,7 +46,7 @@ interface AuthState {
   isLoading: boolean;
   login: (token: string, user: UserAuthInfo) => void;
   loginWithNewToken: (token: string) => Promise<void>;
-  logout: () => void;
+  logout: (router?: AppRouterInstance) => void;
   setUser: (user: UserAuthInfo | null) => void;
   fetchUser: () => Promise<void>;
   refreshCurrentUser: () => Promise<UserAuthInfo | null>;
@@ -49,7 +65,7 @@ export const useAuthStore = create<AuthState>()(
         set({ token, isLoading: true });
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         try {
-            const response = await api.get('/users/me');
+            const response = await api.get('/users/me/profile');
             set({ user: response.data, isAuthenticated: true, isLoading: false });
         } catch (error) {
             console.error("Failed to fetch user after getting new token:", error);
@@ -67,8 +83,12 @@ export const useAuthStore = create<AuthState>()(
         });
       },
 
-      logout: () => {
+      logout: (router) => {
         delete api.defaults.headers.common['Authorization'];
+        sessionStorage.removeItem('hasSeenProfilePopup');
+        if (router) {
+          router.push('/login');
+        }
         set({
           user: null,
           token: null,
@@ -88,7 +108,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         try {
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          const response = await api.get('/users/me');
+          const response = await api.get('/users/me/profile');
           set({ user: response.data, isAuthenticated: true, isLoading: false });
         } catch (error) {
           console.error("Session expired or invalid, logging out:", error);
@@ -104,7 +124,7 @@ export const useAuthStore = create<AuthState>()(
         }
         try {
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          const response = await api.get('/users/me');
+          const response = await api.get('/users/me/profile');
           const updatedUser = response.data;
           set({ user: updatedUser, isAuthenticated: true, isLoading: false });
           return updatedUser;

@@ -11,7 +11,7 @@ const USERS_API_BASE = "/users";
 export const getUserDetailedProfile = async (userId: number): Promise<UserDetail> => {
   try {
     const response = await apiClient.get<UserDetail>(
-      `${USERS_API_BASE}/${userId}`
+      `${USERS_API_BASE}/${userId}/profile`
     );
     return response.data;
   } catch (error) {
@@ -25,7 +25,7 @@ export const getUserDetailedProfile = async (userId: number): Promise<UserDetail
  */
 export const getMyProfile = async (): Promise<UserProfile> => {
   try {
-    const response = await apiClient.get<UserDetail>(`${USERS_API_BASE}/me`);
+    const response = await apiClient.get<UserDetail>(`${USERS_API_BASE}/me/profile`);
     if (!response.data.profile) {
       throw new Error("User profile is not available.");
     }
@@ -105,10 +105,15 @@ export const uploadCoverPhoto = async (file: File): Promise<UserProfile> => {
  */
 export const getMe = async (): Promise<User> => {
   try {
-    const response = await apiClient.get<User>(`${USERS_API_BASE}/me`);
+    const response = await apiClient.get<User>(`${USERS_API_BASE}/me/profile`);
     return response.data;
   } catch (error) {
     console.error("Error fetching current user details:", error);
     throw error;
   }
+}; 
+
+export const getCurrentUserDetailedProfile = async (): Promise<UserDetail> => {
+  const response = await apiClient.get<UserDetail>(`/users/me/profile`);
+  return response.data;
 }; 

@@ -183,9 +183,8 @@ const Navbar = () => {
     };
 
     const handleLogout = () => {
-        logout();
+        logout(router);
         toast.success("Logged out successfully.");
-        router.push('/');
     };
 
     const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -370,7 +369,7 @@ const Navbar = () => {
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                                         <Avatar className="h-8 w-8">
-                                            <AvatarImage src={user.profile?.profile_picture_url || undefined} alt={user.full_name || user.email} />
+                                            <AvatarImage src={user.profile?.profile_picture_signed_url || undefined} alt={user.full_name || user.email} />
                                             <AvatarFallback>{user.full_name?.[0]?.toUpperCase() || user.email[0]?.toUpperCase()}</AvatarFallback>
                                         </Avatar>
                                     </Button>

@@ -27,7 +27,7 @@ const CORP_ADMIN_API_BASE = "/corp-admin";
 /**
  * Fetches the spaces associated with the current corporate admin's company.
  */
-export const getMyCompanySpaces = async (): Promise<Space[]> => {
+export const getCompanySpaces = async (): Promise<Space[]> => {
   const response = await apiClient.get<Space[]>(`${CORP_ADMIN_API_BASE}/spaces`);
   return response.data;
 };
@@ -191,9 +191,10 @@ export const getRankedWaitlist = async (
   search?: string,
   type?: string,
   sortBy?: string,
+  spaceId?: number,
 ): Promise<WaitlistedUser[]> => {
   const response = await apiClient.get<any[]>(`${CORP_ADMIN_API_BASE}/browse-waitlist`, {
-    params: { search, type, sortBy },
+    params: { search, type, sortBy, spaceId },
   });
   return response.data.map(item => ({
     ...item,
@@ -201,8 +202,13 @@ export const getRankedWaitlist = async (
   }));
 };
 
-export const approveInterest = async (spaceId: number, interestId: number): Promise<void> => {
-  await apiClient.post(`${CORP_ADMIN_API_BASE}/spaces/${spaceId}/interests/${interestId}/approve`);
+/**
+ * [Corp Admin] Adds a tenant (freelancer or startup) to a managed space.
+ * @param spaceId The ID of the space to add the tenant to.
+ * @param tenantData The ID of the user or startup to add.
+ */
+export const addTenantToSpace = async (spaceId: number, tenantData: { userId?: number; startupId?: number }): Promise<void> => {
+  await apiClient.post(`${CORP_ADMIN_API_BASE}/spaces/${spaceId}/add-tenant`, tenantData);
 };
 
 /**

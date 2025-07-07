@@ -103,10 +103,13 @@ export interface StartupDirectInviteCreate {
 export interface UserDetail extends User { // Extends the base User type
   profile?: UserProfile | null;
   company?: BasicCompany | null;
-  startup?: BasicStartup | null;
+  startup?: BasicStartup & { space_id?: number | null } | null;
   space?: BasicSpace | null;         // Space user BELONGS to
   managed_space?: BasicSpace | null; // Space user MANAGES (if CORP_ADMIN)
   current_workstation?: UserWorkstationInfo | null;
+  is_profile_complete?: boolean;
+  role: string;
+  space_id?: number | null;
 }
 
 export interface AuthState {
@@ -119,7 +122,7 @@ export interface SpaceUser extends User {
 } 
 
 export interface FreelancerCreate {
-    fullName: string;
+    full_name: string;
     email: string;
     password: string;
 }
