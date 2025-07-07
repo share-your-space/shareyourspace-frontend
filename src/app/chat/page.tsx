@@ -75,7 +75,7 @@ function ChatPageContent() {
         const response = await api.get<Conversation>(`/chat/conversations/with/${otherUserId}`);
         if (isMounted) {
           const newConversation = response.data;
-          addOrUpdateConversation(newConversation);
+          addOrUpdateConversation(newConversation, currentUser?.id);
           setActiveConversationId(newConversation.id);
           router.replace(`/chat?conversationId=${newConversation.id}`, { scroll: false });
         }
@@ -94,7 +94,7 @@ function ChatPageContent() {
           try {
             const response = await api.get<Conversation>(`/chat/conversations/${convId}`);
             if (isMounted) {
-              addOrUpdateConversation(response.data);
+              addOrUpdateConversation(response.data, currentUser?.id);
               setActiveConversationId(convId);
             }
           } catch (error) {
