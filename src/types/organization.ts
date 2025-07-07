@@ -22,6 +22,7 @@ export interface Company {
   team_size?: TeamSize;
   description?: string;
   mission?: string;
+  looking_for?: string[] | null;
   // This can be expanded based on what the backend provides
   direct_members?: User[];
 }
