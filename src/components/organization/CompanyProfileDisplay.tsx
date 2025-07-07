@@ -10,7 +10,8 @@ import { CompanyHeader } from './CompanyHeader';
 import { CompanySidebar } from './CompanySidebar';
 import { Separator } from '@/components/ui/separator';
 import { Controller } from 'react-hook-form';
-import { Textarea, Input } from '@/components/ui'; // Assuming these exist
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { TagInput } from '@/components/ui/TagInput';
 
 interface CompanyProfileDisplayProps {
