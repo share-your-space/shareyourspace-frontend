@@ -22,7 +22,7 @@ import { useSpace } from '@/context/SpaceContext';
 type WaitlistItem = WaitlistedUser | WaitlistedStartup;
 
 const BrowseWaitlistPage = () => {
-  const [waitlist, setWaitlist] = useState<WaitlistItem[]>([]);
+  const [waitlist, setWaitlist] = useState<(WaitlistedUser | WaitlistedStartup)[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('interest');
