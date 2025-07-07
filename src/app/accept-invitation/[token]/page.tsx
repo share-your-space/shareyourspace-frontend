@@ -62,6 +62,10 @@ function AcceptInvitationContent() {
   });
 
   const onSubmit = async (values: AcceptFormValues) => {
+    if (!token) {
+      toast.error("Invitation token is missing. Please use a valid invitation link.");
+      return;
+    }
     setIsLoading(true);
     try {
       const response = await acceptInvitation(token, {
