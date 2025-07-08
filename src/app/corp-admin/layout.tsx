@@ -9,7 +9,7 @@ import { SpaceProvider, useSpace } from "@/context/SpaceContext";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CreateSpaceDialog } from "@/components/corp-admin/CreateSpaceDialog";
-import { Space } from "@/types/space";
+import { Space, BasicSpace } from "@/types/space";
 import { toast } from "sonner";
 import { DialogProvider, useDialog } from "@/context/DialogContext";
 
@@ -33,9 +33,9 @@ const CorpAdminDashboard = ({ children }: { children: React.ReactNode }) => {
     if (showOnboarding) {
       setSpaceCreateDialogOpen(true);
     }
-  }, [showOnboarding]);
+  }, [showOnboarding, setSpaceCreateDialogOpen]);
 
-  const handleSpaceCreated = (newSpace: Space) => {
+  const handleSpaceCreated = (newSpace: BasicSpace) => {
     refetchSpaces().then(() => {
       setSelectedSpaceId(newSpace.id.toString());
       toast.success(`Space "${newSpace.name}" created and selected.`);
