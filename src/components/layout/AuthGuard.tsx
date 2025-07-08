@@ -7,7 +7,7 @@ import { UserRole } from '@/types/enums';
 
 interface AuthGuardProps {
   children: React.ReactNode;
-  allowedRoles: UserRole[];
+  allowedRoles?: UserRole[];
 }
 
 const AuthGuard: React.FC<AuthGuardProps> = ({ children, allowedRoles }) => {
@@ -31,7 +31,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children, allowedRoles }) => {
 
     if (!isAuthenticated) {
       router.push('/login');
-    } else if (allowedRoles && !allowedRoles.includes(user?.role as UserRole)) {
+    } else if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user?.role as UserRole)) {
       router.push('/dashboard'); // Or a dedicated 'unauthorized' page
     }
   }, [isAuthenticated, isLoading, router, pathname, user, allowedRoles, isRefreshed]);
@@ -40,7 +40,10 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children, allowedRoles }) => {
     return <div>Loading...</div>; // Or a more sophisticated skeleton loader
   }
 
-  if (isAuthenticated && user && allowedRoles && allowedRoles.includes(user.role as UserRole)) {
+  if (isAuthenticated && user) {
+    if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user.role as UserRole)) {
+      return null; // Or render an unauthorized message/component
+    }
     return <>{children}</>;
   }
 
