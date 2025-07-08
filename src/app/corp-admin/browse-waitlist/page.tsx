@@ -72,10 +72,12 @@ const BrowseWaitlistPage = () => {
         startupId: selectedTenant.type === 'startup' ? selectedTenant.id : undefined,
       };
       await addTenantToSpace(spaceId, tenantData);
+      
+      const displayName = selectedTenant.type === 'startup' ? selectedTenant.name : selectedTenant.full_name;
 
       const successMessage = selectedTenant.expressed_interest
-        ? `${selectedTenant.name || selectedTenant.full_name} added to space successfully!`
-        : `Invitation sent to ${selectedTenant.name || selectedTenant.full_name}.`;
+        ? `${displayName} added to space successfully!`
+        : `Invitation sent to ${displayName}.`;
       toast.success(successMessage);
 
       fetchWaitlist(); // Refresh the list
@@ -151,10 +153,11 @@ const BrowseWaitlistPage = () => {
               const startupAdmin = 'direct_members' in item ? item.direct_members?.find(isAdmin) : null;
               const messageUserId = item.type === 'freelancer' ? item.id : startupAdmin?.id;
               const entityType = item.type === 'freelancer' ? 'users' : 'startups';
+              const displayName = item.type === 'startup' ? item.name : item.full_name;
 
               return (
                 <TableRow key={`${item.type}-${item.id}`}>
-                  <TableCell>{item.name || item.full_name}</TableCell>
+                  <TableCell>{displayName}</TableCell>
                   <TableCell className="capitalize">{item.type}</TableCell>
                   <TableCell>
                     {item.expressed_interest && (
@@ -195,8 +198,8 @@ const BrowseWaitlistPage = () => {
           isOpen={isAddTenantDialogOpen}
           onClose={handleCloseAddDialog}
           onConfirm={handleConfirmAddTenant}
-          tenantName={selectedTenant.name || selectedTenant.full_name || 'this tenant'}
-          hasExpressedInterest={selectedTenant.expressed_interest}
+          tenantName={selectedTenant.type === 'startup' ? selectedTenant.name || 'this tenant' : selectedTenant.full_name || 'this tenant'}
+          hasExpressedInterest={!!selectedTenant.expressed_interest}
         />
       )}
     </div>
