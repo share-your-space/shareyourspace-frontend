@@ -30,6 +30,7 @@ export interface Company {
 export interface Startup extends OrganizationBase {
   id: number;
   type: "startup"; // Add the type property
+  expressed_interest?: boolean;
   mission?: string | null;
   stage?: StartupStage | null;
   pitch_deck_url?: string | null;

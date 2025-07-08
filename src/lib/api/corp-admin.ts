@@ -17,9 +17,9 @@ import {
   SpaceProfile,
   SpaceProfileUpdate,
   WaitlistedUser,
+  WaitlistedStartup,
   SpaceCreate,
   SpaceImage,
-  WaitlistedStartup,
 } from "@/types/space";
 import { UserSimpleInfo } from "@/types/user";
 
