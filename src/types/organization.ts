@@ -40,6 +40,7 @@ export interface Startup extends OrganizationBase {
   updated_at: string;
   member_slots_allocated?: number | null;
   member_slots_used?: number | null;
+  direct_members?: User[] | null;
 }
 
 export interface CompanyUpdate extends Omit<OrganizationBase, 'name'> {
