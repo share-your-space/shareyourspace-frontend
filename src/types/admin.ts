@@ -1,7 +1,7 @@
 // Expanded User type based on backend documentation
 // Initially from shareyourspace-frontend/src/app/admin/users/page.tsx
 export type AdminUserView = {
-  id: string;
+  id: number;
   full_name: string;
   email: string;
   type: "freelancer" | "startup"; // Add the type property
