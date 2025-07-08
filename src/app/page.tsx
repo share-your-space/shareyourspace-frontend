@@ -3,6 +3,8 @@ import HeroSection from "@/components/landing/HeroSection";
 import BenefitsSection from "@/components/landing/BenefitsSection";
 import UnauthenticatedLayout from '@/components/layout/UnauthenticatedLayout';
 
+export const dynamic = 'force-dynamic';
+
 export default function Home() {
   return (
     <UnauthenticatedLayout>
