@@ -3,13 +3,15 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter, usePathname } from 'next/navigation';
+import { UserRole } from '@/types/enums';
 
 interface AuthGuardProps {
   children: React.ReactNode;
+  allowedRoles: UserRole[];
 }
 
-const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
-  const { isAuthenticated, isLoading, refreshCurrentUser } = useAuthStore();
+const AuthGuard: React.FC<AuthGuardProps> = ({ children, allowedRoles }) => {
+  const { isAuthenticated, isLoading, user, refreshCurrentUser } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
   const [isRefreshed, setIsRefreshed] = useState(false);
@@ -29,14 +31,16 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
     if (!isAuthenticated) {
       router.push('/login');
+    } else if (allowedRoles && !allowedRoles.includes(user?.role as UserRole)) {
+      router.push('/dashboard'); // Or a dedicated 'unauthorized' page
     }
-  }, [isAuthenticated, isLoading, router, pathname, isRefreshed]);
+  }, [isAuthenticated, isLoading, router, pathname, user, allowedRoles, isRefreshed]);
 
   if (isLoading || (isAuthenticated && !isRefreshed)) {
-    return <div>Loading...</div>;
+    return <div>Loading...</div>; // Or a more sophisticated skeleton loader
   }
 
-  if (isAuthenticated) {
+  if (isAuthenticated && user && allowedRoles && allowedRoles.includes(user.role as UserRole)) {
     return <>{children}</>;
   }
 
