@@ -4,7 +4,7 @@ import React, { useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { useRouter, usePathname } from 'next/navigation';
 import { UserRole } from '@/types/enums';
-import { toast } from 'react-toastify';
+import { toast } from 'sonner';
 
 interface AuthGuardProps {
   children: React.ReactNode;
