@@ -4,6 +4,7 @@ export type AdminUserView = {
   id: string;
   full_name: string;
   email: string;
+  type: "freelancer" | "startup"; // Add the type property
   role: "SYS_ADMIN" | "CORP_ADMIN" | "CORP_EMPLOYEE" | "STARTUP_ADMIN" | "STARTUP_MEMBER" | "FREELANCER";
   status: "PENDING_VERIFICATION" | "WAITLISTED" | "PENDING_ONBOARDING" | "ACTIVE" | "SUSPENDED" | "BANNED";
   is_active: boolean;
