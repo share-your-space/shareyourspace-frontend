@@ -140,7 +140,7 @@ export const getStartupsInSpace = async (spaceId: string): Promise<BasicStartup[
  * [Corp Admin] Fetches the editable profile of a specific space.
  * @param spaceId The ID of the space.
  */
-export const getSpaceProfileForEdit = async (spaceId: string): Promise<SpaceProfile> => {
+export const getSpaceProfileForEdit = async (spaceId: number): Promise<SpaceProfile> => {
   const response = await apiClient.get<SpaceProfile>(`/spaces/${spaceId}/profile`);
   return response.data;
 };
@@ -150,7 +150,7 @@ export const getSpaceProfileForEdit = async (spaceId: string): Promise<SpaceProf
  * @param spaceId The ID of the space to update.
  * @param profileData The new profile data.
  */
-export const updateSpaceProfile = async (spaceId: string, profileData: SpaceProfileUpdate): Promise<SpaceProfile> => {
+export const updateSpaceProfile = async (spaceId: number, profileData: SpaceProfileUpdate): Promise<SpaceProfile> => {
   const response = await apiClient.put<SpaceProfile>(`${CORP_ADMIN_API_BASE}/spaces/${spaceId}/profile`, profileData);
   return response.data;
 };
@@ -160,7 +160,7 @@ export const updateSpaceProfile = async (spaceId: string, profileData: SpaceProf
  * @param spaceId The ID of the space.
  * @param file The image file to upload.
  */
-export const uploadSpaceImage = async (spaceId: string, file: File): Promise<SpaceImage> => {
+export const uploadSpaceImage = async (spaceId: number, file: File): Promise<SpaceImage> => {
   const formData = new FormData();
   formData.append("file", file);
 
@@ -181,7 +181,7 @@ export const uploadSpaceImage = async (spaceId: string, file: File): Promise<Spa
  * @param spaceId The ID of the space.
  * @param imageId The ID of the image to delete.
  */
-export const deleteSpaceImage = async (spaceId: string, imageId: number): Promise<void> => {
+export const deleteSpaceImage = async (spaceId: number, imageId: number): Promise<void> => {
   await apiClient.delete<void>(`${CORP_ADMIN_API_BASE}/spaces/${spaceId}/images/${imageId}`);
 };
 
