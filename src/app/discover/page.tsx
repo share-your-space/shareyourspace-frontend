@@ -224,11 +224,9 @@ export default function DiscoverPage() {
   };
 
   return (
-    <AuthenticatedLayout>
       <div className="container mx-auto py-8 px-4 md:px-6">
         <h1 className="text-3xl font-bold tracking-tight mb-6">Discover Connections</h1>
         {renderContent()}
       </div>
-    </AuthenticatedLayout>
   );
 } 
