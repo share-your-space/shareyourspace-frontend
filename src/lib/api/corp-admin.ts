@@ -19,6 +19,7 @@ import {
   WaitlistedUser,
   SpaceCreate,
   SpaceImage,
+  WaitlistedStartup,
 } from "@/types/space";
 import { UserSimpleInfo } from "@/types/user";
 
@@ -192,14 +193,11 @@ export const getRankedWaitlist = async (
   type?: string,
   sortBy?: string,
   spaceId?: number,
-): Promise<WaitlistedUser[]> => {
-  const response = await apiClient.get<any[]>(`${CORP_ADMIN_API_BASE}/browse-waitlist`, {
+): Promise<(WaitlistedUser | WaitlistedStartup)[]> => {
+  const response = await apiClient.get<(WaitlistedUser | WaitlistedStartup)[]>(`${CORP_ADMIN_API_BASE}/browse-waitlist`, {
     params: { search, type, sortBy, spaceId },
   });
-  return response.data.map(item => ({
-    ...item,
-    entity_type: item.type === 'freelancer' ? 'user' : 'startup',
-  }));
+  return response.data;
 };
 
 /**
