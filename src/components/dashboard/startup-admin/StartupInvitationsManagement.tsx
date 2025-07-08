@@ -5,7 +5,7 @@ import { listPendingStartupInvitations, revokeStartupInvitation } from '@/lib/ap
 import { Invitation, InvitationStatus } from '@/types/auth';
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from 'date-fns'; // For formatting dates
 
@@ -23,7 +23,9 @@ const StartupInvitationsManagement = () => {
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || err.message || "Failed to fetch invitations.";
       setError(errorMessage);
-      toast({ title: "Error", description: errorMessage, variant: "destructive" });
+      toast.error("Error", {
+        description: errorMessage,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -36,14 +38,18 @@ const StartupInvitationsManagement = () => {
   const handleRevoke = async (invitationId: number) => {
     try {
       await revokeStartupInvitation(invitationId);
-      toast({ title: "Success", description: "Invitation revoked successfully." });
+      toast.success("Invitation Revoked", {
+        description: `The invitation for ${invitations.find(inv => inv.id === invitationId)?.email} has been successfully revoked.`,
+      });
       // Refresh the list: filter out the revoked invitation or mark status and re-filter view
       setInvitations(prev => prev.map(inv => 
         inv.id === invitationId ? { ...inv, status: InvitationStatus.REVOKED } : inv
       ));
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || "Failed to revoke invitation.";
-      toast({ title: "Error", description: errorMessage, variant: "destructive" });
+    } catch (error) {
+      console.error("Failed to revoke invitation:", error);
+      toast.error("Error", {
+        description: "Failed to revoke invitation. Please try again.",
+      });
     }
   };
 

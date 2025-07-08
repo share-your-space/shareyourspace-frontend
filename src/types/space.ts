@@ -50,6 +50,7 @@ export enum WorkstationStatus {
   AVAILABLE = "AVAILABLE",
   OCCUPIED = "OCCUPIED",
   MAINTENANCE = "MAINTENANCE",
+  RESERVED = "RESERVED",
 }
 
 // Based on app.schemas.space.WorkstationTenantInfo

@@ -17,7 +17,7 @@ interface EditWorkstationDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   workstation: WorkstationDetail | null;
-  spaceId: string;
+  spaceId: number;
   onEditSuccess: () => void;
 }
 
@@ -45,7 +45,7 @@ export const EditWorkstationDialog: React.FC<EditWorkstationDialogProps> = ({
     }
     setIsSaving(true);
     try {
-      await updateWorkstationDetails(spaceId, workstation.id, { name });
+      await updateWorkstationDetails(spaceId.toString(), workstation.id, { name });
       toast.success('Workstation updated successfully!');
       onEditSuccess();
     } catch (error) {

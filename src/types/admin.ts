@@ -18,6 +18,17 @@ export type AdminUserView = {
   managed_space?: { id: number; name: string } | null; // For Corp Admins viewing their managed space
 };
 
+export interface PaginatedAdminUsers {
+  total: number;
+  users: AdminUserView[];
+  page: number;
+  size: number;
+}
+
+export interface UserStatusUpdate {
+  status: "PENDING_VERIFICATION" | "WAITLISTED" | "PENDING_ONBOARDING" | "ACTIVE" | "SUSPENDED" | "BANNED";
+}
+
 // Interface for Space based on backend schema (SpaceNode)
 // Initially from shareyourspace-frontend/src/app/admin/spaces/page.tsx
 export interface AdminSpaceView {

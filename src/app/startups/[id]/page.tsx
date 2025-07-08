@@ -32,7 +32,7 @@ type StartupFormData = z.infer<typeof startupSchema>;
 
 const StartupProfilePage = () => {
   const params = useParams();
-  const { user, updateUser } = useAuthStore();
+  const { user, refreshCurrentUser } = useAuthStore();
   const [startup, setStartup] = useState<Startup | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -77,8 +77,17 @@ const StartupProfilePage = () => {
       const updatedStartup = await updateMyStartup({ [field]: value });
       setStartup(updatedStartup);
       toast.success('Profile updated!');
+      
+      // Refetch startup data to show updated info
+      fetchStartup();
+
+      // Also refresh the user's auth context if their own startup name changed
+      if (user?.startup_id === startupId) {
+        await refreshCurrentUser();
+      }
+
     } catch (error) {
-      toast.error('Failed to update startup profile.');
+      toast.error('Failed to update profile.');
     }
   };
 

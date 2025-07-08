@@ -7,7 +7,7 @@ import * as z from 'zod';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { directInviteStartupMember } from '@/lib/api/invitations';
 import { getMyStartup } from '@/lib/api/organizations';
 import { StartupDirectInviteCreate } from '@/types/auth';
@@ -46,10 +46,8 @@ const DirectInviteMemberForm = ({ onInvitationSent }: DirectInviteMemberFormProp
         setStartup(startupData);
       } catch (error) {
         console.error("Failed to fetch startup data:", error);
-        toast({
-          title: "Error",
+        toast.error("Error", {
           description: "Could not load your startup details. Please try refreshing.",
-          variant: "destructive",
         });
       } finally {
         setIsLoading(false);
@@ -61,7 +59,9 @@ const DirectInviteMemberForm = ({ onInvitationSent }: DirectInviteMemberFormProp
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user?.startup_id) {
-        toast({ title: "Error", description: "You are not associated with a startup.", variant: "destructive" });
+        toast.error("Error", {
+          description: "You are not associated with a startup.",
+        });
         return;
     }
     setIsSubmitting(true);
@@ -72,18 +72,16 @@ const DirectInviteMemberForm = ({ onInvitationSent }: DirectInviteMemberFormProp
         startup_id: user.startup_id,
       };
       await directInviteStartupMember(payload);
-      toast({
-        title: "Invitation Sent",
+      toast.success("Invitation Sent", {
         description: `An invitation has been sent to ${values.email}.`,
       });
       form.reset();
       onInvitationSent(); // This will refetch the list of members/invitations on the parent dashboard
     } catch (error: any) {
-      const errorMessage = error.response?.data?.detail || error.message || "Failed to send invitation.";
-      toast({
-        title: "Error",
+      console.error(error);
+      const errorMessage = error.response?.data?.detail || "An unexpected error occurred.";
+      toast.error("Failed to Send Invitation", {
         description: errorMessage,
-        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);

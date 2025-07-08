@@ -36,15 +36,15 @@ export default function StartOnboardingPage() {
   const [modalType, setModalType] = useState<'startup' | 'corporation' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [startupName, setStartupName] = useState('');
-  const { loginWithNewToken, onboardingToken } = useAuthStore();
+  const { loginWithNewToken, token } = useAuthStore();
 
   const handleFreelancerChoice = async () => {
     setIsLoading(true);
-    const toastId = toast.loading("Setting up your Freelancer profile...");
+    const toastId = toast.loading("Setting your role to Freelancer...");
     try {
-        const response = await api.post('/onboarding/role',
+        const response = await api.post('/onboarding/role', 
             { role: UserRole.FREELANCER },
-            { headers: { Authorization: `Bearer ${onboardingToken}` } }
+            { headers: { Authorization: `Bearer ${token}` } }
         );
         loginWithNewToken(response.data.access_token);
         toast.success("Profile created! Welcome.", { id: toastId });
@@ -82,7 +82,7 @@ export default function StartOnboardingPage() {
 
     try {
         const response = await api.post('/onboarding/role', payload, {
-             headers: { Authorization: `Bearer ${onboardingToken}` }
+             headers: { Authorization: `Bearer ${token}` }
         });
         loginWithNewToken(response.data.access_token);
         toast.success(`${modalType === 'startup' ? 'Startup' : 'Corporation'} registered!`, { id: toastId });

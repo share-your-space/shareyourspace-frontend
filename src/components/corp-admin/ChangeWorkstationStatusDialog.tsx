@@ -24,7 +24,7 @@ interface ChangeWorkstationStatusDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   workstation: WorkstationDetail | null;
   onStatusChangeSuccess: () => void;
-  spaceId: string;
+  spaceId: number;
 }
 
 export const ChangeWorkstationStatusDialog = ({ isOpen, onOpenChange, workstation, onStatusChangeSuccess, spaceId }: ChangeWorkstationStatusDialogProps) => {
@@ -38,7 +38,7 @@ export const ChangeWorkstationStatusDialog = ({ isOpen, onOpenChange, workstatio
   const onSubmit = async (values: StatusFormValues) => {
     if (!workstation) return;
     try {
-      await updateWorkstationStatus(spaceId, workstation.id, values.status);
+      await updateWorkstationStatus(spaceId.toString(), workstation.id, values.status);
       toast.success(`Successfully updated status for ${workstation.name}.`);
       onStatusChangeSuccess();
     } catch (error) {

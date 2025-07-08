@@ -10,7 +10,7 @@ import { Loader2, AlertTriangle, ArrowLeft, UserCheck, Check, MessageSquare } fr
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
-import { type Connection, type ConnectionStatusCheck } from '@/types/connection';
+import { type Connection } from '@/types/connection';
 import { UserDetail } from '@/types/auth';
 import { getUserDetailedProfile } from '@/lib/api/users';
 import UserProfileDisplay from '@/components/profile/UserProfileDisplay';
@@ -47,14 +47,18 @@ const UserProfilePage = () => {
                     // Fetch connection status with this user
                     if (currentUser && currentUser.id !== numericUserId) { // Don't fetch for own profile
                       try {
-                            const statusResponse = await api.get<ConnectionStatusCheck>(`/connections/status/${userId}`);
+                            const statusResponse = await api.get<Connection>(`/connections/status/${userId}`);
                             const status = statusResponse.data.status;
-                            if (status === 'connected') setConnectionStatus('connected');
-                            else if (status === 'pending_from_me' || status === 'pending_from_them') setConnectionStatus('pending');
-                            else setConnectionStatus('idle');
+                            if (status === 'accepted') {
+                                setConnectionStatus('connected');
+                            } else if (status === 'pending') {
+                                setConnectionStatus('pending');
+                            } else {
+                                setConnectionStatus('idle');
+                            }
                         } catch (statusErr) {
-                            console.warn("Failed to fetch connection status for profile page:", statusErr);
-                            setConnectionStatus('idle'); // Default to idle if status check fails
+                            console.error('Failed to fetch connection status', statusErr);
+                            setConnectionStatus('idle'); // Set to idle on error
                         }
                     }
 

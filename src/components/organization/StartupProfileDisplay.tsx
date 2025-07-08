@@ -42,10 +42,12 @@ const StartupProfileDisplay = ({ startup, isEditing, form, onSave }: StartupProf
           <EditableSection title="Pitch Deck" isEditing={isEditing} onSave={() => onSave('pitch_deck_url')}
             editContent={<Controller name="pitch_deck_url" control={form.control} render={({ field }) => <Input {...field} placeholder="https://link-to-your-deck.com" />} />}
           >
-            <a href={startup.pitch_deck_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-500 hover:underline">
-                <ExternalLink className="h-4 w-4" />
-                View Pitch Deck
-            </a>
+            {startup.pitch_deck_url && (
+              <a href={startup.pitch_deck_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-500 hover:underline">
+                  <ExternalLink className="h-4 w-4" />
+                  View Pitch Deck
+              </a>
+            )}
           </EditableSection>
 
         </div>

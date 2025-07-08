@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 interface CreateWorkstationDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  spaceId: string;
+  spaceId: number;
   onCreateSuccess: () => void;
 }
 
@@ -35,7 +35,7 @@ export const CreateWorkstationDialog: React.FC<CreateWorkstationDialogProps> = (
     }
     setIsCreating(true);
     try {
-      await createWorkstation(spaceId, { name: workstationName });
+      await createWorkstation(spaceId.toString(), { name: workstationName });
       toast.success('Workstation created successfully!');
       onCreateSuccess();
     } catch (error) {

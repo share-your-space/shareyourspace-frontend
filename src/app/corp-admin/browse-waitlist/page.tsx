@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { getRankedWaitlist, addTenantToSpace } from '@/lib/api/corp-admin';
-import { AdminUserView as WaitlistedUser } from '@/types/admin';
-import { Startup as WaitlistedStartup } from '@/types/organization';
+import { WaitlistedUser } from '@/types/space';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -19,10 +18,8 @@ import { initiateExternalChat } from '@/lib/api/chat';
 import { AddTenantDialog } from '@/components/corp-admin/AddTenantDialog';
 import { useSpace } from '@/context/SpaceContext';
 
-type WaitlistItem = WaitlistedUser | WaitlistedStartup;
-
 const BrowseWaitlistPage = () => {
-  const [waitlist, setWaitlist] = useState<(WaitlistedUser | WaitlistedStartup)[]>([]);
+  const [waitlist, setWaitlist] = useState<WaitlistedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('interest');
@@ -31,7 +28,7 @@ const BrowseWaitlistPage = () => {
   const { selectedSpace } = useSpace();
   
   const [isAddTenantDialogOpen, setIsAddTenantDialogOpen] = useState(false);
-  const [selectedTenant, setSelectedTenant] = useState<WaitlistItem | null>(null);
+  const [selectedTenant, setSelectedTenant] = useState<WaitlistedUser | null>(null);
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
@@ -53,7 +50,7 @@ const BrowseWaitlistPage = () => {
     fetchWaitlist();
   }, [debouncedSearchTerm, typeFilter, sortBy, selectedSpace]);
 
-  const handleOpenAddDialog = (tenant: WaitlistItem) => {
+  const handleOpenAddDialog = (tenant: WaitlistedUser) => {
     setSelectedTenant(tenant);
     setIsAddTenantDialogOpen(true);
   };
@@ -198,7 +195,7 @@ const BrowseWaitlistPage = () => {
           isOpen={isAddTenantDialogOpen}
           onClose={handleCloseAddDialog}
           onConfirm={handleConfirmAddTenant}
-          tenantName={selectedTenant.type === 'startup' ? selectedTenant.name || 'this tenant' : selectedTenant.full_name || 'this tenant'}
+          tenantName={selectedTenant.type === 'startup' ? selectedTenant.name ?? 'this tenant' : selectedTenant.full_name ?? 'this tenant'}
           hasExpressedInterest={!!selectedTenant.expressed_interest}
         />
       )}

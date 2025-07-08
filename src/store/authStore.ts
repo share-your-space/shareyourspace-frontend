@@ -1,55 +1,20 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { api } from '@/lib/api';
-import { UserRole } from '@/types/enums';
+import { User } from '@/types/auth';
 import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 
-export interface UserProfile {
-  title?: string | null;
-  bio?: string | null;
-  skills_expertise?: string[] | null;
-  industry_focus?: string[] | null;
-  project_interests_goals?: string | null;
-  collaboration_preferences?: string[] | null;
-  tools_technologies?: string[] | null;
-  linkedin_profile_url?: string | null;
-  profile_picture_url?: string | null;
-  profile_picture_signed_url?: string | null;
-  cover_photo_url?: string | null;
-  cover_photo_signed_url?: string | null;
-  is_profile_complete?: boolean;
-}
-
-export interface UserAuthInfo {
-  id: number;
-  email: string;
-  full_name: string | null;
-  role: UserRole | null;
-  status: string;
-  company_id?: number | null;
-  startup_id?: number | null;
-  space_id?: number | null;
-  space_corporate_admin_id?: number | null;
-  is_profile_complete?: boolean;
-  current_workstation?: {
-    workstation_id: number;
-    workstation_name: string;
-    assignment_start_date: string;
-  } | null;
-  profile?: UserProfile | null;
-}
-
 interface AuthState {
-  user: UserAuthInfo | null;
+  user: User | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (token: string, user: UserAuthInfo) => void;
+  login: (token: string, user: User) => void;
   loginWithNewToken: (token: string) => Promise<void>;
   logout: (router?: AppRouterInstance) => void;
-  setUser: (user: UserAuthInfo | null) => void;
+  setUser: (user: User | null) => void;
   fetchUser: () => Promise<void>;
-  refreshCurrentUser: () => Promise<UserAuthInfo | null>;
+  refreshCurrentUser: () => Promise<User | null>;
   triggerConnectionUpdate: () => void;
 }
 

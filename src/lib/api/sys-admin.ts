@@ -1,6 +1,7 @@
 import { apiClient } from "./base";
 import { Space, SpaceCreate } from "@/types/space";
-import { User, PaginatedUsers, UserStatusUpdate } from "@/types/user";
+import { User } from "@/types/auth";
+import { PaginatedAdminUsers, UserStatusUpdate } from "@/types/admin";
 
 /**
  * [Sys Admin] Fetches a list of all spaces in the system.

@@ -48,7 +48,11 @@ function AcceptInvitationContent() {
     if (token) {
       getInvitationDetails(token)
         .then(response => {
-          setInvitationDetails(response);
+          setInvitationDetails({
+            email: response.email,
+            organization_name: response.startup?.name || 'the organization',
+            organization_type: 'Startup'
+          });
         })
         .catch(err => {
           setError(err.response?.data?.detail || 'Invalid or expired invitation link.');

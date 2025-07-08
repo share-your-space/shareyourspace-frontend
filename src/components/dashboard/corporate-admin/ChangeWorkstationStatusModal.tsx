@@ -20,7 +20,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { WorkstationDetail, WorkstationStatus as WorkstationStatusType } from '@/types/space';
+import { WorkstationDetail, WorkstationStatus as WorkstationStatusType } from '@/types/space';
 
 interface ChangeWorkstationStatusModalProps {
   isOpen: boolean;
@@ -32,7 +32,7 @@ interface ChangeWorkstationStatusModalProps {
   error: string | null;
 }
 
-const AVAILABLE_STATUSES_FOR_CHANGE: WorkstationStatusType[] = ['AVAILABLE', 'MAINTENANCE', 'RESERVED']; // Define which statuses can be set manually
+const AVAILABLE_STATUSES_FOR_CHANGE: WorkstationStatusType[] = [WorkstationStatusType.AVAILABLE, WorkstationStatusType.MAINTENANCE, WorkstationStatusType.RESERVED]; // Define which statuses can be set manually
 
 const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -85,9 +85,7 @@ const ChangeWorkstationStatusModal: React.FC<ChangeWorkstationStatusModalProps> 
                 {AVAILABLE_STATUSES_FOR_CHANGE.map(status => (
                   <SelectItem 
                     key={status} 
-                    value={status} 
-                    // Prevent changing to OCCUPIED directly, or from OCCUPIED to itself via this modal if OCCUPIED is not in AVAILABLE_STATUSES_FOR_CHANGE
-                    disabled={status === 'OCCUPIED' || (workstation.status === 'OCCUPIED' && status === workstation.status)}
+                    value={status}
                   >
                     {status}
                   </SelectItem>

@@ -10,8 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import { assignWorkstation } from '@/lib/api/corp-admin';
 import { toast } from 'sonner';
-import { WorkstationDetail } from '@/types/space';
-import { User } from '@/types/auth'; // Assuming a basic User type exists
+import { WorkstationDetail, BasicUser } from '@/types/space';
 
 const assignSchema = z.object({
   userId: z.string().nonempty("Please select a user"),
@@ -23,9 +22,9 @@ interface AssignWorkstationDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   workstation: WorkstationDetail | null;
-  users: User[];
+  users: BasicUser[];
   onAssignmentSuccess: () => void;
-  spaceId: string;
+  spaceId: number;
 }
 
 export const AssignWorkstationDialog = ({ isOpen, onOpenChange, workstation, users, onAssignmentSuccess, spaceId }: AssignWorkstationDialogProps) => {
@@ -36,7 +35,7 @@ export const AssignWorkstationDialog = ({ isOpen, onOpenChange, workstation, use
   const onSubmit = async (values: AssignFormValues) => {
     if (!workstation) return;
     try {
-      await assignWorkstation(spaceId, workstation.id, parseInt(values.userId));
+      await assignWorkstation(spaceId.toString(), workstation.id.toString(), values.userId);
       toast.success(`Successfully assigned ${workstation.name}.`);
       onAssignmentSuccess();
     } catch (error) {

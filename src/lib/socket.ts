@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 // import { ReactionUpdatedEventPayload } from '@/store/chatStore'; // REMOVED
-import { ChatMessageData, ReactionUpdatedEventPayload } from '@/types/chat'; // Added import
+import { ChatMessageData, ReactionUpdatedEventPayload, NewMessageNotificationPayload } from '@/types/chat'; // Added import
 
 // Placeholder for ChatMessageData, ideally this would be imported from a shared types file - NO LONGER NEEDED
 // For now, using 'any' to resolve linter errors quickly. - NO LONGER NEEDED
@@ -14,7 +14,7 @@ interface ServerToClientEvents {
   withAck: (d: string, callback: (e: number) => void) => void;
   receive_message: (message: ChatMessageData) => void; // Uses ChatMessageData from @/types/chat
   connect_error: (err: Error) => void;
-  messages_read: (data: { reader_id: number; conversation_partner_id: number; count: number }) => void;
+  messages_read: (data: { reader_id: number; conversation_partner_id: number; conversation_id: number; read_at: string; }) => void;
   user_online: (data: { user_id: number }) => void;
   user_offline: (data: { user_id: number }) => void;
   online_users_list: (userIds: number[]) => void;
@@ -22,6 +22,7 @@ interface ServerToClientEvents {
   message_updated: (payload: ChatMessageData) => void; // Uses ChatMessageData from @/types/chat
   message_deleted: (payload: ChatMessageData) => void; // Uses ChatMessageData from @/types/chat
   workstation_changed: (data: { status: 'assigned' | 'unassigned', workstation_name?: string }) => void;
+  new_message_notification: (payload: NewMessageNotificationPayload) => void;
   // Add other expected server events here
 }
 
@@ -42,7 +43,7 @@ interface SendMessagePayloadSocket {
 
 interface ClientToServerEvents {
   send_message: (message: SendMessagePayloadSocket) => void; // UPDATED to use a specific type
-  mark_as_read: (data: { sender_id: number }) => void; 
+  mark_as_read: (data: { sender_id: number; conversation_id: number; }) => void; 
   user_typing: (data: { recipient_id: number; is_typing: boolean }) => void; // ADDED from dev plan
   // Add other events the client will emit
 }

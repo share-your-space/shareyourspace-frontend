@@ -6,14 +6,13 @@ import {
     Invitation,
     InvitationDeclineRequest,
     CorpAdminDirectInviteCreate,
-    InvitationDetails,
     StartupDirectInviteCreate
 } from "@/types/auth";
 
 const INVITATIONS_API_BASE = "/invitations";
 
-export const getInvitationDetails = async (token: string): Promise<InvitationDetails> => {
-  const response = await apiClient.get<InvitationDetails>(`${INVITATIONS_API_BASE}/${token}/details`);
+export const getInvitationDetails = async (token: string): Promise<Invitation> => {
+  const response = await apiClient.get<Invitation>(`${INVITATIONS_API_BASE}/${token}/details`);
   return response.data;
 };
 

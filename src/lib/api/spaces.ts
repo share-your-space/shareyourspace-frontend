@@ -2,7 +2,6 @@ import { apiClient } from "./base";
 import { Space, SpaceProfile } from "@/types/space";
 import type {
   ManagedSpaceDetail,
-  EmployeeListResponse,
   SpaceTenantResponse,
   BasicUser,
   StartupTenantInfo,
@@ -14,35 +13,17 @@ import type {
   MessageResponse,
   WorkstationAssignmentRequest,
   WorkstationStatusUpdateRequest,
-  SpaceUsersListResponse,
   SpaceConnectionStatsResponse,
   WorkstationCreate,
   WorkstationUpdate
 } from '../../types/space';
-import { SpaceCreate, SpaceUpdate, SpaceUser, SpaceUserListResponse, BasicStartup } from "@/types/space";
+import { SpaceCreate, SpaceUsersListResponse, BasicStartup } from "@/types/space";
 
 // Note: This file will be updated to include public-facing space functions,
 // such as fetching a space's public profile, listing available spaces, etc.
 // Admin-specific functionality has been moved to corp-admin.ts and sys-admin.ts.
 
 const API_BASE_URL = '/spaces'; // Correct base path for space-related APIs
-
-async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const token = getAuthToken(); 
-  const headers = {
-    "Content-Type": "application/json",
-    ...(token && { "Authorization": `Bearer ${token}` }),
-    ...options.headers,
-  };
-
-  const response = await fetch(url, { ...options, headers });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ detail: response.statusText }));
-    throw new Error(errorData.detail || "API request failed");
-  }
-  return response.json();
-}
 
 // Get details of the managed space
 export const getMyManagedSpace = async (): Promise<ManagedSpaceDetail> => {
@@ -52,7 +33,7 @@ export const getMyManagedSpace = async (): Promise<ManagedSpaceDetail> => {
 
 // List employees in the managed space
 export const listMySpaceEmployees = async (): Promise<BasicUser[]> => {
-  const response = await apiClient.get<EmployeeListResponse>(`${API_BASE_URL}/me/employees`);
+  const response = await apiClient.get<BasicUser[]>(`${API_BASE_URL}/me/employees`);
   return response.data;
 };
 
@@ -104,8 +85,8 @@ export const deleteWorkstation = async (workstationId: number): Promise<void> =>
 // --- End New Workstation CRUD API functions ---
 
 // New function to list all users in the Corp Admin's managed space
-export const listAllUsersInMySpace = async (): Promise<SpaceUserListResponse> => {
-  const response = await apiClient.get<SpaceUserListResponse>(`${API_BASE_URL}/me/users`);
+export const listAllUsersInMySpace = async (): Promise<SpaceUsersListResponse> => {
+  const response = await apiClient.get<SpaceUsersListResponse>(`${API_BASE_URL}/me/users`);
   return response.data;
 };
 
@@ -152,3 +133,4 @@ export const listBrowsableSpaces = async (): Promise<Space[]> => {
 
 // Add other public-facing space-related API functions here, for example:
 // - expressInterestInSpace
+

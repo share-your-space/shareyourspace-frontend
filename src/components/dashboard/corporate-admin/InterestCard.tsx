@@ -76,7 +76,7 @@ export default function InterestCard({ interest, onInterestAccepted }: InterestC
     <Card>
       <CardHeader className="flex flex-row items-start gap-4 space-y-0">
         <Avatar className="h-12 w-12">
-          <AvatarImage src={isStartup ? interest.startup?.logo_url : interest.user.profile?.profile_picture_url} alt="Profile" />
+          <AvatarImage src={(isStartup ? interest.startup?.logo_url : interest.user.profile?.profile_picture_url) || ''} alt="Profile" />
           <AvatarFallback>{isStartup ? interest.startup?.name[0] : interest.user.full_name?.[0]}</AvatarFallback>
         </Avatar>
         <div className="flex-1">

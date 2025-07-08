@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/store/authStore";
 import { api } from "@/lib/api"; // Import the api client
 import UnauthenticatedLayout from '@/components/layout/UnauthenticatedLayout';
-import { type User } from "@/types/user";
+import { type User } from "@/types/auth";
 import { toast } from "react-hot-toast";
 
 export default function LoginPage() {
@@ -116,7 +116,7 @@ export default function LoginPage() {
                   id="password"
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                   disabled={isLoading}
                   autoComplete="current-password"
                 />

@@ -101,7 +101,7 @@ const EditProfilePage = () => {
       try {
         const updatedProfile = await uploadMyProfilePicture(e.target.files[0]);
         setProfile(updatedProfile);
-        setPreviewImageUrl(updatedProfile.profile_picture_signed_url);
+        setPreviewImageUrl(updatedProfile.profile_picture_signed_url || null);
         setProfilePictureFile(null);
         toast.success("Profile picture updated!");
       } catch (error) {
@@ -130,7 +130,8 @@ const EditProfilePage = () => {
     try {
       const dataToSave: Partial<UserProfileUpdateRequest> = {};
       fields.forEach(field => {
-        dataToSave[field] = getValues(field);
+        const value = getValues(field);
+        (dataToSave as any)[field] = value;
       });
       const updatedProfile = await updateMyProfile(dataToSave);
       setProfile(updatedProfile);
@@ -177,7 +178,7 @@ const EditProfilePage = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2 space-y-4">
           <EditableSection title="About" isEditing={isEditing} onSave={() => handleSave(['bio'])} editContent={
-            <Controller name="bio" control={control} render={({ field }) => <Textarea {...field} rows={5} placeholder="Tell us about yourself..." />} />
+            <Controller name="bio" control={control} render={({ field }) => <Textarea {...field} value={field.value ?? ''} rows={5} placeholder="Tell us about yourself..." />} />
           }>
             <p className="text-gray-600 prose">{profile.bio || 'Tell us about yourself...'}</p>
           </EditableSection>
@@ -207,9 +208,9 @@ const EditProfilePage = () => {
           </EditableSection>
           
           <EditableSection title="LinkedIn" isEditing={isEditing} onSave={() => handleSave(['linkedin_profile_url'])} editContent={
-             <Controller name="linkedin_profile_url" control={control} render={({ field }) => <Input {...field} placeholder="https://linkedin.com/in/yourprofile" />} />
+             <Controller name="linkedin_profile_url" control={control} render={({ field }) => <Input {...field} value={field.value ?? ''} placeholder="https://linkedin.com/in/yourprofile" />} />
           }>
-            <a href={profile.linkedin_profile_url} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">{profile.linkedin_profile_url}</a>
+            <a href={profile.linkedin_profile_url || ''} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">{profile.linkedin_profile_url}</a>
           </EditableSection>
 
         </div>

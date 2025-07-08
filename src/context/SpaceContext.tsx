@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { Space } from '@/types/space';
 import { getCompanySpaces } from '@/lib/api/corp-admin';
-import { useAuth } from './AuthContext';
 import { UserRole } from '@/types/enums';
 import { useAuthStore } from '@/store/authStore';
 import axios from 'axios';

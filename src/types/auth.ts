@@ -1,6 +1,5 @@
 import { BasicStartup, BasicCompany, BasicSpace, UserWorkstationInfo } from "./space";
 import { UserProfile } from "./userProfile"; // Import UserProfile
-import { User } from "./user";
 
 // Corresponds to app.models.invitation.InvitationStatus enum
 export enum InvitationStatus {

@@ -4,20 +4,12 @@ import { socket } from '@/lib/socket';
 import { useChatStore } from '@/store/chatStore'; // Import chat store
 import { toast } from 'sonner'; // <<< ADDED IMPORT
 import { useRouter } from 'next/navigation'; // <<< ADDED IMPORT
+import { NewMessageNotificationPayload } from '@/types/chat';
 
 /**
  * Component responsible for managing the Socket.IO connection based on auth state.
  * This should be mounted client-side within a layout component.
  */
-
-interface NewMessageNotificationPayload {
-  message_id: number;
-  conversation_id: number;
-  sender_id: number;
-  sender_name: string;
-  message_preview: string;
-  created_at: string;
-}
 
 export function SocketConnectionManager() {
   const token = useAuthStore((state) => state.token);
@@ -47,7 +39,7 @@ export function SocketConnectionManager() {
         socket.auth = { token };
         socket.connect();
         console.log('Attempting socket connection with token...');
-      } else if (socket.auth.token !== token) {
+      } else if ((socket.auth as { token: string }).token !== token) {
         // Token might have refreshed, update auth and reconnect if needed
         console.log('Socket token changed, updating auth...');
         socket.auth = { token };
@@ -111,7 +103,7 @@ export function SocketConnectionManager() {
         return; 
       }
       
-      const currentUserId = parseInt(currentUser.id, 10); 
+      const currentUserId = currentUser.id; 
       if (isNaN(currentUserId)) {
         console.error('Current user ID from authStore is not a valid number:', currentUser.id);
         return;

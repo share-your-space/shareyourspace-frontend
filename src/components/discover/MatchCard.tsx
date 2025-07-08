@@ -73,7 +73,7 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match, initialConnectionSt
   };
   
   let connectButtonContent:
-    | { text: string; icon: React.ElementType; disabled: boolean; onClick?: () => void }
+    | { text: string; icon: React.FC<React.SVGProps<SVGSVGElement>>; disabled: boolean; onClick?: () => void }
     | undefined = undefined;
 
   switch (connectionStatus) {

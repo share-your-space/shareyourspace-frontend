@@ -82,7 +82,7 @@ function ResetPasswordForm() {
                 id="password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                 disabled={isLoading || !token || !!message} // Disable if loading, no token, or success
                 autoComplete="new-password"
               />
@@ -93,7 +93,7 @@ function ResetPasswordForm() {
                 id="confirm-password"
                 required
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
                 disabled={isLoading || !token || !!message}
                 autoComplete="new-password"
               />

@@ -48,6 +48,16 @@ export interface ReactionUpdatedEventPayload {
   action: "added" | "removed";
 }
 
+// From SocketConnectionManager.tsx
+export interface NewMessageNotificationPayload {
+  message_id: number;
+  conversation_id: number;
+  sender_id: number;
+  sender_name: string;
+  message_preview: string;
+  created_at: string;
+}
+
 // Message interface (as defined in chatStore.ts - Note: it's very similar to ChatMessageData)
 // We should probably consolidate ChatMessageData and Message. For now, keeping both if they serve slightly different state needs.
 // If ChatMessageData is the raw fetch type and Message is the store type, they might diverge.
@@ -67,3 +77,5 @@ export interface Conversation {
   hasMoreMessages: boolean;
   messagesFetched: boolean;
 } 
+
+export type ConversationData = Conversation; 

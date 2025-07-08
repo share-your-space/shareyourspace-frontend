@@ -8,7 +8,7 @@ import {
   deleteWorkstation,
   unassignWorkstation
 } from '@/lib/api/corp-admin';
-import { WorkstationDetail } from '@/types/space';
+import { WorkstationDetail, BasicUser } from '@/types/space';
 import { User } from '@/types/auth';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +38,7 @@ import { useDebounce } from '@/hooks/use-debounce';
 const WorkstationsPage = () => {
   const { selectedSpace } = useSpace();
   const [workstations, setWorkstations] = useState<WorkstationDetail[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<BasicUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedWs, setSelectedWs] = useState<WorkstationDetail | null>(null);
   const [isAssignDialogOpen, setAssignDialogOpen] = useState(false);
@@ -63,7 +63,7 @@ const WorkstationsPage = () => {
         ]);
         setWorkstations(wsResponse.workstations);
         const assignedUserIds = wsResponse.workstations
-            .map(ws => ws.occupant?.id)
+            .map(ws => ws.occupant?.user_id)
             .filter(Boolean);
         setUsers(usersResponse.users.filter(user => !assignedUserIds.includes(user.id)));
       } catch (error) {
@@ -107,7 +107,7 @@ const WorkstationsPage = () => {
   const handleDeleteWorkstation = async () => {
     if (!selectedSpace || !selectedWs) return;
     try {
-      await deleteWorkstation(selectedSpace.id, selectedWs.id);
+      await deleteWorkstation(selectedSpace.id.toString(), selectedWs.id);
       toast.success("Workstation deleted successfully.");
       fetchData(); // Refresh data
     } catch (error) {
@@ -121,7 +121,7 @@ const WorkstationsPage = () => {
   const handleUnassignWorkstation = async () => {
     if (!selectedSpace || !selectedWs) return;
     try {
-      await unassignWorkstation(selectedSpace.id, selectedWs.id);
+      await unassignWorkstation(selectedSpace.id.toString(), selectedWs.id);
       toast.success("User unassigned successfully.");
       fetchData();
     } catch (error) {

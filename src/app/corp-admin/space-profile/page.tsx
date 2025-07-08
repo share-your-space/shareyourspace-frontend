@@ -76,16 +76,8 @@ const SpaceProfilePage = () => {
   const handleSave = async (data: ProfileFormValues) => {
     if (!selectedSpace) return;
 
-    const payload: Partial<ProfileFormValues> = {
-      ...data,
-      house_rules: data.houseRules, 
-    };
-    
-    // remove houseRules from payload
-    delete (payload as any).houseRules;
-
     try {
-      const updatedProfile = await updateSpaceProfile(selectedSpace.id, payload);
+      const updatedProfile = await updateSpaceProfile(selectedSpace.id, data);
       setProfile(updatedProfile);
       toast.success(`Profile updated!`);
       setIsEditing(false);

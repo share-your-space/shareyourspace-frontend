@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSpace } from '@/context/SpaceContext';
 import { listAllUsersInSpace } from '@/lib/api/corp-admin';
-import { User } from '@/types/auth';
+import { BasicUser as User } from '@/types/space';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
@@ -71,7 +71,6 @@ const UsersPage = () => {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -79,7 +78,6 @@ const UsersPage = () => {
               <TableRow key={user.id}>
                 <TableCell>{user.full_name}</TableCell>
                 <TableCell>{user.email}</TableCell>
-                <TableCell>{user.role}</TableCell>
               </TableRow>
             ))}
           </TableBody>

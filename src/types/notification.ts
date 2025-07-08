@@ -1,5 +1,5 @@
-import { User } from './user'; // Assuming a User type/interface exists
-import { BasicUser } from './user'; 
+import { User } from './auth';
+import { BasicUser } from './space';
 
 export interface Notification {
   id: number;
