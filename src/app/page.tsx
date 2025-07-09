@@ -1,11 +1,11 @@
+'use client';
+
 import Image from "next/image";
 import HeroSection from "@/components/landing/HeroSection";
 import UnauthenticatedLayout from '@/components/layout/UnauthenticatedLayout';
 import nextDynamic from "next/dynamic";
 
 const BenefitsSection = nextDynamic(() => import('@/components/landing/BenefitsSection'), { ssr: false });
-
-export const dynamic = 'force-dynamic';
 
 export default function Home() {
   return (
