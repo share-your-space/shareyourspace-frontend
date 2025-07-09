@@ -1,9 +1,9 @@
 import Image from "next/image";
 import HeroSection from "@/components/landing/HeroSection";
 import UnauthenticatedLayout from '@/components/layout/UnauthenticatedLayout';
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 
-const BenefitsSection = dynamic(() => import('@/components/landing/BenefitsSection'), { ssr: false });
+const BenefitsSection = nextDynamic(() => import('@/components/landing/BenefitsSection'), { ssr: false });
 
 export const dynamic = 'force-dynamic';
 
