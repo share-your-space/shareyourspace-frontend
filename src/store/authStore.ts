@@ -107,11 +107,10 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => localStorage),
-      onRehydrate: () => {
-        // This function is called when the store is rehydrated from storage.
-        // We can now safely say the store is no longer in its initial loading state.
-        useAuthStore.setState({ isLoading: false });
-      }
     }
   )
 );
+
+useAuthStore.persist.onFinishHydration(() => {
+  useAuthStore.setState({ isLoading: false });
+});
