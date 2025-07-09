@@ -153,7 +153,7 @@ const ConnectionsPage = () => {
         } finally {
             setIsLoading(prev => ({ ...prev, [type]: false }));
         }
-    }, [currentUser, isLoadingAuth]);
+    }, [isLoadingAuth]);
 
     useEffect(() => {
         if (!isLoadingAuth && currentUser) { // Only fetch if auth loaded and user exists
@@ -161,7 +161,7 @@ const ConnectionsPage = () => {
             fetchData('sent');
             fetchData('active');
         }
-    }, [fetchData, currentUser, isLoadingAuth]);
+    }, [currentUser?.id, isLoadingAuth]);
 
     const handleAction = async (action: 'accept' | 'decline' | 'cancel' | 'remove', connectionId: number) => {
         if (currentUser?.status === 'WAITLISTED') return; // Safety check
