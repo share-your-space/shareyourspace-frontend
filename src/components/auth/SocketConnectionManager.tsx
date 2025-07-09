@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { socket } from '@/lib/socket';
 import { useChatStore } from '@/store/chatStore'; // Import chat store
@@ -27,17 +27,32 @@ export function SocketConnectionManager() {
   // Router for navigation
   const router = useRouter();
   const logout = useAuthStore((state) => state.logout);
+  const connectionAttempts = useRef(0);
+  const maxConnectionAttempts = 3;
 
   useEffect(() => {
-    const handleConnectError = (error: Error) => {
-      console.error('Socket connection failed, logging out:', error);
-      logout(router);
-      toast.error('Session expired. Please log in again.');
+    const handleConnect = () => {
+      console.log('Socket connected successfully.');
+      // Reset attempts on successful connection
+      connectionAttempts.current = 0;
     };
 
+    const handleConnectError = (error: Error) => {
+      connectionAttempts.current += 1;
+      console.error(`Socket connection attempt ${connectionAttempts.current} failed:`, error);
+      
+      if (connectionAttempts.current >= maxConnectionAttempts) {
+        console.error('Socket connection failed after multiple attempts, logging out.');
+        logout(router);
+        toast.error('Session expired. Please log in again.');
+      }
+    };
+
+    socket.on('connect', handleConnect);
     socket.on('connect_error', handleConnectError);
 
     return () => {
+      socket.off('connect', handleConnect);
       socket.off('connect_error', handleConnectError);
     };
   }, [logout, router]);
@@ -53,12 +68,16 @@ export function SocketConnectionManager() {
       console.log(`Auth state updated: isAuthenticated=${isAuthenticated}, token available. Socket connected: ${socket.connected}`);
       // Connect or update auth if already connected but token changed
       if (!socket.connected) {
+        // Reset attempts before a new connection sequence
+        connectionAttempts.current = 0;
         socket.auth = { token };
         socket.connect();
         console.log('Attempting socket connection with token...');
       } else if ((socket.auth as { token: string }).token !== token) {
         // Token might have refreshed, update auth and reconnect if needed
         console.log('Socket token changed, updating auth...');
+        // Reset attempts before a new connection sequence
+        connectionAttempts.current = 0;
         socket.auth = { token };
         socket.disconnect().connect(); // Disconnect and reconnect with new token
       }

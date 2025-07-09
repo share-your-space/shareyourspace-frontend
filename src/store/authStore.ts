@@ -18,6 +18,9 @@ interface AuthState {
   triggerConnectionUpdate: () => void;
 }
 
+// Helper function to check if we are on the client
+const isClient = typeof window !== 'undefined';
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -98,14 +101,39 @@ export const useAuthStore = create<AuthState>()(
           return null;
         }
       },
-      
+
       triggerConnectionUpdate: () => {
-        get().refreshCurrentUser();
-      }
+        // This function's purpose is to allow other components to trigger
+        // a re-evaluation of effects that depend on the auth state.
+        // By calling this, you can force components listening to this piece of state
+        // to re-run their logic.
+        set({ user: get().user });
+      },
     }),
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => localStorage),
+      // Only persist token and user. Other state should be transient.
+      partialize: (state) => ({ token: state.token, user: state.user }),
+      // This function runs after the store has been rehydrated
+      onRehydrateStorage: () => (state) => {
+        if (isClient && state) {
+          console.log('Zustand hydration finished.');
+          // If a token is present, assume authenticated and fetch user data
+          // to ensure it's fresh and valid.
+          if (state.token) {
+            console.log('Token found on hydration, validating user session.');
+            api.defaults.headers.common['Authorization'] = `Bearer ${state.token}`;
+            // We don't have access to `get()` here, so we use the hydrated `state`
+            // and then call fetchUser which uses `get()` internally.
+            useAuthStore.getState().fetchUser();
+          } else {
+            // If no token, ensure we are in a clean logged-out state.
+            console.log('No token found on hydration, ensuring logged out state.');
+            useAuthStore.setState({ isLoading: false, isAuthenticated: false, user: null });
+          }
+        }
+      },
     }
   )
 );
