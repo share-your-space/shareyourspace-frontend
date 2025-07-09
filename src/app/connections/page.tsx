@@ -119,49 +119,45 @@ const ConnectionsPage = () => {
     const [sent, setSent] = useState<ConnectionItem[]>([]);
     const [active, setActive] = useState<ConnectionItem[]>([]);
     
-    const [isLoading, setIsLoading] = useState<Record<string, boolean>>({ incoming: true, sent: true, active: true });
-    const [error, setError] = useState<Record<string, string | null>>({ incoming: null, sent: null, active: null });
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
     const [isProcessingAction, setIsProcessingAction] = useState<Record<number, boolean>>({}); // Tracks loading state for specific connection actions by ID
+    const [refetchTrigger, setRefetchTrigger] = useState(0);
 
     const currentUser = useAuthStore(state => state.user);
     const isLoadingAuth = useAuthStore((state) => state.isLoading); // Get auth loading state
 
-    const fetchData = useCallback(async (type: 'incoming' | 'sent' | 'active') => {
-        // Do not fetch if user is waitlisted or auth is still loading
-        if (isLoadingAuth || currentUser?.status === 'WAITLISTED') {
-            setIsLoading(prev => ({ ...prev, [type]: false })); // Ensure loading is set to false
-            return;
-        }
-
-        setIsLoading(prev => ({ ...prev, [type]: true }));
-        setError(prev => ({ ...prev, [type]: null }));
-        let endpoint = '';
-        switch (type) {
-            case 'incoming': endpoint = '/connections/pending'; break; // Current user is recipient
-            case 'sent': endpoint = '/connections/sent'; break; // Current user is requester, status pending
-            case 'active': endpoint = '/connections/accepted'; break;
-        }
-
-        try {
-            const response = await api.get<ConnectionItem[]>(endpoint);
-            if (type === 'incoming') setIncoming(response.data);
-            else if (type === 'sent') setSent(response.data);
-            else if (type === 'active') setActive(response.data);
-        } catch (err) {
-            console.error(`Error fetching ${type} connections:`, err);
-            setError(prev => ({ ...prev, [type]: (err as Error).message || `Failed to fetch ${type} connections.` }));
-        } finally {
-            setIsLoading(prev => ({ ...prev, [type]: false }));
-        }
-    }, [isLoadingAuth]);
-
     useEffect(() => {
-        if (!isLoadingAuth && currentUser) { // Only fetch if auth loaded and user exists
-            fetchData('incoming');
-            fetchData('sent');
-            fetchData('active');
-        }
-    }, [currentUser?.id, isLoadingAuth]);
+        const fetchData = async () => {
+            if (isLoadingAuth || !currentUser || currentUser.status === 'WAITLISTED') {
+                setIsLoading(false);
+                return;
+            }
+
+            setIsLoading(true);
+            setError(null);
+
+            try {
+                const [incomingRes, sentRes, activeRes] = await Promise.all([
+                    api.get<ConnectionItem[]>('/connections/pending'),
+                    api.get<ConnectionItem[]>('/connections/sent'),
+                    api.get<ConnectionItem[]>('/connections/accepted')
+                ]);
+
+                setIncoming(incomingRes.data);
+                setSent(sentRes.data);
+                setActive(activeRes.data);
+
+            } catch (err) {
+                console.error('Error fetching connections:', err);
+                setError((err as Error).message || 'Failed to fetch connections.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [currentUser?.id, currentUser?.status, isLoadingAuth, refetchTrigger]);
 
     const handleAction = async (action: 'accept' | 'decline' | 'cancel' | 'remove', connectionId: number) => {
         if (currentUser?.status === 'WAITLISTED') return; // Safety check
@@ -193,9 +189,7 @@ const ConnectionsPage = () => {
             await promise;
             toast.success(successMessage);
             // Refresh all lists after action
-            fetchData('incoming');
-            fetchData('sent');
-            fetchData('active');
+            setRefetchTrigger(prev => prev + 1);
             useAuthStore.getState().triggerConnectionUpdate(); // Notify other components like Navbar
         } catch (err) {
             console.error(`Error performing action ${action}:`, err);
@@ -210,11 +204,11 @@ const ConnectionsPage = () => {
     };
 
     const renderList = (type: 'incoming' | 'sent' | 'active', data: ConnectionItem[]) => {
-        if (isLoading[type]) {
+        if (isLoading) {
             return <div className="flex justify-center items-center py-10"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
         }
-        if (error[type]) {
-            return <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><CardTitle>Error</CardTitle><AlertDesc>{error[type]}</AlertDesc></Alert>;
+        if (error) {
+            return <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><CardTitle>Error</CardTitle><AlertDesc>{error}</AlertDesc></Alert>;
         }
         if (data.length === 0) {
             let message = 'No connections here yet.';
