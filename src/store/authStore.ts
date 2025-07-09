@@ -70,7 +70,6 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: false, isAuthenticated: false, user: null });
           return;
         }
-        set({ isLoading: true });
         try {
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
           const response = await api.get('/users/me/profile');
