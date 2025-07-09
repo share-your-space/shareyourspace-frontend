@@ -45,10 +45,12 @@ export function SocketConnectionManager() {
   useEffect(() => {
     // Wait for Zustand store to rehydrate before managing connection
     if (isLoading) {
+        console.log("Auth store is loading, skipping socket connection management.");
         return;
     }
 
     if (isAuthenticated && token) {
+      console.log(`Auth state updated: isAuthenticated=${isAuthenticated}, token available. Socket connected: ${socket.connected}`);
       // Connect or update auth if already connected but token changed
       if (!socket.connected) {
         socket.auth = { token };
@@ -61,9 +63,10 @@ export function SocketConnectionManager() {
         socket.disconnect().connect(); // Disconnect and reconnect with new token
       }
     } else {
+      console.log(`Auth state updated: isAuthenticated=${isAuthenticated}, token available: ${!!token}. Socket connected: ${socket.connected}`);
       // Disconnect if not authenticated or no token
       if (socket.connected) {
-        console.log('Disconnecting socket...');
+        console.log('Disconnecting socket due to lack of auth...');
         socket.disconnect();
         setOnlineUsers([]); // Clear online users on logout
       }
@@ -156,4 +159,4 @@ export function SocketConnectionManager() {
 
   // This component doesn't render anything itself
   return null;
-} 
+}
