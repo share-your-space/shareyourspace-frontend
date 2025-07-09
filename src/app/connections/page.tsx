@@ -127,9 +127,13 @@ const ConnectionsPage = () => {
     const currentUser = useAuthStore(state => state.user);
     const isLoadingAuth = useAuthStore((state) => state.isLoading); // Get auth loading state
 
+    console.log('[ConnectionsPage] Component Render. isLoadingAuth:', isLoadingAuth, 'currentUser ID:', currentUser?.id);
+
     useEffect(() => {
         const fetchData = async () => {
+            console.log('[ConnectionsPage] useEffect triggered. Fetching data...');
             if (isLoadingAuth || !currentUser || currentUser.status === 'WAITLISTED') {
+                console.log('[ConnectionsPage] Skipping fetch:', { isLoadingAuth, hasUser: !!currentUser, status: currentUser?.status });
                 setIsLoading(false);
                 return;
             }
