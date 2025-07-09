@@ -48,7 +48,7 @@ interface ClientToServerEvents {
   // Add other events the client will emit
 }
 
-const URL = process.env.NEXT_PUBLIC_BACKEND_WS_URL || 'ws://localhost:8000';
+const URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
 // Initialize socket instance
 // Use the defined event types for better type safety

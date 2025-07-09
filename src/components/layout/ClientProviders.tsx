@@ -12,7 +12,7 @@ const ClientProviders = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     fetchUser();
-  }, [fetchUser]);
+  }, []);
 
   return (
     <ThemeProvider
