@@ -194,7 +194,6 @@ const ConnectionsPage = () => {
             toast.success(successMessage);
             // Refresh all lists after action
             setRefetchTrigger(prev => prev + 1);
-            useAuthStore.getState().triggerConnectionUpdate(); // Notify other components like Navbar
         } catch (err) {
             console.error(`Error performing action ${action}:`, err);
             if (err instanceof AxiosError) {
