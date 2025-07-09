@@ -5,8 +5,15 @@ import { SocketConnectionManager } from '@/components/auth/SocketConnectionManag
 import { useAuthStore } from "@/store/authStore";
 import AuthenticatedLayout from "./AuthenticatedLayout";
 import UnauthenticatedLayout from "./UnauthenticatedLayout";
+import { useEffect } from "react";
 
 const ClientProviders = ({ children }: { children: React.ReactNode }) => {
+  const fetchUser = useAuthStore(state => state.fetchUser);
+
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
+
   return (
     <ThemeProvider
       attribute="class"

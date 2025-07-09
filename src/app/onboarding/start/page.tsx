@@ -42,7 +42,7 @@ export default function StartOnboardingPage() {
     setIsLoading(true);
     const toastId = toast.loading("Setting your role to Freelancer...");
     try {
-        const response = await api.post('/onboarding/role', 
+        const response = await api.post('/onboarding/role',
             { role: UserRole.FREELANCER },
             { headers: { Authorization: `Bearer ${token}` } }
         );

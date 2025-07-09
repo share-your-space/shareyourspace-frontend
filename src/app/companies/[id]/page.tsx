@@ -84,7 +84,7 @@ const CompanyProfilePage = () => {
       }
       setIsEditing(false); // Exit editing mode on successful save
     } catch (error) {
-      toast.error('Failed to update profile.');
+       toast.error('Failed to update profile.');
     }
   };
 

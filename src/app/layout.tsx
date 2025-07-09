@@ -26,12 +26,12 @@ export default function RootLayout({
         <ClientProviders>
           <DialogProvider>
                 <div className="flex flex-col min-h-screen">
-                  <Navbar />
+              <Navbar />
                   <main className="flex-grow bg-background text-foreground">
-                    {children}
-                  </main>
-                  <Footer />
-                </div>
+                {children}
+              </main>
+              <Footer />
+            </div>
             <Toaster />
           </DialogProvider>
         </ClientProviders>

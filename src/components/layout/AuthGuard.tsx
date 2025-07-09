@@ -25,7 +25,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children, allowedRoles }) => {
   useEffect(() => {
     // Don't do anything while the initial user fetch is in progress.
     if (isLoading) {
-      return;
+      return; 
     }
 
     // If not authenticated after checking, redirect to login.

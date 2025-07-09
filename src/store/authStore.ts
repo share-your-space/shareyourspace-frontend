@@ -65,6 +65,7 @@ export const useAuthStore = create<AuthState>()(
       setUser: (user) => set({ user }),
       
       fetchUser: async () => {
+        set({ isLoading: false });
         const token = get().token;
         if (!token) {
           set({ isLoading: false, isAuthenticated: false, user: null });
