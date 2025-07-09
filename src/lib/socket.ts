@@ -67,6 +67,7 @@ const URL = getSocketUrl();
 // Use the defined event types for better type safety
 export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(URL, {
   autoConnect: false, // Only connect manually when authenticated
+  transports: ['websocket'], // Force websocket connection, prevent polling
   // You might need withCredentials: true if using cookies for auth later
 });
 
