@@ -26,6 +26,21 @@ export function SocketConnectionManager() {
 
   // Router for navigation
   const router = useRouter();
+  const logout = useAuthStore((state) => state.logout);
+
+  useEffect(() => {
+    const handleConnectError = (error: Error) => {
+      console.error('Socket connection failed, logging out:', error);
+      logout(router);
+      toast.error('Session expired. Please log in again.');
+    };
+
+    socket.on('connect_error', handleConnectError);
+
+    return () => {
+      socket.off('connect_error', handleConnectError);
+    };
+  }, [logout, router]);
 
   useEffect(() => {
     // Wait for Zustand store to rehydrate before managing connection
