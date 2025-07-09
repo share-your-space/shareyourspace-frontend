@@ -111,6 +111,8 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-useAuthStore.persist.onFinishHydration(() => {
-  useAuthStore.setState({ isLoading: false });
-});
+if (typeof window !== 'undefined') {
+  useAuthStore.persist.onFinishHydration(() => {
+    useAuthStore.setState({ isLoading: false });
+  });
+}
