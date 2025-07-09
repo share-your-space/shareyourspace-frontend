@@ -48,7 +48,20 @@ interface ClientToServerEvents {
   // Add other events the client will emit
 }
 
-const URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/';
+const getSocketUrl = () => {
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (baseUrl) {
+    // If a full URL is provided, use it.
+    // This is expected in production.
+    return baseUrl;
+  }
+  // Fallback for local development if the env var isn't set.
+  // Assumes the backend runs on port 8000 locally.
+  return 'http://localhost:8000';
+};
+
+
+const URL = getSocketUrl();
 
 // Initialize socket instance
 // Use the defined event types for better type safety
