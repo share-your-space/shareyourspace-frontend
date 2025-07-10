@@ -157,7 +157,7 @@ function ChatPageContent() {
         <div className="flex flex-col h-full">
           {activeConversation ? (
             <>
-              <ChatHeader user={activeConversation.other_user} />
+              <ChatHeader />
               <MessageArea />
               <MessageInput />
             </>
