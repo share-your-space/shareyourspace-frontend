@@ -22,13 +22,15 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MultiSelect } from '@/components/ui/MultiSelect';
 import { TeamSize } from '@/types/enums';
 
 const startupSchema = z.object({
   name: z.string().min(1, 'Startup name is required'),
   website: z.string().url({ message: "Invalid URL" }).optional().or(z.literal('')),
   pitch_deck_url: z.string().url({ message: "Invalid URL" }).optional().or(z.literal('')),
-  industry_focus: z.string().optional(),
+  industry_focus: z.array(z.string()).optional(),
+  looking_for: z.array(z.string()).optional(),
   team_size: z.nativeEnum(TeamSize).optional(),
   mission: z.string().optional(),
   description: z.string().optional(),
@@ -46,7 +48,8 @@ const EditStartupProfilePage = () => {
       name: '',
       website: '',
       pitch_deck_url: '',
-      industry_focus: '',
+      industry_focus: [],
+      looking_for: [],
       team_size: undefined,
       mission: '',
       description: '',
@@ -61,7 +64,8 @@ const EditStartupProfilePage = () => {
           name: data.name,
           website: data.website || '',
           pitch_deck_url: data.pitch_deck_url || '',
-          industry_focus: data.industry_focus || '',
+          industry_focus: data.industry_focus || [],
+          looking_for: data.looking_for || [],
           team_size: data.team_size || undefined,
           mission: data.mission || '',
           description: data.description || '',
@@ -161,7 +165,32 @@ const EditStartupProfilePage = () => {
                   <FormItem>
                     <FormLabel>Industry Focus</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Industry Focus" />
+                      <MultiSelect
+                        selected={field.value || []}
+                        options={[]} // You might want to populate this with suggestions
+                        onChange={field.onChange}
+                        placeholder="Type and press Enter to add industries"
+                        className="w-full"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="looking_for"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Looking For</FormLabel>
+                    <FormControl>
+                      <MultiSelect
+                        selected={field.value || []}
+                        options={[]} // You might want topopulate this with suggestions
+                        onChange={field.onChange}
+                        placeholder="Type and press Enter to add needs"
+                        className="w-full"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -228,4 +257,4 @@ const EditStartupProfilePage = () => {
   );
 };
 
-export default EditStartupProfilePage; 
+export default EditStartupProfilePage;

@@ -9,25 +9,22 @@ import * as z from 'zod';
 import { getCompany, updateMyCompany } from '@/lib/api/organizations';
 import { Company, CompanyUpdate } from '@/types/organization';
 import { useAuthStore } from '@/store/authStore';
-import { TeamSize } from '@/types/enums';
 import { toast } from 'sonner';
-
 import { Button } from '@/components/ui/button';
 import CompanyProfileDisplay from '@/components/organization/CompanyProfileDisplay';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Loader2, Edit, Save, X } from 'lucide-react';
+import { Edit } from 'lucide-react';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
 
-const companyFormSchema = z.object({
+const companySchema = z.object({
   name: z.string().min(1, 'Company name is required'),
-  industry_focus: z.string().optional(),
+  website: z.string().url({ message: "Invalid URL" }).optional().or(z.literal('')),
+  industry_focus: z.array(z.string()).optional(),
   description: z.string().optional(),
-  website: z.string().url().optional().or(z.literal('')),
-  team_size: z.nativeEnum(TeamSize).optional(),
   looking_for: z.array(z.string()).optional(),
 });
 
-type CompanyFormValues = z.infer<typeof companyFormSchema>;
+type CompanyFormData = z.infer<typeof companySchema>;
 
 const CompanyProfilePage = () => {
   const params = useParams();
@@ -38,10 +35,10 @@ const CompanyProfilePage = () => {
 
   const companyId = Number(params.id);
 
-  const form = useForm<CompanyFormValues>({
-    resolver: zodResolver(companyFormSchema),
+  const form = useForm<CompanyFormData>({
+    resolver: zodResolver(companySchema),
   });
-  
+
   const { getValues, reset } = form;
 
   const fetchCompany = useCallback(async () => {
@@ -52,10 +49,9 @@ const CompanyProfilePage = () => {
       setCompany(data);
       reset({
         name: data.name,
-        industry_focus: data.industry_focus || '',
-        description: data.description || '',
         website: data.website || '',
-        team_size: data.team_size || undefined,
+        industry_focus: data.industry_focus || [],
+        description: data.description || '',
         looking_for: data.looking_for || [],
       });
     } catch (error) {
@@ -69,11 +65,12 @@ const CompanyProfilePage = () => {
     fetchCompany();
   }, [fetchCompany]);
 
-  const handleSave = async () => {
-    const values = form.getValues();
+  const handleSave = async (field: keyof CompanyFormData) => {
     try {
-      await updateMyCompany(values);
-      toast.success('Profile updated successfully!');
+      const value = getValues(field);
+      const updatedCompany = await updateMyCompany({ [field]: value });
+      setCompany(updatedCompany);
+      toast.success('Profile updated!');
       
       // Refetch company data to show updated info
       fetchCompany();
@@ -82,9 +79,9 @@ const CompanyProfilePage = () => {
       if (user?.company_id === companyId) {
         await refreshCurrentUser();
       }
-      setIsEditing(false); // Exit editing mode on successful save
+
     } catch (error) {
-       toast.error('Failed to update profile.');
+      toast.error('Failed to update profile.');
     }
   };
 
@@ -114,4 +111,4 @@ const CompanyProfilePage = () => {
   );
 };
 
-export default CompanyProfilePage; 
+export default CompanyProfilePage;
