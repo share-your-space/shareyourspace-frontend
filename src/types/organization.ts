@@ -5,7 +5,7 @@ import { User } from './auth';
 interface OrganizationBase {
   name: string;
   logo_url?: string | null;
-  industry_focus?: string | null;
+  industry_focus?: string[] | null;
   description?: string | null;
   website?: string | null;
   team_size?: TeamSize | null;
