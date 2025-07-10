@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
 import { ContactList } from '@/components/chat/ContactList';
-import { MessageArea } from '@/components/chat/MessageArea';
+import MessageArea from '@/components/chat/MessageArea';
 import { MessageInput } from '@/components/chat/MessageInput';
 import { useChatStore } from '@/store/chatStore';
 import { useAuthStore } from '@/store/authStore';
@@ -14,6 +14,7 @@ import { Conversation } from '@/types/chat';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, Lock, MessageSquare } from "lucide-react";
 import Link from 'next/link';
+import ChatHeader from '@/components/chat/ChatHeader';
 
 function ChatPageContent() {
   const { 
@@ -101,7 +102,7 @@ function ChatPageContent() {
               setActiveConversationId(convId);
             }
           } catch (error) {
-            console.error("Failed to fetch specific conversation:", error);
+            console.error("Failed to fetch conversation by ID:", error);
           }
         }
       }
@@ -118,78 +119,71 @@ function ChatPageContent() {
         handleUrlConversation(convId);
       }
     }
-
+    
     return () => { isMounted = false; };
-  }, [searchParams, router, setActiveConversationId, addOrUpdateConversation]);
-
+  }, [searchParams, currentUser, addOrUpdateConversation, setActiveConversationId, router]);
 
   if (isLoadingAuth) {
     return (
-        <div className="flex h-[calc(100vh-var(--header-height))] items-center justify-center">
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        </div>
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
   }
 
-  if (currentUser?.status === 'WAITLISTED' && conversations.length === 0) {
+  if (!currentUser) {
     return (
-        <div className="container mx-auto py-8 px-4 md:px-6 flex flex-col items-center justify-center h-[calc(100vh-var(--header-height))]">
-            <Alert variant="default" className="border-orange-500 max-w-lg">
-                <Lock className="h-5 w-5 text-orange-600" />
-                <AlertTitle className="text-orange-700 mt-[-2px]">Feature Locked: Chat</AlertTitle>
-                <AlertDescription className="text-muted-foreground mt-2">
-                    You can only chat with Space Admins who have contacted you.
-                    Full chat features will be available once you are accepted into a space.
-                    <br />
-                    Please check your <Link href="/dashboard" className="text-primary hover:underline">dashboard</Link> for status updates.
-                </AlertDescription>
-            </Alert>
-        </div>
+      <div className="flex items-center justify-center h-full">
+        <Alert variant="destructive" className="max-w-md">
+          <Lock className="h-4 w-4" />
+          <AlertTitle>Authentication Required</AlertTitle>
+          <AlertDescription>
+            You must be logged in to access the chat. Please <Link href="/login" className="font-bold hover:underline">log in</Link>.
+          </AlertDescription>
+        </Alert>
+      </div>
     );
   }
 
   return (
-      <div className="flex h-[calc(100vh-var(--header-height))] border">
-        <ResizablePanelGroup direction="horizontal" className="rounded-lg border">
-          <ResizablePanel defaultSize={25} maxSize={30} minSize={20}>
-            <div className="flex h-full items-center justify-center p-2">
-              <ContactList />
+    <ResizablePanelGroup direction="horizontal" className="h-full w-full">
+      <ResizablePanel defaultSize={25} minSize={20} maxSize={35}>
+        <div className="flex flex-col h-full">
+          <ContactList />
+        </div>
+      </ResizablePanel>
+      <ResizableHandle withHandle />
+      <ResizablePanel defaultSize={75}>
+        <div className="flex flex-col h-full">
+          {activeConversation ? (
+            <>
+              <ChatHeader user={activeConversation.other_user} />
+              <MessageArea />
+              <MessageInput />
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-center p-4">
+              <MessageSquare className="w-12 h-12 text-muted-foreground mb-4" />
+              <h2 className="text-xl font-semibold">Select a Conversation</h2>
+              <p className="text-muted-foreground">Choose a contact from the list to start chatting.</p>
             </div>
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={75}>
-            {activeConversation ? (
-                <div className="flex flex-col h-full">
-                    <div className="flex-grow overflow-y-auto">
-                        <MessageArea />
-                    </div>
-                    <div className="border-t bg-background">
-                        <MessageInput />
-                    </div>
-                </div>
-            ) : (
-                <div className="flex flex-col h-full items-center justify-center text-center text-muted-foreground bg-muted/20">
-                    <MessageSquare className="h-12 w-12 mb-4" />
-                    <h2 className="text-xl font-semibold">Select a conversation</h2>
-                    <p className="text-sm">Choose a contact from the list to start chatting.</p>
-                </div>
-            )}
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </div>
+          )}
+        </div>
+      </ResizablePanel>
+    </ResizablePanelGroup>
   );
 }
 
 export default function ChatPage() {
-    return (
-        <AuthenticatedLayout>
-            <Suspense fallback={
-                <div className="flex h-[calc(100vh-var(--header-height))] items-center justify-center">
-                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                </div>
-            }>
-                <ChatPageContent />
-            </Suspense>
-        </AuthenticatedLayout>
-    )
-} 
+  return (
+    <AuthenticatedLayout>
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-full">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }>
+        <ChatPageContent />
+      </Suspense>
+    </AuthenticatedLayout>
+  );
+}
