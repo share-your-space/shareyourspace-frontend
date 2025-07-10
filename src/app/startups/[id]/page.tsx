@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 
 import { getStartup, updateMyStartup } from '@/lib/api/organizations';
-import { Startup, StartupUpdate } from '@/types/organization';
+import { Startup } from '@/types/organization';
 import { useAuthStore } from '@/store/authStore';
 import { TeamSize } from '@/types/enums';
 import { toast } from 'sonner';
@@ -22,7 +22,8 @@ const startupSchema = z.object({
   name: z.string().min(1, 'Startup name is required'),
   website: z.string().url({ message: "Invalid URL" }).optional().or(z.literal('')),
   pitch_deck_url: z.string().url({ message: "Invalid URL" }).optional().or(z.literal('')),
-  industry_focus: z.string().optional(),
+  industry_focus: z.array(z.string()).optional(),
+  looking_for: z.array(z.string()).optional(),
   team_size: z.nativeEnum(TeamSize).optional(),
   mission: z.string().optional(),
   description: z.string().optional(),
@@ -51,17 +52,26 @@ const StartupProfilePage = () => {
       setLoading(true);
       const data = await getStartup(startupId);
       setStartup(data);
+
+      const parseStringToArray = (value: string | string[] | null | undefined): string[] => {
+        if (Array.isArray(value)) return value;
+        if (typeof value === 'string') return value.split(',').map(s => s.trim()).filter(Boolean);
+        return [];
+      };
+
       reset({
         name: data.name,
         website: data.website || '',
         pitch_deck_url: data.pitch_deck_url || '',
-        industry_focus: data.industry_focus || '',
+        industry_focus: parseStringToArray(data.industry_focus),
+        looking_for: parseStringToArray(data.looking_for),
         team_size: data.team_size || undefined,
         mission: data.mission || '',
         description: data.description || '',
       });
-    } catch (error) {
-      toast.error('Failed to fetch startup profile');
+    } catch (e) {
+      const error = e as Error;
+      toast.error(`Failed to fetch startup profile: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -86,8 +96,9 @@ const StartupProfilePage = () => {
         await refreshCurrentUser();
       }
 
-    } catch (error) {
-      toast.error('Failed to update profile.');
+    } catch (e) {
+      const error = e as Error;
+      toast.error(`Failed to update profile: ${error.message}`);
     }
   };
 
@@ -117,4 +128,4 @@ const StartupProfilePage = () => {
   );
 };
 
-export default StartupProfilePage; 
+export default StartupProfilePage;
