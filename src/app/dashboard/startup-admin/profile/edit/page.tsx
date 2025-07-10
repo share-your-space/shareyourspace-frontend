@@ -60,12 +60,19 @@ const EditStartupProfilePage = () => {
     if (user?.startup_id) {
       getStartup(user.startup_id).then(data => {
         setStartup(data);
+
+        const parseStringToArray = (value: string | string[] | null | undefined): string[] => {
+          if (Array.isArray(value)) return value;
+          if (typeof value === 'string') return value.split(',').map(s => s.trim()).filter(Boolean);
+          return [];
+        };
+
         form.reset({
           name: data.name,
           website: data.website || '',
           pitch_deck_url: data.pitch_deck_url || '',
-          industry_focus: data.industry_focus || [],
-          looking_for: data.looking_for || [],
+          industry_focus: parseStringToArray(data.industry_focus),
+          looking_for: parseStringToArray(data.looking_for),
           team_size: data.team_size || undefined,
           mission: data.mission || '',
           description: data.description || '',
