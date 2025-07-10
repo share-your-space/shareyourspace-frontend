@@ -1,45 +1,55 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MatchCard } from '@/components/discover/MatchCard';
 import { useAuthStore } from '@/store/authStore';
-// import { getPotentialMatches, checkConnectionStatus, ConnectionStatusCheck } from "@/lib/api";
-import { api } from "@/lib/api"; // Import the api client
+import { api } from "@/lib/api"; 
 import { type MatchResult } from '@/types/matching';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Loader2, AlertTriangle, Info, Lock } from "lucide-react"
+import { AlertTriangle, Info, Lock, Search, X, SlidersHorizontal } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
-import Link from 'next/link'; // Import Link
-import { Button } from '@/components/ui/button'; // Import Button
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { FilterSheet } from '@/components/discover/FilterSheet';
 
-// Type for the status map
-// type StatusMap = Record<number, ConnectionStatusCheck>;
-type StatusMap = Record<number, any>; // Use 'any' as a temporary measure
+type ConnectionStatusValue = 'connected' | 'pending_from_me' | 'pending_from_them' | 'not_connected' | 'declined';
+type ConnectionStatusCheck = {
+  status: ConnectionStatusValue;
+};
+type StatusMap = Record<number, ConnectionStatusCheck>;
+type MatchApiResponse = MatchResult[] | { message: string };
+
+interface ApiError {
+    response?: {
+        data?: {
+            detail?: string;
+        };
+    };
+}
 
 export default function DiscoverPage() {
   const [matches, setMatches] = useState<MatchResult[]>([]);
-  const [connectionStatuses, setConnectionStatuses] = useState<StatusMap>({}); // State for statuses
+  const [connectionStatuses, setConnectionStatuses] = useState<StatusMap>({});
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
 
-  const user = useAuthStore((state) => state.user); // Get user from store
-  const token = useAuthStore((state) => state.token); // Token is still needed for API calls for non-waitlisted
-  const isLoadingAuth = useAuthStore((state) => state.isLoading); // Get auth loading state
+  const user = useAuthStore((state) => state.user);
+  const token = useAuthStore((state) => state.token);
+  const isLoadingAuth = useAuthStore((state) => state.isLoading);
 
   useEffect(() => {
-    // Wait for auth state to load and user to be defined
     if (isLoadingAuth) {
-      return; // Don't do anything if auth is still loading
-    }
-
-    // If user is waitlisted, don't fetch matches
-    if (user?.status === 'WAITLISTED') {
-      setIsLoading(false); // Not loading matches
       return;
     }
 
-    // Proceed to fetch matches if user is not waitlisted and authenticated
+    if (user?.status === 'WAITLISTED') {
+      setIsLoading(false);
+      return;
+    }
+
     const fetchMatchesAndStatuses = async () => {
       setIsLoading(true);
       setError(null);
@@ -53,114 +63,121 @@ export default function DiscoverPage() {
       }
 
       try {
-        // const matchesResponse = await api.get<MatchResult[]>('/matching/discover');
-        // const fetchedMatches = matchesResponse.data;
-        const fetchedMatches: MatchResult[] = []; // Temp: return empty array
+        const matchesResponse = await api.get<MatchApiResponse>('/matching/discover');
+        const fetchedData = matchesResponse.data;
         
-        // Check for a profile completion message from the backend
-        if (fetchedMatches.length > 0 && (fetchedMatches[0] as any).message) {
-            setError((fetchedMatches[0] as any).message);
-            setMatches([]); // Clear any potential stale matches
+        if (Array.isArray(fetchedData)) {
+            setMatches(fetchedData);
+            if (fetchedData.length > 0) {
+                const userIds = fetchedData.filter(m => m.profile).map(m => m.profile!.user_id);
+                if (userIds.length > 0) {
+                    const params = new URLSearchParams();
+                    userIds.forEach(id => params.append('user_id', id.toString()));
+                    try {
+                        const statusesResponse = await api.get<StatusMap>(
+                            `/connections/status-batch?${params.toString()}`
+                        );
+                        setConnectionStatuses(statusesResponse.data);
+                    } catch (statusError: unknown) {
+                        console.error("Fetch connection statuses error:", statusError);
+                    }
+                }
+            }
+        } else if (fetchedData && 'message' in fetchedData) {
+            setError(fetchedData.message);
+            setMatches([]);
         } else {
-        setMatches(fetchedMatches);
-        if (fetchedMatches && fetchedMatches.length > 0) {
-              const userIds = fetchedMatches.filter(m => m.profile).map(m => m.profile!.user_id);
-              if (userIds.length > 0) {
-          const params = new URLSearchParams();
-          userIds.forEach(id => params.append('user_id', id.toString()));
-
-          // try {
-          //   const statusesResponse = await api.get<StatusMap>(
-          //     `/connections/status-batch?${params.toString()}`
-          //   );
-          //   setConnectionStatuses(statusesResponse.data);
-          // } catch (statusError: any) {
-          //   console.error("Fetch connection statuses error:", statusError);
-          //         // Non-critical error, we can still display matches
-          //       }
-              }
-          }
+            setMatches([]);
         }
 
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Fetch matches error:", err);
-        setError(err.response?.data?.detail || err.message || 'An unknown error occurred.');
+        const apiError = err as ApiError;
+        setError(apiError.response?.data?.detail || 'An unknown error occurred.');
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (token && user && user.status !== 'WAITLISTED') { // Ensure user is defined and not waitlisted
+    if (token && user && user.status !== 'WAITLISTED') {
       fetchMatchesAndStatuses();
-    } else if (!token && !isLoadingAuth) { // If no token and auth isn't loading, set error or let AuthGuard handle
+    } else if (!token && !isLoadingAuth) {
       setError('Authentication required. Please log in.');
       setIsLoading(false);
     }
-  }, [token, user, isLoadingAuth]); // Depend on user and isLoadingAuth
+  }, [token, user, isLoadingAuth]);
 
-  // Convert backend status string to MatchCard prop type
+  const filteredMatches = useMemo(() => {
+    if (!searchTerm) return matches;
+    return matches.filter(match => {
+      const profile = match.profile;
+      const term = searchTerm.toLowerCase();
+      return (
+        profile.full_name?.toLowerCase().includes(term) ||
+        profile.title?.toLowerCase().includes(term) ||
+        profile.bio?.toLowerCase().includes(term) ||
+        profile.skills_expertise?.some(skill => skill.toLowerCase().includes(term))
+      );
+    });
+  }, [matches, searchTerm]);
+
   const getInitialStatus = (userId: number): 'idle' | 'pending' | 'connected' => {
     const statusInfo = connectionStatuses[userId];
     if (!statusInfo) return 'idle';
     
-    // switch (statusInfo.status) {
-    //     case 'connected':
-    //         return 'connected';
-    //     case 'pending_from_me':
-    //     case 'pending_from_them':
-    //         return 'pending';
-    //     case 'not_connected':
-    //     case 'declined': // Treat declined as idle for the button
-    //     default:
-    //         return 'idle';
-    // }
-    return 'idle';
+    switch (statusInfo.status) {
+        case 'connected':
+            return 'connected';
+        case 'pending_from_me':
+        case 'pending_from_them':
+            return 'pending';
+        default:
+            return 'idle';
+    }
   };
 
   const renderContent = () => {
-    if (isLoadingAuth || (isLoading && user?.status !== 'WAITLISTED')) { // Show skeletons if auth loading OR loading matches for non-waitlisted
+    if (isLoadingAuth || (isLoading && user?.status !== 'WAITLISTED')) {
       return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, index) => (
-            <Skeleton key={index} className="h-[350px] w-full" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {[...Array(8)].map((_, index) => (
+            <Skeleton key={index} className="h-[420px] w-full rounded-xl" />
           ))}
         </div>
       );
     }
 
-    // Handle waitlisted user state first
     if (user?.status === 'WAITLISTED') {
       return (
-        <Alert variant="default" className="border-orange-500">
-          <Lock className="h-5 w-5 text-orange-600" />
-          <AlertTitle className="text-orange-700">Feature Locked: Discover Connections</AlertTitle>
-          <AlertDescription className="text-muted-foreground">
-            This feature will become available once you are actively assigned to a space.
-            Being part of a space allows you to discover and connect with other members within your community.
-            <br />
-            In the meantime, completing your profile will improve your visibility once you join a space.
-          </AlertDescription>
-          <div className="mt-4 flex items-center gap-x-4">
-            <Button asChild>
-              <Link href="/dashboard/profile/edit">Complete Your Profile</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/dashboard">Go to Dashboard</Link>
-            </Button>
-          </div>
-        </Alert>
+        <div className="flex items-center justify-center h-[50vh] bg-gray-50 rounded-2xl">
+            <Alert variant="default" className="max-w-lg text-center shadow-lg border-orange-500/50">
+              <Lock className="h-6 w-6 text-orange-600 mx-auto mb-3" />
+              <AlertTitle className="text-xl font-semibold text-orange-800">Feature Locked: Discover Connections</AlertTitle>
+              <AlertDescription className="text-muted-foreground mt-2">
+                This feature will become available once you are actively assigned to a space.
+                In the meantime, completing your profile will improve your visibility once you join a space.
+              </AlertDescription>
+              <div className="mt-6 flex items-center justify-center gap-x-4">
+                <Button asChild>
+                  <Link href="/dashboard/profile/edit">Complete Your Profile</Link>
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href="/dashboard">Go to Dashboard</Link>
+                </Button>
+              </div>
+            </Alert>
+        </div>
       );
     }
 
-    // Handle case where user is not in a space
     if (!user?.space_id) {
         return (
             <Alert>
                 <Info className="h-5 w-5" />
                 <AlertTitle>Start Your Journey!</AlertTitle>
                 <AlertDescription>
-                    The Discover feature is where you'll find other members inside your workspace.
-                    Since you're not part of a space yet, your next step is to explore potential spaces or get invited by a Corporate Admin.
+                    The Discover feature is where you&apos;ll find other members inside your workspace.
+                    Since you&apos;re not part of a space yet, your next step is to explore potential spaces or get invited by a Corporate Admin.
                     <br /><br />
                     Keep your <Link href="/dashboard/profile/edit" className="text-primary hover:underline">profile</Link> updated to increase your chances of being discovered!
                 </AlertDescription>
@@ -168,8 +185,7 @@ export default function DiscoverPage() {
         );
     }
 
-    // Existing logic for non-waitlisted users
-    if (error && !matches.length) {
+    if (error && !filteredMatches.length) {
       return (
          <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -186,30 +202,29 @@ export default function DiscoverPage() {
       );
     }
 
-    if (!isLoading && matches.length === 0) {
+    if (!isLoading && filteredMatches.length === 0) {
       return (
          <Alert>
             <Info className="h-4 w-4" />
             <AlertTitle>No Matches Found</AlertTitle>
             <AlertDescription>
-              We couldn't find any potential matches for you right now. Try updating your profile with more details!
+              We couldn&apos;t find any potential matches for you right now. Try adjusting your search or updating your profile with more details!
             </AlertDescription>
         </Alert>
       );
     }
 
-    // Render matches, potentially with a non-critical error message above
     return (
       <>
-        {error && matches.length > 0 && ( // Show non-critical error (e.g., status fetch failure) above list
+        {error && filteredMatches.length > 0 && (
              <Alert variant="destructive" className="mb-4">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Warning</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
             </Alert>
         )}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {matches.map((match, index) => 
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-8">
+          {filteredMatches.map((match, index) => 
             match.profile ? (
             <MatchCard 
               key={match.profile.user_id || index} 
@@ -225,8 +240,41 @@ export default function DiscoverPage() {
 
   return (
       <div className="container mx-auto py-8 px-4 md:px-6">
-        <h1 className="text-3xl font-bold tracking-tight mb-6">Discover Connections</h1>
+        <div className="mb-8">
+            <h1 className="text-4xl font-bold tracking-tight">Discover Connections</h1>
+            <p className="text-muted-foreground mt-2">Browse and connect with professionals in your space.</p>
+        </div>
+
+        <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-sm py-4 mb-8">
+            <div className="flex gap-4 items-center">
+                <div className="relative flex-grow">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input 
+                        placeholder="Search by name, title, skill..." 
+                        className="pl-10"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                    {searchTerm && (
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7"
+                            onClick={() => setSearchTerm('')}
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
+                </div>
+                <Button variant="outline" onClick={() => setIsFilterSheetOpen(true)}>
+                    <SlidersHorizontal className="mr-2 h-4 w-4" />
+                    Filters
+                </Button>
+            </div>
+        </div>
+
         {renderContent()}
+        <FilterSheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen} />
       </div>
   );
-} 
+}
