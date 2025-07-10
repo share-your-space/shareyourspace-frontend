@@ -84,8 +84,8 @@ const EditStartupProfilePage = () => {
   const onSubmit = async (data: StartupFormData) => {
     const updatePayload: StartupUpdate = {
       ...data,
-      industry_focus: data.industry_focus?.join(', '),
-      looking_for: data.looking_for, // This is already string[] in StartupUpdate
+      industry_focus: data.industry_focus,
+      looking_for: data.looking_for,
     };
 
     toast.promise(updateMyStartup(updatePayload), {
