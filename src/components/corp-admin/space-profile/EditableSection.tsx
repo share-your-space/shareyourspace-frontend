@@ -7,9 +7,10 @@ interface EditableSectionProps {
   onSave: () => void;
   children: React.ReactNode;
   editContent: React.ReactNode;
+  showSaveButton?: boolean;
 }
 
-export const EditableSection: React.FC<EditableSectionProps> = ({ title, isEditing, onSave, children, editContent }) => {
+export const EditableSection: React.FC<EditableSectionProps> = ({ title, isEditing, onSave, children, editContent, showSaveButton = true }) => {
   return (
     <div className="py-6 border-b">
       <div className="flex justify-between items-center mb-4">
@@ -18,7 +19,7 @@ export const EditableSection: React.FC<EditableSectionProps> = ({ title, isEditi
       {isEditing ? (
         <div className="space-y-4">
           {editContent}
-          <Button onClick={onSave} size="sm">Save</Button>
+          {showSaveButton && <Button onClick={onSave} size="sm">Save</Button>}
         </div>
       ) : (
         <div className="prose max-w-none text-gray-600">
@@ -27,4 +28,4 @@ export const EditableSection: React.FC<EditableSectionProps> = ({ title, isEditi
       )}
     </div>
   );
-}; 
+};

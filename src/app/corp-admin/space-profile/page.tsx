@@ -43,7 +43,7 @@ const SpaceProfilePage = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
 
-  const { control, handleSubmit, reset, getValues } = useForm<ProfileFormValues>({
+  const { control, handleSubmit, reset } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
   });
 
@@ -81,8 +81,9 @@ const SpaceProfilePage = () => {
       setProfile(updatedProfile);
       toast.success(`Profile updated!`);
       setIsEditing(false);
-    } catch (error) {
-      toast.error(`Failed to update profile.`);
+    } catch (e) {
+      const error = e as Error;
+      toast.error(`Failed to update profile: ${error.message}`);
     }
   };
 
@@ -96,8 +97,9 @@ const SpaceProfilePage = () => {
           setProfile({ ...profile, images: updatedImages });
         }
         toast.success("Image uploaded successfully!");
-      } catch (error) {
-        toast.error("Failed to upload image.");
+      } catch (e) {
+        const error = e as Error;
+        toast.error(`Failed to upload image: ${error.message}`);
       }
     }
   };
@@ -108,8 +110,9 @@ const SpaceProfilePage = () => {
         await deleteSpaceImage(selectedSpace.id, imageId);
         setProfile(prev => prev ? { ...prev, images: prev.images.filter(img => img.id !== imageId) } : null);
         toast.success("Image deleted successfully!");
-      } catch (error) {
-        toast.error("Failed to delete image.");
+      } catch (e) {
+        const error = e as Error;
+        toast.error(`Failed to delete image: ${error.message}`);
       }
     }
   };
@@ -159,6 +162,7 @@ const SpaceProfilePage = () => {
                 title="About this space" 
                 isEditing={isEditing} 
                 onSave={() => {}}
+                showSaveButton={false}
                 editContent={
                   <div className="space-y-4">
                     <Controller name="description" control={control} render={({ field }) => <Textarea {...field} placeholder="Tell everyone about your space..." rows={6} />} />
@@ -177,6 +181,7 @@ const SpaceProfilePage = () => {
                 title="Amenities" 
                 isEditing={isEditing} 
                 onSave={() => {}}
+                showSaveButton={false}
                 editContent={<Controller name="amenities" control={control} render={({ field }) => <TagInput {...field} placeholder="Add an amenity" />} />}
               >
                  <ul className="grid grid-cols-2 gap-2">
@@ -188,6 +193,7 @@ const SpaceProfilePage = () => {
                 title="House Rules" 
                 isEditing={isEditing} 
                 onSave={() => {}}
+                showSaveButton={false}
                 editContent={<Controller name="houseRules" control={control} render={({ field }) => <Textarea {...field} placeholder="What are the rules?" rows={4} />} />}
               >
                 <p>{profile.house_rules}</p>

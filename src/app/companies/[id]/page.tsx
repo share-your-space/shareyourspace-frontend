@@ -78,8 +78,11 @@ const CompanyProfilePage = () => {
       setCompany(updatedCompany);
       toast.success('Profile updated!');
       
-      // Refetch company data to show updated info
-      fetchCompany();
+      // The fetchCompany() call here might be causing a race condition
+      // where we fetch the data before the update has fully propagated in the backend db.
+      // The updateMyCompany should return the updated data, so we can rely on that for the UI update.
+      // A user page refresh will be the ultimate test of persistence.
+      // fetchCompany();
 
       // Also refresh the user's auth context if their own company name changed
       if (user?.company_id === companyId) {
