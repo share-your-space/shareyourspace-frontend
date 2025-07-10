@@ -3,9 +3,39 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Eye, Share2, MessageSquare } from 'lucide-react';
+import { UserProfile } from '@/types/userProfile';
 
-export const ProfileSidebar = () => {
-  const completion = 80; // This would be calculated based on profile data
+interface ProfileSidebarProps {
+  profile: UserProfile | null;
+}
+
+export const ProfileSidebar: React.FC<ProfileSidebarProps> = ({ profile }) => {
+  
+  const calculateProfileCompletion = (profile: UserProfile | null): number => {
+    if (!profile) return 0;
+
+    const fields = [
+      profile.title,
+      profile.bio,
+      profile.skills_expertise,
+      profile.industry_focus,
+      profile.project_interests_goals,
+      profile.collaboration_preferences,
+      profile.tools_technologies,
+      profile.linkedin_profile_url,
+      profile.profile_picture_signed_url,
+      profile.cover_photo_signed_url
+    ];
+
+    const filledFields = fields.filter(field => {
+      if (Array.isArray(field)) return field.length > 0;
+      return !!field;
+    }).length;
+
+    return Math.round((filledFields / fields.length) * 100);
+  };
+
+  const completion = calculateProfileCompletion(profile);
 
   return (
     <Card>
@@ -30,4 +60,4 @@ export const ProfileSidebar = () => {
       </CardContent>
     </Card>
   );
-}; 
+};
