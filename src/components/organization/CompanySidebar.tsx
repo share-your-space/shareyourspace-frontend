@@ -5,6 +5,7 @@ import { ExternalLink, Users, Briefcase, User as UserIcon } from 'lucide-react';
 import { Company } from '@/types/organization';
 import Link from 'next/link';
 import { UserRole } from '@/types/enums';
+import { Badge } from '@/components/ui/badge';
 
 interface CompanySidebarProps {
   company: Company;
@@ -32,9 +33,15 @@ export const CompanySidebar: React.FC<CompanySidebarProps> = ({ company }) => {
                 <span className="text-gray-500 flex items-center"><Users className="h-4 w-4 mr-2"/> Team Size</span>
                 <strong>{company.team_size || 'N/A'}</strong>
             </div>
-             <div className="flex justify-between mt-2">
-                <span className="text-gray-500 flex items-center"><Briefcase className="h-4 w-4 mr-2"/> Industry</span>
-                <strong>{company.industry_focus || 'N/A'}</strong>
+             <div className="flex flex-col mt-2">
+                <span className="text-gray-500 flex items-center mb-1"><Briefcase className="h-4 w-4 mr-2"/> Industry</span>
+                <div className="flex flex-wrap gap-1">
+                  {Array.isArray(company.industry_focus) ? (
+                    company.industry_focus.map(industry => <Badge key={industry} variant="secondary">{industry}</Badge>)
+                  ) : (
+                    <Badge variant="secondary">{company.industry_focus || 'N/A'}</Badge>
+                  )}
+                </div>
             </div>
             {startupAdmin && (
               <div className="flex justify-between mt-2">
@@ -48,4 +55,4 @@ export const CompanySidebar: React.FC<CompanySidebarProps> = ({ company }) => {
       </CardContent>
     </Card>
   );
-}; 
+};

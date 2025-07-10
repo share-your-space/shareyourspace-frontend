@@ -18,7 +18,7 @@ export interface Company {
   name: string;
   logo_url?: string | null;
   website?: string | null;
-  industry_focus?: string | null;
+  industry_focus?: string[] | null;
   team_size?: TeamSize | null;
   description?: string | null;
   mission?: string | null;
@@ -52,4 +52,4 @@ export interface StartupUpdate extends Omit<OrganizationBase, 'name'> {
     mission?: string | null;
     stage?: StartupStage | null;
     pitch_deck_url?: string | null;
-} 
+}

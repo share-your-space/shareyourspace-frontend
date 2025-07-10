@@ -4,10 +4,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { companySchema, CompanyFormData } from '@/lib/schemas';
 
 import { getCompany, updateMyCompany } from '@/lib/api/organizations';
-import { Company, CompanyUpdate } from '@/types/organization';
+import { Company } from '@/types/organization';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -15,16 +15,6 @@ import CompanyProfileDisplay from '@/components/organization/CompanyProfileDispl
 import { Skeleton } from '@/components/ui/skeleton';
 import { Edit } from 'lucide-react';
 import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
-
-const companySchema = z.object({
-  name: z.string().min(1, 'Company name is required'),
-  website: z.string().url({ message: "Invalid URL" }).optional().or(z.literal('')),
-  industry_focus: z.array(z.string()).optional(),
-  description: z.string().optional(),
-  looking_for: z.array(z.string()).optional(),
-});
-
-type CompanyFormData = z.infer<typeof companySchema>;
 
 const CompanyProfilePage = () => {
   const params = useParams();
@@ -47,15 +37,23 @@ const CompanyProfilePage = () => {
       setLoading(true);
       const data = await getCompany(companyId);
       setCompany(data);
+
+      const parseStringToArray = (value: string | string[] | null | undefined): string[] => {
+        if (Array.isArray(value)) return value;
+        if (typeof value === 'string') return value.split(',').map(s => s.trim()).filter(Boolean);
+        return [];
+      };
+
       reset({
         name: data.name,
         website: data.website || '',
-        industry_focus: data.industry_focus || [],
+        industry_focus: parseStringToArray(data.industry_focus),
         description: data.description || '',
-        looking_for: data.looking_for || [],
+        looking_for: parseStringToArray(data.looking_for),
       });
-    } catch (error) {
-      toast.error('Failed to fetch company profile');
+    } catch (e) {
+      const error = e as Error;
+      toast.error(`Failed to fetch company profile: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -80,8 +78,9 @@ const CompanyProfilePage = () => {
         await refreshCurrentUser();
       }
 
-    } catch (error) {
-      toast.error('Failed to update profile.');
+    } catch (e) {
+      const error = e as Error;
+      toast.error(`Failed to update profile: ${error.message}`);
     }
   };
 
