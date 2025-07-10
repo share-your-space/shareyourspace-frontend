@@ -4,7 +4,7 @@ import { UserDetail } from '@/types/auth';
 import { Badge } from "@/components/ui/badge";
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Settings, Link as LinkIcon, Briefcase, Building, Users } from 'lucide-react';
+import { Settings, Link as LinkIcon, Building, Users } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { ProfileHeader } from './ProfileHeader';
 import { ProfileSidebar } from './ProfileSidebar';
@@ -104,9 +104,9 @@ export default function UserProfileDisplay({ userDetail }: UserProfileDisplayPro
         </div>
 
         <div className="md:col-span-1 space-y-4">
-          <ProfileSidebar />
+          {userDetail.profile && <ProfileSidebar profile={userDetail.profile} />}
         </div>
       </div>
     </div>
   );
-} 
+}
