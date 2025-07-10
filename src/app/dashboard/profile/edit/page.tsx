@@ -8,16 +8,11 @@ import * as z from 'zod';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from 'sonner';
 import { UserProfile, UserProfileUpdateRequest } from '@/types/userProfile';
 import { ContactVisibility } from '@/types/enums';
 import { getMyProfile, updateMyProfile, uploadMyProfilePicture, uploadCoverPhoto } from '@/lib/api/users';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, UploadCloud, Edit } from 'lucide-react';
+import { Edit } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { Separator } from '@/components/ui/separator';
@@ -46,8 +41,6 @@ const EditProfilePage = () => {
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
-  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   const { control, reset, getValues } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -77,11 +70,9 @@ const EditProfilePage = () => {
         tools_technologies: fetchedProfile.tools_technologies || [],
         linkedin_profile_url: fetchedProfile.linkedin_profile_url || '',
       });
-      if (fetchedProfile.profile_picture_signed_url) {
-        setPreviewImageUrl(fetchedProfile.profile_picture_signed_url);
-      }
-    } catch (error) {
-      toast.error("Failed to load your profile data.");
+    } catch (e) {
+      const error = e as Error;
+      toast.error(`Failed to load your profile data: ${error.message}`);
       router.push('/dashboard');
     } finally {
       setIsPageLoading(false);
@@ -101,11 +92,10 @@ const EditProfilePage = () => {
       try {
         const updatedProfile = await uploadMyProfilePicture(e.target.files[0]);
         setProfile(updatedProfile);
-        setPreviewImageUrl(updatedProfile.profile_picture_signed_url || null);
-        setProfilePictureFile(null);
         toast.success("Profile picture updated!");
-      } catch (error) {
-        toast.error("Failed to upload profile picture.");
+      } catch (e) {
+        const error = e as Error;
+        toast.error(`Failed to upload profile picture: ${error.message}`);
       }
     }
   };
@@ -116,8 +106,9 @@ const EditProfilePage = () => {
         const updatedProfile = await uploadCoverPhoto(e.target.files[0]);
         setProfile(updatedProfile);
         toast.success("Cover photo updated!");
-      } catch (error) {
-        toast.error("Failed to upload cover photo.");
+      } catch (e) {
+        const error = e as Error;
+        toast.error(`Failed to upload cover photo: ${error.message}`);
       }
     }
   };
@@ -131,14 +122,29 @@ const EditProfilePage = () => {
       const dataToSave: Partial<UserProfileUpdateRequest> = {};
       fields.forEach(field => {
         const value = getValues(field);
-        (dataToSave as any)[field] = value;
+        (dataToSave as Record<string, unknown>)[field] = value;
       });
+
+      console.log('--- Saving User Profile ---');
+      console.log('Fields to save:', fields);
+      console.log('Data being sent to backend:', dataToSave);
+
       const updatedProfile = await updateMyProfile(dataToSave);
+
+      console.log('Response from backend (updated profile):', updatedProfile);
+
       setProfile(updatedProfile);
       toast.success("Profile Updated");
-      router.push(`/users/${user.id}`);
-    } catch (error: any) {
+      // We will not redirect immediately to observe the state.
+      // The user can navigate away manually.
+      // router.push(`/users/${user.id}`);
+    } catch (e) {
+      const error = e as Error & { response?: { data?: { detail?: string } } };
       const msg = error.response?.data?.detail || error.message || "Failed to update profile.";
+      console.error('--- Error Saving User Profile ---');
+      console.error('Fields:', fields);
+      console.error('Data sent:', getValues());
+      console.error(error);
       toast.error(msg);
     }
   };
@@ -216,11 +222,11 @@ const EditProfilePage = () => {
         </div>
 
         <div className="md:col-span-1 space-y-4">
-          <ProfileSidebar />
+          <ProfileSidebar profile={profile} />
         </div>
       </div>
     </div>
   );
 };
 
-export default EditProfilePage; 
+export default EditProfilePage;

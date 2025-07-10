@@ -66,7 +66,15 @@ const CompanyProfilePage = () => {
   const handleSave = async (field: keyof CompanyFormData) => {
     try {
       const value = getValues(field);
-      const updatedCompany = await updateMyCompany({ [field]: value });
+      console.log('--- Saving Company Profile ---');
+      console.log(`Field: ${field}`);
+      console.log('Value being sent to backend:', value);
+
+      const payload = { [field]: value };
+      const updatedCompany = await updateMyCompany(payload);
+      
+      console.log('Response from backend (updated company):', updatedCompany);
+
       setCompany(updatedCompany);
       toast.success('Profile updated!');
       
@@ -80,6 +88,9 @@ const CompanyProfilePage = () => {
 
     } catch (e) {
       const error = e as Error;
+      console.error('--- Error Saving Company Profile ---');
+      console.error(`Failed to update field: ${field}`);
+      console.error(error);
       toast.error(`Failed to update profile: ${error.message}`);
     }
   };

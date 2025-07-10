@@ -84,12 +84,23 @@ const StartupProfilePage = () => {
   const handleSave = async (field: keyof StartupFormData) => {
     try {
       const value = getValues(field);
-      const updatedStartup = await updateMyStartup({ [field]: value });
+      console.log('--- Saving Startup Profile ---');
+      console.log(`Field: ${field}`);
+      console.log('Value being sent to backend:', value);
+
+      const payload = { [field]: value };
+      const updatedStartup = await updateMyStartup(payload);
+      
+      console.log('Response from backend (updated startup):', updatedStartup);
+      
       setStartup(updatedStartup);
       toast.success('Profile updated!');
-      
-      // Refetch startup data to show updated info
-      fetchStartup();
+
+      // The fetchStartup() call here might be causing a race condition
+      // where we fetch the data before the update has fully propagated in the backend db.
+      // The updateMyStartup should return the updated data, so we can rely on that for the UI update.
+      // A user page refresh will be the ultimate test of persistence.
+      // fetchStartup();
 
       // Also refresh the user's auth context if their own startup name changed
       if (user?.startup_id === startupId) {
@@ -98,6 +109,9 @@ const StartupProfilePage = () => {
 
     } catch (e) {
       const error = e as Error;
+      console.error('--- Error Saving Startup Profile ---');
+      console.error(`Failed to update field: ${field}`);
+      console.error(error);
       toast.error(`Failed to update profile: ${error.message}`);
     }
   };
