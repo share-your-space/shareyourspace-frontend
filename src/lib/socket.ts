@@ -23,6 +23,7 @@ interface ServerToClientEvents {
   message_deleted: (payload: ChatMessageData) => void; // Uses ChatMessageData from @/types/chat
   workstation_changed: (data: { status: 'assigned' | 'unassigned', workstation_name?: string }) => void;
   new_message_notification: (payload: NewMessageNotificationPayload) => void;
+  user_typing: (data: { sender_id: number; conversation_id: number }) => void; // ADDED for type consistency
   // Add other expected server events here
 }
 
@@ -44,7 +45,7 @@ interface SendMessagePayloadSocket {
 interface ClientToServerEvents {
   send_message: (message: SendMessagePayloadSocket) => void; // UPDATED to use a specific type
   mark_as_read: (data: { sender_id: number; conversation_id: number; }) => void; 
-  user_typing: (data: { recipient_id: number; is_typing: boolean }) => void; // ADDED from dev plan
+  user_typing: (data: { recipient_id: number }) => void; // ADDED to match implementation
   // Add other events the client will emit
 }
 
