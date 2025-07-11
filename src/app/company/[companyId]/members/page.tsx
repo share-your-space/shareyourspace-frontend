@@ -37,7 +37,7 @@ const MemberCard: React.FC<{ member: Tenant }> = ({ member }) => {
             <CardContent className="p-4 flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                     <Avatar className="h-12 w-12">
-                        <AvatarImage src={avatarUrl} alt={name || ''} />
+                        <AvatarImage src={avatarUrl || undefined} alt={name || ''} />
                         <AvatarFallback>{getInitials(name)}</AvatarFallback>
                     </Avatar>
                     <div>
