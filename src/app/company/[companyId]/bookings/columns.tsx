@@ -87,7 +87,7 @@ export const columns: ColumnDef<Booking>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(booking.id)}
+              onClick={() => navigator.clipboard.writeText(booking.id.toString())}
             >
               Copy booking ID
             </DropdownMenuItem>
