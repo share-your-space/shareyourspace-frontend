@@ -7,4 +7,5 @@ export interface Booking {
     end_date: string | null;
     user: UserSimpleInfo;
     workstation: Workstation;
+    status: string; // "CONFIRMED", "PENDING", "CANCELLED", etc.
 }
