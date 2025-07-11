@@ -9,7 +9,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Calendar, Loader2 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthStore } from "@/store/authStore";
 import { Booking } from "@/types/booking";
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./columns";
@@ -18,7 +18,7 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
+  const token = useAuthStore((state) => state.token);
 
   useEffect(() => {
     const fetchBookings = async () => {

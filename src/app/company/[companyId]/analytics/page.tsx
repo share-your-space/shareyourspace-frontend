@@ -15,7 +15,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuthStore } from '@/store/authStore';
 import { AnalyticsData } from '@/types/analytics';
 import { Loader2 } from 'lucide-react';
 
@@ -45,7 +45,7 @@ const AnalyticsPage = () => {
     const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { token } = useAuth();
+    const token = useAuthStore((state) => state.token);
 
     useEffect(() => {
         const fetchAnalytics = async () => {
