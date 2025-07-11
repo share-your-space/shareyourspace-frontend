@@ -31,7 +31,7 @@ export interface Company {
 }
 
 export interface Startup extends OrganizationBase {
-  id: number;
+  id: string;
   type: "startup"; // Add the type property
   expressed_interest?: boolean;
   mission?: string | null;
@@ -44,6 +44,13 @@ export interface Startup extends OrganizationBase {
   member_slots_allocated?: number | null;
   member_slots_used?: number | null;
   direct_members?: User[] | null;
+  funding_amount?: number | null;
+  achievements?: string[] | null;
+  founder?: UserSimpleInfo | null;
+  contact_email?: string | null;
+  profile?: {
+    logo_signed_url?: string;
+  };
 }
 
 export interface CompanyUpdate extends Omit<OrganizationBase, 'name'> {

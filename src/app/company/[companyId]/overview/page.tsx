@@ -4,9 +4,10 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { apiClient } from '@/lib/api/base';
 import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { LucideIcon } from "lucide-react";
 import { Building, Briefcase, Users, UserCheck, Mail, CalendarCheck } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
 
 interface DashboardStats {
@@ -18,7 +19,7 @@ interface DashboardStats {
   active_bookings: number;
 }
 
-const StatCard = ({ title, value, icon: Icon, isLoading, description }: { title: string, value: string | number, icon: React.ElementType, isLoading: boolean, description?: string }) => (
+const StatCard = ({ title, value, icon: Icon, isLoading, description }: { title: string, value: string | number, icon: LucideIcon, isLoading: boolean, description?: string }) => (
     <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{title}</CardTitle>

@@ -23,6 +23,7 @@ export interface BillingInfo {
   current_plan: Plan;
   payment_method: PaymentMethod | null;
   invoices: Invoice[];
-  plan_renewal_date: string; // ISO date string
+  usage: { [key: string]: number };
   available_plans: Plan[];
+  plan_renewal_date: string | null; // ISO date string
 }

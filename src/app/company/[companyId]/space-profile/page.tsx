@@ -1,23 +1,19 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Briefcase, Wifi, Coffee, Loader2, AlertCircle, Users, Utensils, Printer, Sofa, Phone, Car, ConciergeBell, Mail, Clock, Calendar, Upload } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams } from 'next/navigation';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { useAuthStore } from "@/store/authStore";
+import { Space } from "@/types/space";
+import { apiClient } from "@/lib/api/base";
+import { PackageOpen, Upload, Wifi, Coffee, Users, Loader2, AlertCircle, Briefcase } from 'lucide-react';
 import Image from 'next/image';
-import { useAuthStore } from '@/store/authStore';
-import { Space } from '@/types/space';
-import { toast } from 'sonner';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 
 const allAmenities = [
     { id: 'wifi', name: 'High-Speed WiFi', icon: Wifi },
@@ -34,41 +30,38 @@ const allAmenities = [
     { id: 'event_space', name: 'Event Space', icon: Calendar },
 ];
 
-export default function SpaceProfilePage() {
+const SpaceProfilePage = () => {
+    const { companyId } = useParams<{ companyId: string }>();
     const [spaces, setSpaces] = useState<Space[]>([]);
     const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const token = useAuthStore((state) => state.token);
-    const [isSaving, setIsSaving] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const user = useAuthStore((state) => state.user);
+
+    const fetchSpaces = useCallback(async () => {
+        if (!companyId) return;
+        setIsLoading(true);
+        setError(null);
+        try {
+            const response = await apiClient.get<Space[]>(`/company/${companyId}/spaces`, {
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            setSpaces(response.data);
+            if (response.data.length > 0) {
+                setSelectedSpace(response.data[0]);
+            }
+        } catch (err) {
+            setError("Failed to load spaces. Please try again.");
+            toast.error("Failed to load spaces.");
+        } finally {
+            setIsLoading(false);
+        }
+    }, [companyId]);
 
     useEffect(() => {
-        const fetchSpaces = async () => {
-            if (!token) {
-                setLoading(false);
-                setError("Authentication token not found.");
-                return;
-            }
-            try {
-                setLoading(true);
-                const response = await fetch('/api/corp-admin/spaces', {
-                    headers: { 'Authorization': `Bearer ${token}` },
-                });
-                if (!response.ok) throw new Error('Failed to fetch spaces');
-                const fetchedData: Space[] = await response.json();
-                setSpaces(fetchedData);
-                if (fetchedData.length > 0) {
-                    setSelectedSpace(fetchedData[0]);
-                }
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'An unknown error occurred');
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchSpaces();
-    }, [token]);
+    }, [fetchSpaces]);
 
     const handleSpaceChange = (spaceId: string) => {
         const space = spaces.find(s => s.id.toString() === spaceId);
@@ -86,80 +79,51 @@ export default function SpaceProfilePage() {
         setSelectedSpace({ ...selectedSpace, amenities: newAmenities });
     };
 
-    const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file || !selectedSpace || !token) return;
+    const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        if (!selectedSpace) return;
+        const { name, value } = e.target;
+        setSelectedSpace({ ...selectedSpace, [name]: value });
+    };
 
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0 || !selectedSpace) return;
+        const file = e.target.files[0];
         const formData = new FormData();
-        formData.append('image_file', file);
+        formData.append("file", file);
 
+        setIsSubmitting(true);
         try {
-            const response = await fetch(`/api/corp-admin/spaces/${selectedSpace.id}/images`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-                body: formData,
+            const response = await apiClient.post<{ signed_url: string }>(`/spaces/${selectedSpace.id}/upload-image`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || 'Failed to upload image.');
-            }
-
-            const newImage = await response.json();
-            setSelectedSpace(prev => ({
-                ...prev!,
-                images: [...(prev?.images || []), newImage],
-            }));
+            setSelectedSpace({
+                ...selectedSpace,
+                images: [...(selectedSpace.images || []), { id: Date.now(), url: response.data.signed_url, signed_url: response.data.signed_url }]
+            });
             toast.success("Image uploaded successfully!");
-
-        } catch (err) {
-            toast.error(err instanceof Error ? err.message : 'An unknown error occurred');
-        }
-    };
-
-    const handleSaveChanges = async () => {
-        if (!selectedSpace || !token) {
-            toast.error("No space selected or not authenticated.");
-            return;
-        }
-
-        setIsSaving(true);
-        try {
-            const response = await fetch(`/api/corp-admin/spaces/${selectedSpace.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    name: selectedSpace.name,
-                    description: selectedSpace.description,
-                    address: selectedSpace.address,
-                    amenities: selectedSpace.amenities,
-                }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || 'Failed to save changes.');
-            }
-
-            const updatedSpace = await response.json();
-
-            // Update the local state with the saved data
-            setSpaces(spaces.map(s => s.id === updatedSpace.id ? updatedSpace : s));
-            setSelectedSpace(updatedSpace);
-
-            toast.success("Space profile updated successfully!");
-
-        } catch (err) {
-            toast.error(err instanceof Error ? err.message : 'An unknown error occurred');
+        } catch (uploadError) {
+            toast.error("Image upload failed.");
         } finally {
-            setIsSaving(false);
+            setIsSubmitting(false);
         }
     };
-    
-    if (loading) {
+
+    const handleUpdateSpace = async () => {
+        if (!selectedSpace) return;
+        setIsSubmitting(true);
+        try {
+            const { id, ...updateData } = selectedSpace;
+            await apiClient.put(`/spaces/${id}`, updateData);
+            toast.success("Space updated successfully!");
+            fetchSpaces(); // Refresh data
+        } catch (updateError) {
+            toast.error("Failed to update space.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    if (isLoading) {
         return <div className="flex justify-center items-center h-full"><Loader2 className="h-16 w-16 animate-spin text-primary" /></div>;
     }
 
@@ -168,129 +132,89 @@ export default function SpaceProfilePage() {
     }
 
     return (
-        <div className="space-y-8">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center">
-                        <Briefcase className="mr-3 h-6 w-6" />
-                        Manage Your Space Profile
-                    </CardTitle>
-                    <CardDescription>Select a space to view and edit its public profile.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Select onValueChange={handleSpaceChange} defaultValue={selectedSpace?.id.toString()}>
-                        <SelectTrigger className="w-[280px]">
-                            <SelectValue placeholder="Select a space" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {spaces.map(space => (
-                                <SelectItem key={space.id} value={space.id.toString()}>
-                                    {space.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </CardContent>
-            </Card>
+        <div className="grid gap-6 md:grid-cols-12">
+            <div className="md:col-span-3">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center">
+                            <Briefcase className="mr-3 h-6 w-6" />
+                            Your Spaces
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {spaces.length > 0 ? (
+                            <Select onValueChange={handleSpaceChange} defaultValue={selectedSpace?.id.toString()}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a space" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {spaces.map(space => (
+                                        <SelectItem key={space.id} value={space.id.toString()}>
+                                            {space.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">No spaces found.</p>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
 
-            {!selectedSpace ? (
-                <div className="text-center py-10 text-muted-foreground">
-                    <p>Select a space to see its details or create one if you haven't already.</p>
-                </div>
-            ) : (
-                <>
-                    {/* Gallery Section */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Photo Gallery</CardTitle>
-                            <CardDescription>Showcase your space with high-quality images.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {selectedSpace.images?.map((img) => (
-                                    <div key={img.id} className="relative aspect-video rounded-lg overflow-hidden">
-                                        <Image src={img.image_url} alt={`Space photo ${img.id}`} layout="fill" objectFit="cover" />
-                                    </div>
-                                ))}
-                                <div 
-                                    className="relative aspect-video rounded-lg overflow-hidden border-2 border-dashed flex items-center justify-center cursor-pointer hover:bg-muted/50"
-                                    onClick={() => fileInputRef.current?.click()}
-                                >
-                                    <input 
-                                        type="file" 
-                                        ref={fileInputRef} 
-                                        onChange={handleImageUpload}
-                                        className="hidden" 
-                                        accept="image/png, image/jpeg, image/gif"
-                                    />
-                                    <Button variant="outline" size="sm"><Upload className="mr-2 h-4 w-4"/>Upload</Button>
+            <div className="md:col-span-9">
+                <Card>
+                    {selectedSpace ? (
+                        <>
+                            <CardHeader>
+                                <CardTitle>Edit Space Profile</CardTitle>
+                                <CardDescription>Update the details for {selectedSpace.name}.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="space-y-2">
+                                    <Label htmlFor="name">Space Name</Label>
+                                    <Input id="name" name="name" value={selectedSpace.name} onChange={handleFormChange} />
                                 </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                                <div className="space-y-2">
+                                    <Label htmlFor="description">Description</Label>
+                                    <Textarea id="description" name="description" value={selectedSpace.description || ''} onChange={handleFormChange} />
+                                </div>
+                                
+                                <div className="space-y-4">
+                                    <Label>Images</Label>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        {(selectedSpace.images || []).map(image => (
+                                            <div key={image.id} className="relative">
+                                                <Image src={image.signed_url} alt="Space" layout="fill" className="rounded-md object-cover" />
+                                            </div>
+                                        ))}
+                                        <Label htmlFor="image-upload" className="flex flex-col items-center justify-center border-2 border-dashed rounded-md cursor-pointer h-32 hover:bg-accent">
+                                            <Upload className="h-8 w-8 text-muted-foreground" />
+                                            <span className="text-sm text-muted-foreground">Upload</span>
+                                            <Input id="image-upload" type="file" className="sr-only" onChange={handleImageUpload} disabled={isSubmitting} />
+                                        </Label>
+                                    </div>
+                                </div>
 
-                    {/* Details Section */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Space Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="space-y-2">
-                                <Label htmlFor="spaceName">Space Name</Label>
-                                <Input id="spaceName" value={selectedSpace.name} onChange={(e) => setSelectedSpace({...selectedSpace, name: e.target.value})} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="description">Public Description</Label>
-                                <Textarea id="description" value={selectedSpace.description || ''} onChange={(e) => setSelectedSpace({...selectedSpace, description: e.target.value})} placeholder="Describe what makes your space unique..." rows={5} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="address">Address</Label>
-                                <Input id="address" value={selectedSpace.address || ''} onChange={(e) => setSelectedSpace({...selectedSpace, address: e.target.value})} />
-                            </div>
+                            </CardContent>
+                            <CardFooter className="flex justify-end">
+                                <Button onClick={handleUpdateSpace} disabled={isSubmitting}>
+                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Save Changes
+                                </Button>
+                            </CardFooter>
+                        </>
+                    ) : (
+                        <CardContent className="flex flex-col items-center justify-center h-64 text-center">
+                            <PackageOpen className="h-12 w-12 text-muted-foreground mb-4" />
+                            <h3 className="text-lg font-semibold">No Space Selected</h3>
+                            <p>Select a space to see its details or create one if you haven&apos;t already.</p>
                         </CardContent>
-                    </Card>
-
-                    {/* Amenities Section */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Amenities</CardTitle>
-                            <CardDescription>Select the amenities you offer.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {allAmenities.map(amenity => {
-                                const Icon = amenity.icon;
-                                const isSelected = selectedSpace.amenities?.includes(amenity.id);
-                                return (
-                                    <Button
-                                        key={amenity.id}
-                                        variant={isSelected ? "default" : "outline"}
-                                        onClick={() => handleAmenityToggle(amenity.id)}
-                                        className="h-auto justify-start"
-                                    >
-                                        <div className="flex items-center gap-3 p-2">
-                                            <Icon className={`h-6 w-6 ${isSelected ? '' : 'text-muted-foreground'}`} />
-                                            <span className="text-sm font-medium">{amenity.name}</span>
-                                        </div>
-                                    </Button>
-                                );
-                            })}
-                        </CardContent>
-                    </Card>
-
-                    <div className="flex justify-end">
-                        <Button size="lg" onClick={handleSaveChanges} disabled={isSaving}>
-                            {isSaving ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Saving...
-                                </>
-                            ) : (
-                                `Save Changes for ${selectedSpace.name}`
-                            )}
-                        </Button>
-                    </div>
-                </>
-            )}
+                    )}
+                </Card>
+            </div>
         </div>
     );
-}
+};
+
+export default SpaceProfilePage;

@@ -87,12 +87,8 @@ export default function BrowseTenantsPage() {
                     }
                 });
                 
-                const data = response.data.map((item: any) => {
-                    if (item.full_name) { // It's a freelancer (User)
-                        return { ...item, type: 'freelancer' };
-                    } else { // It's a startup
-                        return { ...item, type: 'startup' };
-                    }
+                const data = response.data.map((item: { user: User; startup: Startup }) => {
+                    return item.user || item.startup;
                 });
 
                 setTenants(data);
