@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { CompanySettings } from "@/types/company";
-import api from "@/lib/api";
+import { apiClient as api } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 
 export default function SettingsPage() {

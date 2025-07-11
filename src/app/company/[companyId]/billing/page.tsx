@@ -55,7 +55,13 @@ const InvoiceRow: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
     </div>
 );
 
-export default function CompanyBillingPage({ params }: { params: { companyId: string } }) {
+interface PageProps {
+    params: {
+        companyId: string;
+    };
+}
+
+export default function CompanyBillingPage({ params }: PageProps) {
     const [billingInfo, setBillingInfo] = useState<BillingInfo | null>(null);
     const [loading, setLoading] = useState(true);
 
