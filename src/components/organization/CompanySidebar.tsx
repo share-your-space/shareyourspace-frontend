@@ -2,17 +2,18 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ExternalLink, Users, Briefcase, User as UserIcon } from 'lucide-react';
-import { Company } from '@/types/organization';
+import { Company, Startup } from '@/types/organization';
 import Link from 'next/link';
 import { UserRole } from '@/types/enums';
 import { Badge } from '@/components/ui/badge';
+import { HeaderData } from './CompanyHeader';
 
 interface CompanySidebarProps {
-  company: Company;
+  company: HeaderData;
 }
 
 export const CompanySidebar: React.FC<CompanySidebarProps> = ({ company }) => {
-  const startupAdmin = company.direct_members?.find(member => member.role === UserRole.STARTUP_ADMIN);
+  const startupAdmin = 'direct_members' in company && company.direct_members?.find(member => member.role === UserRole.STARTUP_ADMIN);
 
   return (
     <Card>
