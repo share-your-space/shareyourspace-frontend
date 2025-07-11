@@ -18,7 +18,7 @@ export interface Company {
   name: string;
   logo_url?: string | null;
   website?: string | null;
-  industry_focus?: string | null; // Changed from string[]
+  industry_focus?: string[] | null; // Reverted from string
   team_size?: TeamSize | null;
   description?: string | null;
   looking_for?: string[] | null;
