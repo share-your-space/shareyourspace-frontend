@@ -186,7 +186,7 @@ const SpaceProfilePage = () => {
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         {(selectedSpace.images || []).map(image => (
                                             <div key={image.id} className="relative">
-                                                <Image src={image.signed_url} alt="Space" layout="fill" className="rounded-md object-cover" />
+                                                <Image src={image.signed_url || image.image_url} alt="Space" layout="fill" className="rounded-md object-cover" />
                                             </div>
                                         ))}
                                         <Label htmlFor="image-upload" className="flex flex-col items-center justify-center border-2 border-dashed rounded-md cursor-pointer h-32 hover:bg-accent">
