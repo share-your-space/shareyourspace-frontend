@@ -28,7 +28,7 @@ export const columns: ColumnDef<Booking>[] = [
       return (
         <div className="flex items-center space-x-3">
           <Avatar>
-            <AvatarImage src={user.profile?.profile_picture_signed_url} />
+            <AvatarImage src={user.profile?.profile_picture_signed_url ?? ''} />
             <AvatarFallback>{getInitials(user.full_name)}</AvatarFallback>
           </Avatar>
           <div>
