@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { CompanySettings } from "@/types/company";
-import { apiClient as api } from "@/lib/api";
+import { apiClient } from "@/lib/api/base";
 import { Loader2 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -28,7 +28,7 @@ export default function SettingsPage() {
       if (!companyId) return;
       try {
         setLoading(true);
-        const response = await api.get(`/company/${companyId}/settings`);
+        const response = await apiClient.get(`/company/${companyId}/settings`);
         const data = response.data;
         setSettings({
           companyName: data.name,
@@ -62,7 +62,7 @@ export default function SettingsPage() {
         website: settings.website,
         address: settings.address,
       };
-      await api.put(`/company/${companyId}/settings`, payload);
+      await apiClient.put(`/company/${companyId}/settings`, payload);
       toast.success("Settings updated successfully!");
     } catch (error) {
       console.error("Failed to update settings", error);
