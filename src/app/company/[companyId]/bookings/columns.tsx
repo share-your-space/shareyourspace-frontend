@@ -16,25 +16,25 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 
-const getInitials = (name?: string) =>
+const getInitials = (name?: string | null) =>
   name ? name.split(" ").map((n) => n[0]).join("") : "U";
 
 export const columns: ColumnDef<Booking>[] = [
   {
-    accessorKey: "tenant",
+    accessorKey: "user",
     header: "Tenant",
     cell: ({ row }) => {
-      const tenant = row.original.tenant;
+      const user = row.original.user;
       return (
         <div className="flex items-center space-x-3">
           <Avatar>
-            <AvatarImage src={tenant.avatarUrl} />
-            <AvatarFallback>{getInitials(tenant.name)}</AvatarFallback>
+            <AvatarImage src={user.profile?.profile_picture_signed_url} />
+            <AvatarFallback>{getInitials(user.full_name)}</AvatarFallback>
           </Avatar>
           <div>
-            <div className="font-medium">{tenant.name}</div>
+            <div className="font-medium">{user.full_name}</div>
             <div className="text-sm text-muted-foreground">
-              {tenant.email}
+              {user.email}
             </div>
           </div>
         </div>
@@ -46,14 +46,17 @@ export const columns: ColumnDef<Booking>[] = [
     header: "Workstation",
   },
   {
-    accessorKey: "startTime",
+    accessorKey: "start_date",
     header: "Start Time",
-    cell: ({ row }) => format(new Date(row.original.startTime), "PPpp"),
+    cell: ({ row }) => format(new Date(row.original.start_date), "PPpp"),
   },
   {
-    accessorKey: "endTime",
+    accessorKey: "end_date",
     header: "End Time",
-    cell: ({ row }) => format(new Date(row.original.endTime), "PPpp"),
+    cell: ({ row }) => {
+        const { end_date } = row.original;
+        return end_date ? format(new Date(end_date), "PPpp") : 'N/A';
+    }
   },
   {
     accessorKey: "status",

@@ -13,8 +13,11 @@ import { useAuthStore } from "@/store/authStore";
 import { Booking } from "@/types/booking";
 import { DataTable } from "@/components/ui/data-table";
 import { columns } from "./columns";
+import { useParams } from "next/navigation";
+import { apiClient } from "@/lib/api/base";
 
 export default function BookingsPage() {
+  const { companyId } = useParams<{ companyId: string }>();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,26 +25,21 @@ export default function BookingsPage() {
 
   useEffect(() => {
     const fetchBookings = async () => {
-      if (!token) {
+      if (!token || !companyId) {
         setLoading(false);
-        setError("Authentication token not found.");
+        setError("Authentication token or company ID not found.");
         return;
       }
 
       try {
         setLoading(true);
-        const response = await fetch("/api/corp-admin/bookings", {
+        const response = await apiClient.get(`/company/${companyId}/bookings`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch bookings");
-        }
-
-        const data = await response.json();
-        setBookings(data);
+        setBookings(response.data);
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "An unknown error occurred"
@@ -51,8 +49,10 @@ export default function BookingsPage() {
       }
     };
 
-    fetchBookings();
-  }, [token]);
+    if (companyId) {
+      fetchBookings();
+    }
+  }, [token, companyId]);
 
   return (
     <div className="space-y-6">
