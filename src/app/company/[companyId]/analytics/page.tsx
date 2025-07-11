@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Bar, Line, Pie } from 'react-chartjs-2';
+import { Bar, Line, Pie, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -15,6 +15,9 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import { useAuth } from '@/hooks/useAuth';
+import { AnalyticsData } from '@/types/analytics';
+import { Loader2 } from 'lucide-react';
 
 ChartJS.register(
   CategoryScale,
@@ -28,51 +31,118 @@ ChartJS.register(
   Legend
 );
 
-const memberGrowthData = {
-  labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
-  datasets: [
-    {
-      label: 'New Members',
-      data: [12, 19, 25, 30, 45, 50, 62],
-      borderColor: 'hsl(var(--primary))',
-      backgroundColor: 'hsla(var(--primary), 0.2)',
-      fill: true,
+const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: {
+            position: 'top' as const,
+        },
     },
-  ],
 };
-
-const connectionsOverTimeData = {
-  labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
-  datasets: [
-    {
-      label: 'Connections Made',
-      data: [65, 59, 80, 81, 102, 120, 145],
-      borderColor: 'hsl(var(--destructive))',
-      backgroundColor: 'hsla(var(--destructive), 0.2)',
-    },
-  ],
-};
-
-const skillDistributionData = {
-    labels: ['Engineering', 'Design', 'Product', 'Marketing', 'Sales', 'Operations'],
-    datasets: [
-      {
-        label: 'Skill Distribution',
-        data: [40, 20, 15, 10, 10, 5],
-        backgroundColor: [
-          '#FF6384',
-          '#36A2EB',
-          '#FFCE56',
-          '#4BC0C0',
-          '#9966FF',
-          '#FF9F40'
-        ],
-        hoverOffset: 4
-      }
-    ]
-  };
 
 const AnalyticsPage = () => {
+    const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const { token } = useAuth();
+
+    useEffect(() => {
+        const fetchAnalytics = async () => {
+            if (!token) {
+                setLoading(false);
+                setError("Authentication token not found.");
+                return;
+            }
+
+            try {
+                setLoading(true);
+                const response = await fetch('/api/corp-admin/analytics', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch analytics data');
+                }
+
+                const data: AnalyticsData = await response.json();
+                setAnalyticsData(data);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'An unknown error occurred');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchAnalytics();
+    }, [token]);
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center h-full">
+                <Loader2 className="h-16 w-16 animate-spin text-primary" />
+            </div>
+        );
+    }
+
+    if (error) {
+        return <div className="text-center text-red-500">{error}</div>;
+    }
+
+    if (!analyticsData) {
+        return <div className="text-center text-muted-foreground">No analytics data available.</div>;
+    }
+
+    const tenantGrowthChartData = {
+        labels: analyticsData.tenant_growth.map(d => new Date(d.date).toLocaleDateString()),
+        datasets: [
+            {
+                label: 'New Tenants',
+                data: analyticsData.tenant_growth.map(d => d.count),
+                borderColor: 'hsl(var(--primary))',
+                backgroundColor: 'hsla(var(--primary), 0.2)',
+                fill: true,
+            },
+        ],
+    };
+
+    const bookingsChartData = {
+        labels: analyticsData.bookings_over_time.map(d => new Date(d.date).toLocaleDateString()),
+        datasets: [
+            {
+                label: 'Bookings',
+                data: analyticsData.bookings_over_time.map(d => d.count),
+                borderColor: 'hsl(var(--destructive))',
+                backgroundColor: 'hsla(var(--destructive), 0.2)',
+            },
+        ],
+    };
+
+    const tenantDistributionChartData = {
+        labels: Object.keys(analyticsData.tenant_distribution),
+        datasets: [
+            {
+                data: Object.values(analyticsData.tenant_distribution),
+                backgroundColor: ['#36A2EB', '#FFCE56'],
+                hoverOffset: 4,
+            },
+        ],
+    };
+
+    const utilizationChartData = {
+        labels: ['Occupied', 'Available'],
+        datasets: [
+          {
+            data: [analyticsData.workstation_utilization, 100 - analyticsData.workstation_utilization],
+            backgroundColor: ['#4BC0C0', '#E0E0E0'],
+            hoverOffset: 4
+          }
+        ]
+      };
+
+
   return (
     <div className="space-y-8">
       <div>
@@ -80,41 +150,57 @@ const AnalyticsPage = () => {
         <p className="text-muted-foreground">Insights into your company&apos;s engagement and growth.</p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Member Growth</CardTitle>
-            <CardDescription>New members joining over time.</CardDescription>
+            <CardTitle>Tenant Growth</CardTitle>
+            <CardDescription>New tenants joining over the last 30 days.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
-              <Line data={memberGrowthData} options={{ responsive: true, maintainAspectRatio: false }} />
+              <Line data={tenantGrowthChartData} options={chartOptions} />
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Booking Activity</CardTitle>
+            <CardDescription>Workstation bookings over the last 30 days.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <Bar data={bookingsChartData} options={chartOptions} />
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Connections Activity</CardTitle>
-            <CardDescription>Connections being made within your space.</CardDescription>
+            <CardTitle>Tenant Distribution</CardTitle>
+            <CardDescription>Breakdown of tenant types.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
-              <Bar data={connectionsOverTimeData} options={{ responsive: true, maintainAspectRatio: false }} />
+              <Pie data={tenantDistributionChartData} options={chartOptions} />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Workstation Utilization</CardTitle>
+            <CardDescription>Percentage of occupied workstations.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px] flex items-center justify-center">
+                <div className="w-full h-full relative">
+                    <Doughnut data={utilizationChartData} options={{...chartOptions, cutout: '60%'}} />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-2xl font-bold">{analyticsData.workstation_utilization.toFixed(1)}%</span>
+                    </div>
+                </div>
             </div>
           </CardContent>
         </Card>
       </div>
-      <Card>
-        <CardHeader>
-            <CardTitle>Skill Distribution</CardTitle>
-            <CardDescription>Breakdown of primary skills across your members.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex justify-center">
-            <div className="w-full max-w-[350px] h-[350px]">
-                <Pie data={skillDistributionData} options={{ responsive: true, maintainAspectRatio: false }} />
-            </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

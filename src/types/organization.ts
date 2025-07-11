@@ -18,11 +18,14 @@ export interface Company {
   name: string;
   logo_url?: string | null;
   website?: string | null;
-  industry_focus?: string[] | null;
+  industry_focus?: string | null; // Changed from string[]
   team_size?: TeamSize | null;
   description?: string | null;
-  mission?: string | null;
   looking_for?: string[] | null;
+  social_media_links?: { [key: string]: string } | null;
+  created_at: string;
+  updated_at: string;
+  admin?: UserSimpleInfo | null;
   // This can be expanded based on what the backend provides
   direct_members?: User[] | null;
 }

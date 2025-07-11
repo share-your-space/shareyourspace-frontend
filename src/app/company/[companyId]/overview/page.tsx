@@ -1,113 +1,125 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { apiClient } from '@/lib/api/base';
 import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building, Users, Briefcase, Mail, BarChart2, Activity } from 'lucide-react';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-import { Bar } from 'react-chartjs-2';
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Building, Briefcase, Users, UserCheck, Mail, CalendarCheck } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
 
 interface DashboardStats {
-    total_spaces: number;
-    total_workstations: number;
-    occupied_workstations: number;
-    total_tenants: number;
-    pending_invites: number;
+  total_spaces: number;
+  total_workstations: number;
+  occupied_workstations: number;
+  total_tenants: number;
+  pending_invites: number;
+  active_bookings: number;
 }
 
-const StatCard = ({ title, value, icon: Icon, description }: { title: string, value: string | number, icon: React.ElementType, description: string }) => (
+const StatCard = ({ title, value, icon: Icon, isLoading, description }: { title: string, value: string | number, icon: React.ElementType, isLoading: boolean, description?: string }) => (
     <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{title}</CardTitle>
             <Icon className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-            <div className="text-2xl font-bold">{value}</div>
-            <p className="text-xs text-muted-foreground">{description}</p>
+            {isLoading ? (
+                <Skeleton className="h-8 w-20" />
+            ) : (
+                <div className="text-2xl font-bold">{value}</div>
+            )}
+            {description && !isLoading && <p className="text-xs text-muted-foreground">{description}</p>}
         </CardContent>
     </Card>
 );
 
-const OverviewPage = ({ params }: { params: { companyId: string } }) => {
+const CompanyDashboardOverviewPage = () => {
+    const params = useParams();
+    const companyId = params.companyId;
     const [stats, setStats] = useState<DashboardStats | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const response = await apiClient.get<DashboardStats>(`/corp-admin/dashboard/stats`);
-                setStats(response.data);
-            } catch (error) {
-                toast.error('Failed to load dashboard data.');
-                console.error(error);
-            } finally {
-                setLoading(false);
-            }
-        };
+        if (companyId) {
+            const fetchStats = async () => {
+                setIsLoading(true);
+                try {
+                    // The endpoint is not company-specific in the backend yet, but we call it when a companyId is present.
+                    const response = await apiClient.get<DashboardStats>(`/corp-admin/dashboard/stats`);
+                    setStats(response.data);
+                } catch (error) {
+                    toast.error('Failed to load dashboard statistics.');
+                    console.error("Failed to fetch dashboard stats:", error);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            fetchStats();
+        }
+    }, [companyId]);
 
-        fetchStats();
-    }, [params.companyId]);
+    const workstationOccupancy = stats && stats.total_workstations > 0
+        ? (stats.occupied_workstations / stats.total_workstations) * 100
+        : 0;
 
-    const workstationsData = {
-        labels: ['Workstations'],
-        datasets: [
-            {
-                label: 'Occupied',
-                data: [stats?.occupied_workstations || 0],
-                backgroundColor: 'rgba(75, 192, 192, 0.6)',
-            },
-            {
-                label: 'Available',
-                data: [(stats?.total_workstations || 0) - (stats?.occupied_workstations || 0)],
-                backgroundColor: 'rgba(201, 203, 207, 0.6)',
-            },
-        ],
-    };
-
-    if (loading) {
-        return <div>Loading...</div>;
-    }
-
-    if (!stats) {
-        return <div>Could not load dashboard statistics.</div>;
-    }
+    const statCards = [
+        { title: "Total Spaces", value: stats?.total_spaces, icon: Building, isLoading, description: "All managed spaces" },
+        { title: "Total Workstations", value: stats?.total_workstations, icon: Briefcase, isLoading, description: "Across all spaces" },
+        { title: "Active Tenants", value: stats?.total_tenants, icon: Users, isLoading, description: "Users in your spaces" },
+        { title: "Pending Invites", value: stats?.pending_invites, icon: Mail, isLoading, description: "Awaiting user response" },
+        { title: "Active Bookings", value: stats?.active_bookings, icon: CalendarCheck, isLoading, description: "Current workstation bookings" },
+        { title: "Occupied Workstations", value: stats?.occupied_workstations, icon: UserCheck, isLoading, description: "Currently assigned workstations" },
+    ];
 
     return (
-        <div className="p-6">
-            <h1 className="text-3xl font-bold mb-6">Dashboard Overview</h1>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <StatCard title="Total Spaces" value={stats.total_spaces} icon={Building} description="All managed spaces" />
-                <StatCard title="Total Workstations" value={stats.total_workstations} icon={Briefcase} description="All available workstations" />
-                <StatCard title="Active Tenants" value={stats.total_tenants} icon={Users} description="Users occupying workstations" />
-                <StatCard title="Pending Invites" value={stats.pending_invites} icon={Mail} description="Invitations awaiting response" />
+        <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+            <div className="flex items-center justify-between space-y-2">
+                <h2 className="text-3xl font-bold tracking-tight">Overview</h2>
             </div>
-            <div className="grid gap-4 mt-6 md:grid-cols-2">
-                <Card>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {statCards.map((card, index) => (
+                    <StatCard
+                        key={index}
+                        title={card.title}
+                        value={card.value ?? '...'}
+                        icon={card.icon}
+                        isLoading={isLoading}
+                        description={card.description}
+                    />
+                ))}
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                <Card className="col-span-4">
                     <CardHeader>
-                        <CardTitle className="flex items-center">
-                            <BarChart2 className="mr-2 h-5 w-5" />
-                            Workstation Occupancy
-                        </CardTitle>
+                        <CardTitle>Workstation Occupancy</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <div style={{ height: '300px' }}>
-                            <Bar data={workstationsData} options={{ maintainAspectRatio: false, indexAxis: 'y' }} />
-                        </div>
+                    <CardContent className="pl-2">
+                         {isLoading ? (
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-1/4" />
+                                <Skeleton className="h-4 w-full" />
+                            </div>
+                         ) : (
+                            <>
+                                <p className="text-sm text-muted-foreground mb-2">
+                                    {stats?.occupied_workstations} of {stats?.total_workstations} workstations are occupied.
+                                </p>
+                                <Progress value={workstationOccupancy} className="w-full" />
+                            </>
+                         )}
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="col-span-3">
                     <CardHeader>
-                        <CardTitle className="flex items-center">
-                            <Activity className="mr-2 h-5 w-5" />
-                            Recent Activity
-                        </CardTitle>
+                        <CardTitle>Recent Activity</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {/* Placeholder for activity feed */}
-                        <p className="text-muted-foreground">Activity feed coming soon.</p>
+                        {/* Placeholder for recent activity feed */}
+                        <div className="text-center text-muted-foreground py-8">
+                            Activity feed coming soon.
+                        </div>
                     </CardContent>
                 </Card>
             </div>
@@ -115,4 +127,4 @@ const OverviewPage = ({ params }: { params: { companyId: string } }) => {
     );
 };
 
-export default OverviewPage;
+export default CompanyDashboardOverviewPage;

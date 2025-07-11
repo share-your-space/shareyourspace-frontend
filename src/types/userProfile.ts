@@ -5,6 +5,8 @@ export interface UserProfile {
   user_id: number;
   full_name?: string | null;
   title?: string | null;
+  headline?: string | null;
+  industry?: string | null;
   bio?: string | null;
   contact_info_visibility?: ContactVisibility | null;
   skills_expertise?: string[] | null;
@@ -32,4 +34,4 @@ export interface UserProfileUpdateRequest {
   linkedin_profile_url?: string | null;
   cover_photo_url?: string | null;
   // profile_picture_url is typically handled by a separate upload endpoint
-} 
+}

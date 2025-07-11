@@ -6,6 +6,28 @@ export interface BasicUser {
   role: string; // Consider an Enum if roles are strictly defined on frontend too
 }
 
+export interface SpaceImage {
+  id: number;
+  image_url: string;
+}
+
+export interface Space {
+  id: number;
+  name: string;
+  address: string | null;
+  company_id: number | null;
+  total_workstations: number;
+  headline: string | null;
+  amenities: string[] | null;
+  house_rules: string | null;
+  vibe: string | null;
+  opening_hours: Record<string, string> | null;
+  key_highlights: string[] | null;
+  neighborhood_description: string | null;
+  description: string | null;
+  images?: SpaceImage[];
+}
+
 // Based on app.schemas.organization.Startup (BasicStartup in space.py context)
 export interface BasicStartup {
   id: number;
@@ -176,6 +198,11 @@ export interface Interest {
     created_at: string;
 } 
 
+export interface SpaceImage {
+  id: number;
+  image_url: string;
+}
+
 export interface Space {
   id: number;
   name: string;
@@ -186,16 +213,11 @@ export interface Space {
   amenities: string[] | null;
   house_rules: string | null;
   vibe: string | null;
-  opening_hours?: any;
+  opening_hours: Record<string, string> | null;
   key_highlights: string[] | null;
   neighborhood_description: string | null;
   description: string | null;
-}
-
-export interface SpaceImage {
-  id: number;
-  image_url: string;
-  description?: string;
+  images?: SpaceImage[];
 }
 
 export interface SpaceProfile {
@@ -250,4 +272,4 @@ export interface WaitlistedUser {
 
 export interface AddUserToSpaceRequest {
   user_id: number;
-} 
+}

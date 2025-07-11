@@ -1,55 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, FileText, Download } from 'lucide-react';
-
-// Types
-interface Plan {
-    name: string;
-    price: string;
-    features: string[];
-    isCurrent: boolean;
-}
-
-interface Invoice {
-    id: string;
-    date: string;
-    amount: string;
-}
-
-// Mock Data
-const plans: Plan[] = [
-    {
-        name: 'Community',
-        price: 'Free',
-        features: ['Up to 10 members', 'Basic analytics', 'Community support'],
-        isCurrent: false,
-    },
-    {
-        name: 'Pro',
-        price: '$49/month',
-        features: ['Up to 50 members', 'Advanced analytics', 'Priority support', 'Custom branding'],
-        isCurrent: true,
-    },
-    {
-        name: 'Enterprise',
-        price: 'Contact Us',
-        features: ['Unlimited members', 'Dedicated account manager', 'Premium support & SLA', 'Advanced security & compliance'],
-        isCurrent: false,
-    },
-];
-
-const invoices: Invoice[] = [
-    { id: 'INV-2024-003', date: 'July 1, 2024', amount: '$49.00' },
-    { id: 'INV-2024-002', date: 'June 1, 2024', amount: '$49.00' },
-    { id: 'INV-2024-001', date: 'May 1, 2024', amount: '$49.00' },
-];
+import { CheckCircle, FileText, Download, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { BillingInfo, Plan, Invoice } from '@/types/billing';
+import { format } from 'date-fns';
 
 const PlanCard: React.FC<{ plan: Plan }> = ({ plan }) => (
-    <Card className={`flex flex-col ${plan.isCurrent ? 'border-primary' : ''}`}>
+    <Card className={`flex flex-col ${plan.is_current ? 'border-primary' : ''}`}>
         <CardHeader>
             <CardTitle>{plan.name}</CardTitle>
             <CardDescription className="text-2xl font-bold">{plan.price}</CardDescription>
@@ -65,7 +26,7 @@ const PlanCard: React.FC<{ plan: Plan }> = ({ plan }) => (
             </ul>
         </CardContent>
         <CardFooter>
-            {plan.isCurrent ? (
+            {plan.is_current ? (
                 <Button variant="outline" className="w-full" disabled>Current Plan</Button>
             ) : (
                 <Button className="w-full">{plan.name === 'Enterprise' ? 'Contact Sales' : 'Upgrade'}</Button>
@@ -80,19 +41,59 @@ const InvoiceRow: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
             <FileText className="h-5 w-5 text-muted-foreground" />
             <div>
                 <p className="font-semibold">{invoice.id}</p>
-                <p className="text-sm text-muted-foreground">Paid on {invoice.date}</p>
+                <p className="text-sm text-muted-foreground">Paid on {format(new Date(invoice.date), 'MMMM d, yyyy')}</p>
             </div>
         </div>
         <div className="flex items-center gap-4">
-            <p className="font-mono text-sm">{invoice.amount}</p>
-            <Button variant="ghost" size="icon">
-                <Download className="h-4 w-4" />
+            <p className="font-mono text-sm">${invoice.amount.toFixed(2)}</p>
+            <Button variant="ghost" size="icon" asChild>
+                <a href={invoice.pdf_url} target="_blank" rel="noopener noreferrer">
+                    <Download className="h-4 w-4" />
+                </a>
             </Button>
         </div>
     </div>
 );
 
-export default function CompanyBillingPage() {
+export default function CompanyBillingPage({ params }: { params: { companyId: string } }) {
+    const [billingInfo, setBillingInfo] = useState<BillingInfo | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchBillingInfo = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch(`/api/corp-admin/billing`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch billing information');
+                }
+                const data: BillingInfo = await response.json();
+                setBillingInfo(data);
+            } catch (error) {
+                console.error(error);
+                toast.error('Could not load billing details.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchBillingInfo();
+    }, [params.companyId]);
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center h-full">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        );
+    }
+
+    if (!billingInfo) {
+        return <div className="text-center">Could not load billing information.</div>;
+    }
+
+    const { current_plan, payment_method, invoices, plan_renewal_date, available_plans } = billingInfo;
+
     return (
         <div className="space-y-8">
             {/* Current Plan & Payment Method Section */}
@@ -100,10 +101,12 @@ export default function CompanyBillingPage() {
                 <Card className="lg:col-span-2">
                     <CardHeader>
                         <CardTitle>Current Plan</CardTitle>
-                        <CardDescription>You are currently on the Pro plan.</CardDescription>
+                        <CardDescription>You are currently on the {current_plan.name} plan.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-muted-foreground">Your plan renews on August 1, 2024.</p>
+                        <p className="text-muted-foreground">
+                            Your plan renews on {format(new Date(plan_renewal_date), 'MMMM d, yyyy')}.
+                        </p>
                     </CardContent>
                     <CardFooter>
                         <Button variant="outline">Cancel Subscription</Button>
@@ -115,13 +118,19 @@ export default function CompanyBillingPage() {
                         <CardDescription>Your primary payment method.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex items-center gap-3">
-                            <Image src="/visa-logo.svg" alt="Visa" className="h-8" width={50} height={32} />
-                            <div>
-                                <p className="font-semibold">Visa ending in 1234</p>
-                                <p className="text-sm text-muted-foreground">Expires 12/2026</p>
+                        {payment_method ? (
+                            <div className="flex items-center gap-3">
+                                <Image src="/visa-logo.svg" alt={payment_method.card_type} className="h-8" width={50} height={32} />
+                                <div>
+                                    <p className="font-semibold">{payment_method.card_type} ending in {payment_method.last4}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        Expires {payment_method.expiry_month}/{payment_method.expiry_year}
+                                    </p>
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                            <p className="text-muted-foreground">No payment method on file.</p>
+                        )}
                     </CardContent>
                     <CardFooter>
                         <Button variant="secondary">Update Payment Method</Button>
@@ -133,7 +142,7 @@ export default function CompanyBillingPage() {
             <div>
                 <h2 className="text-2xl font-bold tracking-tight mb-4">Upgrade Your Plan</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {plans.map(plan => <PlanCard key={plan.name} plan={plan} />)}
+                    {available_plans.map(plan => <PlanCard key={plan.name} plan={plan} />)}
                 </div>
             </div>
 
@@ -145,7 +154,11 @@ export default function CompanyBillingPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-2">
-                        {invoices.map(invoice => <InvoiceRow key={invoice.id} invoice={invoice} />)}
+                        {invoices.length > 0 ? (
+                            invoices.map(invoice => <InvoiceRow key={invoice.id} invoice={invoice} />)
+                        ) : (
+                            <p className="text-muted-foreground text-center py-4">No invoices found.</p>
+                        )}
                     </div>
                 </CardContent>
             </Card>
