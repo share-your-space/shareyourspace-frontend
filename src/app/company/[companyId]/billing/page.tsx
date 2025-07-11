@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -9,14 +10,8 @@ import { CheckCircle, Download, Loader2, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { apiClient } from "@/lib/api/base";
-import { BillingInfo, Plan } from "@/types/billing";
+import { BillingInfo, Plan, Invoice } from "@/types/billing";
 import { Company } from "@/types/company";
-
-interface PageProps {
-  params: {
-    companyId: string;
-  };
-}
 
 const PlanCard = ({ plan }: { plan: Plan }) => (
   <Card className={cn("flex flex-col", { "border-primary": plan.is_current })}>
@@ -42,13 +37,14 @@ const PlanCard = ({ plan }: { plan: Plan }) => (
   </Card>
 );
 
-const BillingPage: React.FC<PageProps> = ({ params }) => {
-  const { companyId } = params;
+const BillingPage = () => {
+  const { companyId } = useParams<{ companyId: string }>();
   const [billingInfo, setBillingInfo] = useState<BillingInfo | null>(null);
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!companyId) return;
     const loadData = async () => {
       setLoading(true);
       try {
@@ -199,7 +195,7 @@ const BillingPage: React.FC<PageProps> = ({ params }) => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {invoices.map((invoice) => (
+              {invoices.map((invoice: Invoice) => (
                 <TableRow key={invoice.id}>
                   <TableCell className="font-medium">{invoice.id}</TableCell>
                   <TableCell>{format(new Date(invoice.date), 'MMM d, yyyy')}</TableCell>
