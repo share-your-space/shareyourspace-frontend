@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
     Home, Users, BarChart2, CreditCard, Settings, Menu, Building, Mail,
-    Briefcase, Calendar, UserPlus, Search, Users2
+    Briefcase, Calendar, UserPlus, Search, Users2, type LucideIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface NavLinkProps {
     href: string;
-    icon: React.ElementType;
+    icon: LucideIcon;
     label: string;
     isMobile?: boolean;
     onClick?: () => void;
@@ -125,7 +125,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             <div className="p-4 border-t mt-auto">
                  <Link href="/dashboard/profile" className="flex items-center gap-3 group">
                     <Avatar className="h-10 w-10">
-                        <AvatarImage src={user?.profile_picture_signed_url || undefined} />
+                        <AvatarImage src={user?.profile?.profile_picture_signed_url || undefined} />
                         <AvatarFallback>{getInitials(user?.full_name)}</AvatarFallback>
                     </Avatar>
                     <div className="truncate">

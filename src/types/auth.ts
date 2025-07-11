@@ -1,4 +1,4 @@
-import { BasicStartup, BasicCompany, BasicSpace, UserWorkstationInfo } from "./space";
+import { BasicStartup, BasicSpace, UserWorkstationInfo, BasicCompany } from "./space";
 import { UserProfile } from "./userProfile"; // Import UserProfile
 
 // Corresponds to app.models.invitation.InvitationStatus enum
@@ -25,6 +25,7 @@ export interface User {
   space_id?: number | null;
   company_id?: number | null;
   profile?: UserProfile | null;
+  company?: BasicCompany | null;
 }
 
 // Corresponds to app.schemas.auth.Token
@@ -116,9 +117,11 @@ export interface AuthState {
   token_type: string;
 }
 
+/*
 export interface SpaceUser extends User {
     // SpaceUser might have additional properties in the future
 } 
+*/
 
 export interface FreelancerCreate {
     full_name: string;
@@ -150,4 +153,4 @@ export interface CorporateAdminCreate {
         website: string;
         description: string;
     };
-} 
+}
