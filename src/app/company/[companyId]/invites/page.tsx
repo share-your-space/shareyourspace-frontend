@@ -1,111 +1,112 @@
-'use client';
+"use client";
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { UserPlus, Mail } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { MoreHorizontal, UserPlus } from 'lucide-react';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-// Mock Data
-const pendingInvites = [
-    { email: 'new.dev@example.com', role: 'Member', dateSent: '2024-07-10', status: 'Pending' },
-    { email: 'lead.designer@example.com', role: 'Member', dateSent: '2024-07-09', status: 'Pending' },
-    { email: 'external.consultant@example.com', role: 'Admin', dateSent: '2024-07-05', status: 'Expired' },
+const mockInvites = [
+    {
+        id: '1',
+        email: 'new.hire@example.com',
+        role: 'Member',
+        status: 'Pending',
+        sentAt: '2025-07-11T09:00:00Z',
+    },
+    {
+        id: '2',
+        email: 'another.dev@example.com',
+        role: 'Member',
+        status: 'Pending',
+        sentAt: '2025-07-10T14:00:00Z',
+    },
+    {
+        id: '3',
+        email: 'accepted.user@example.com',
+        role: 'Admin',
+        status: 'Accepted',
+        sentAt: '2025-07-09T11:00:00Z',
+    },
 ];
 
-export default function InvitesPage() {
+const InvitesPage = () => {
     return (
-        <div className="space-y-8">
-            {/* Invite New Member Section */}
+        <div className="p-6">
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center">
-                        <UserPlus className="mr-3 h-6 w-6" />
-                        Invite New Member or Admin
-                    </CardTitle>
-                    <CardDescription>They will receive an email with instructions to join your company.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex flex-col md:flex-row items-end gap-4">
-                        <div className="w-full space-y-2">
-                            <Label htmlFor="email">Email Address</Label>
-                            <Input id="email" type="email" placeholder="name@company.com" />
-                        </div>
-                        <div className="w-full md:w-auto space-y-2">
-                            <Label htmlFor="role">Role</Label>
-                            <Select>
-                                <SelectTrigger className="w-full md:w-[180px]">
-                                    <SelectValue placeholder="Select a role" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="member">Member</SelectItem>
-                                    <SelectItem value="admin">Admin</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <Button className="w-full md:w-auto">
-                            <Mail className="mr-2 h-4 w-4" />
-                            Send Invitation
+                    <div className="flex items-center justify-between">
+                        <CardTitle>Manage Invites</CardTitle>
+                        <Button>
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            Send Invite
                         </Button>
                     </div>
-                </CardContent>
-            </Card>
-
-            {/* Pending Invites Section */}
-            <Card>
-                 <CardHeader>
-                    <CardTitle>Pending Invitations</CardTitle>
-                    <CardDescription>These invitations have been sent but not yet accepted.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                     <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Email</TableHead>
-                                <TableHead>Role</TableHead>
-                                <TableHead>Date Sent</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {pendingInvites.map((invite) => (
-                                <TableRow key={invite.email}>
-                                    <TableCell className="font-medium">{invite.email}</TableCell>
-                                    <TableCell>{invite.role}</TableCell>
-                                    <TableCell>{invite.dateSent}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={invite.status === 'Pending' ? 'default' : 'outline'}>
-                                            {invite.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="sm">Resend</Button>
-                                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">Cancel</Button>
-                                    </TableCell>
+                    <div className="bg-background rounded-lg border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead>Role</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Sent At</TableHead>
+                                    <TableHead>
+                                        <span className="sr-only">Actions</span>
+                                    </TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {mockInvites.map((invite) => (
+                                    <TableRow key={invite.id}>
+                                        <TableCell className="font-medium">{invite.email}</TableCell>
+                                        <TableCell>{invite.role}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={invite.status === 'Pending' ? 'destructive' : 'default'}>
+                                                {invite.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>{new Date(invite.sentAt).toLocaleDateString()}</TableCell>
+                                        <TableCell>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button aria-haspopup="true" size="icon" variant="ghost" disabled={invite.status === 'Accepted'}>
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                        <span className="sr-only">Toggle menu</span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                    <DropdownMenuItem>Resend Invite</DropdownMenuItem>
+                                                    <DropdownMenuItem className="text-red-600">Cancel Invite</DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
         </div>
     );
-}
+};
+
+export default InvitesPage;

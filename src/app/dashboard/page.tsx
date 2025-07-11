@@ -17,7 +17,9 @@ const DashboardPage = () => {
       if (user.role === UserRole.SYS_ADMIN) {
         router.replace('/sys-admin');
       } else if (user.role === UserRole.CORP_ADMIN) {
-        router.replace('/corp-admin');
+        if (user.company?.id) {
+            router.replace(`/company/${user.company.id}`);
+        }
     }
     }
   }, [user, isLoading, router]);
@@ -36,4 +38,4 @@ const DashboardPage = () => {
   return <UserDashboard user={user} />;
 };
 
-export default DashboardPage; 
+export default DashboardPage;

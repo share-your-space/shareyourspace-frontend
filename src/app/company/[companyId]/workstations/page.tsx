@@ -1,11 +1,25 @@
-'use client';
+"use client";
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Users2, PlusCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 // Mock Data
 const workstations = [
@@ -17,53 +31,66 @@ const workstations = [
 
 export default function WorkstationsPage() {
     return (
-        <div className="space-y-6">
+        <div className="p-6">
             <Card>
-                <CardHeader className="sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <CardTitle className="flex items-center">
-                            <Users2 className="mr-3 h-6 w-6" />
-                            Workstation Management
-                        </CardTitle>
-                        <CardDescription>Oversee all workstations in your space.</CardDescription>
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <CardTitle>Manage Workstations</CardTitle>
+                        <Button>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Add Workstation
+                        </Button>
                     </div>
-                    <Button className="mt-4 sm:mt-0">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Workstation
-                    </Button>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>ID</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Current Occupant</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {workstations.map((ws) => (
-                                <TableRow key={ws.id}>
-                                    <TableCell className="font-medium">{ws.id}</TableCell>
-                                    <TableCell>{ws.type}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={
-                                            ws.status === 'Available' ? 'default' :
-                                            ws.status === 'Occupied' ? 'secondary' : 'destructive'
-                                        }>
-                                            {ws.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>{ws.occupant || 'N/A'}</TableCell>
-                                    <TableCell className="text-right">
-                                        <Button variant="ghost" size="sm">Manage</Button>
-                                    </TableCell>
+                    <div className="bg-background rounded-lg border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Workstation</TableHead>
+                                    <TableHead>Space</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Current Tenant</TableHead>
+                                    <TableHead>
+                                        <span className="sr-only">Actions</span>
+                                    </TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {workstations.map((ws) => (
+                                    <TableRow key={ws.id}>
+                                        <TableCell className="font-medium">{ws.id}</TableCell>
+                                        <TableCell>{ws.type}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={
+                                                ws.status === 'Available' ? 'default' :
+                                                ws.status === 'Occupied' ? 'secondary' : 'destructive'
+                                            }>
+                                                {ws.status}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>{ws.occupant || 'N/A'}</TableCell>
+                                        <TableCell>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                        <span className="sr-only">Toggle menu</span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                    <DropdownMenuItem>Edit</DropdownMenuItem>
+                                                    <DropdownMenuItem>Assign Tenant</DropdownMenuItem>
+                                                    <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
         </div>

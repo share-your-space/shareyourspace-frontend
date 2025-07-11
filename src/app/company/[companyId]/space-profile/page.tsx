@@ -1,98 +1,63 @@
-'use client';
+"use client";
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Briefcase, Image as ImageIcon, MapPin, Wifi, Coffee } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import Image from 'next/image';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Upload } from 'lucide-react';
 
-export default function SpaceProfilePage() {
+const SpaceProfilePage = () => {
+    // Mock data for the space profile
+    const spaceProfile = {
+        name: 'Innovate Hub',
+        description: 'A vibrant co-working space for tech startups and freelancers. We offer a collaborative environment with modern amenities to help your business grow.',
+        address: '123 Tech Street, Silicon Valley, CA 94107',
+        website: 'https://innovatehub.com',
+        logoUrl: 'https://i.pravatar.cc/150?u=a042581f4e29026707d',
+    };
+
     return (
-        <div className="space-y-8">
+        <div className="p-6 space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center">
-                        <Briefcase className="mr-3 h-6 w-6" />
-                        Manage Your Space Profile
-                    </CardTitle>
-                    <CardDescription>This is the information that potential tenants and members will see.</CardDescription>
+                    <CardTitle>Space Profile</CardTitle>
+                    <CardDescription>Update your space's profile information. This will be visible to potential tenants.</CardDescription>
                 </CardHeader>
-            </Card>
-
-            {/* Gallery Section */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Photo Gallery</CardTitle>
-                    <CardDescription>Showcase your space with high-quality images.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="relative aspect-video rounded-lg overflow-hidden">
-                            <Image src="/placeholder-image.png" alt="Space photo 1" layout="fill" objectFit="cover" />
-                        </div>
-                         <div className="relative aspect-video rounded-lg overflow-hidden">
-                            <Image src="/placeholder-image.png" alt="Space photo 2" layout="fill" objectFit="cover" />
-                        </div>
-                         <div className="relative aspect-video rounded-lg overflow-hidden">
-                            <Image src="/placeholder-image.png" alt="Space photo 3" layout="fill" objectFit="cover" />
-                        </div>
-                        <div className="relative aspect-video rounded-lg overflow-hidden border-2 border-dashed flex items-center justify-center">
-                           <Button variant="outline" size="sm"><ImageIcon className="mr-2 h-4 w-4"/>Add Photos</Button>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Details Section */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Space Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="space-y-2">
-                        <Label htmlFor="spaceName">Space Name</Label>
-                        <Input id="spaceName" defaultValue="The Innovation Hub" />
+                <CardContent className="space-y-4">
+                    <div className="flex items-center space-x-4">
+                        <Avatar className="h-20 w-20">
+                            <AvatarImage src={spaceProfile.logoUrl} alt={spaceProfile.name} />
+                            <AvatarFallback>{spaceProfile.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <Button variant="outline">
+                            <Upload className="mr-2 h-4 w-4" />
+                            Upload Logo
+                        </Button>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="description">Public Description</Label>
-                        <Textarea id="description" placeholder="Describe what makes your space unique..." rows={5} />
+                        <Label htmlFor="name">Space Name</Label>
+                        <Input id="name" defaultValue={spaceProfile.name} />
                     </div>
-                     <div className="space-y-2">
+                    <div className="space-y-2">
+                        <Label htmlFor="description">Description</Label>
+                        <Textarea id="description" defaultValue={spaceProfile.description} rows={4} />
+                    </div>
+                    <div className="space-y-2">
                         <Label htmlFor="address">Address</Label>
-                        <Input id="address" defaultValue="123 Tech Street, Silicon Valley, CA 94107" />
+                        <Input id="address" defaultValue={spaceProfile.address} />
                     </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="website">Website</Label>
+                        <Input id="website" defaultValue={spaceProfile.website} />
+                    </div>
+                    <Button>Save Changes</Button>
                 </CardContent>
             </Card>
-
-            {/* Amenities Section */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Amenities</CardTitle>
-                    <CardDescription>Select the amenities you offer.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/50">
-                        <Wifi className="h-5 w-5 text-primary" />
-                        <span>High-Speed WiFi</span>
-                    </div>
-                    <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/50">
-                        <Coffee className="h-5 w-5 text-primary" />
-                        <span>Free Coffee & Tea</span>
-                    </div>
-                    <div className="flex items-center gap-2 p-3 border rounded-lg">
-                        <MapPin className="h-5 w-5 text-muted-foreground" />
-                        <span>Meeting Rooms</span>
-                    </div>
-                     <Button variant="secondary" className="h-full">Manage Amenities</Button>
-                </CardContent>
-            </Card>
-
-            <div className="flex justify-end">
-                <Button size="lg">Save All Changes</Button>
-            </div>
         </div>
     );
-}
+};
+
+export default SpaceProfilePage;
