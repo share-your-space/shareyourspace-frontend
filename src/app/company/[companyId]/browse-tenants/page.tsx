@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/select"
 import { useAuthStore } from '@/store/authStore';
 import { apiClient } from '@/lib/api/base';
-import { Tenant } from '@/types/user';
+import { Tenant, UserSimpleInfo as User } from '@/types/user';
+import { Startup } from '@/types/organization';
 import { toast } from 'sonner';
 import { UserProfile } from '@/types/userProfile';
 
@@ -88,7 +89,10 @@ export default function BrowseTenantsPage() {
                 });
                 
                 const data = response.data.map((item: { user: User; startup: Startup }) => {
-                    return item.user || item.startup;
+                    if (item.user) {
+                        return { ...item.user, type: 'user' };
+                    }
+                    return { ...item.startup, type: 'startup' };
                 });
 
                 setTenants(data);
