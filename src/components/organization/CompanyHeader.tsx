@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Link as LinkIcon, Building, Users, ExternalLink } from 'lucide-react';
 import { Company, Startup } from '@/types/organization';
 import { TeamSize } from '@/types/enums';
+import { User } from '@/types/auth';
 
 // Create a more generic type for the header
 export interface HeaderData {
@@ -13,6 +14,7 @@ export interface HeaderData {
   team_size?: TeamSize | null;
   industry_focus?: string[] | null;
   social_media_links?: { [key: string]: string } | null;
+  direct_members?: User[] | null;
 }
 
 export const CompanyHeader = ({ company }: { company: HeaderData }) => {
