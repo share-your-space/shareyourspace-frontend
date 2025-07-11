@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -11,6 +11,12 @@ import { cn } from '@/lib/utils';
 import { apiClient } from "@/lib/api/base";
 import { BillingInfo, Plan } from "@/types/billing";
 import { Company } from "@/types/company";
+
+interface PageProps {
+  params: {
+    companyId: string;
+  };
+}
 
 const PlanCard = ({ plan }: { plan: Plan }) => (
   <Card className={cn("flex flex-col", { "border-primary": plan.is_current })}>
@@ -36,42 +42,27 @@ const PlanCard = ({ plan }: { plan: Plan }) => (
   </Card>
 );
 
-const fetchBillingInfo = async (companyId: string): Promise<BillingInfo | null> => {
-  try {
-    const response = await apiClient.get<BillingInfo>(`/company/${companyId}/billing`);
-    return response.data;
-  } catch (error) {
-    console.error("Failed to fetch billing info:", error);
-    return null;
-  }
-};
-
-const fetchCompanyDetails = async (companyId: string): Promise<Company | null> => {
-  try {
-    const response = await apiClient.get<Company>(`/company/${companyId}`);
-    return response.data;
-  } catch (error) {
-    console.error("Failed to fetch company details:", error);
-    return null;
-  }
-};
-
-const BillingPage = ({ params }: { params: { companyId: string } }) => {
+const BillingPage: React.FC<PageProps> = ({ params }) => {
   const { companyId } = params;
-  const [billingInfo, setBillingInfo] = React.useState<BillingInfo | null>(null);
-  const [company, setCompany] = React.useState<Company | null>(null);
-  const [loading, setLoading] = React.useState(true);
+  const [billingInfo, setBillingInfo] = useState<BillingInfo | null>(null);
+  const [company, setCompany] = useState<Company | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      const [billingData, companyData] = await Promise.all([
-        fetchBillingInfo(companyId),
-        fetchCompanyDetails(companyId),
-      ]);
-      setBillingInfo(billingData);
-      setCompany(companyData);
-      setLoading(false);
+      try {
+        const [billingData, companyData] = await Promise.all([
+          apiClient.get<BillingInfo>(`/company/${companyId}/billing`),
+          apiClient.get<Company>(`/company/${companyId}`),
+        ]);
+        setBillingInfo(billingData.data);
+        setCompany(companyData.data);
+      } catch (error) {
+        console.error("Failed to fetch billing or company data:", error);
+      } finally {
+        setLoading(false);
+      }
     };
     loadData();
   }, [companyId]);
@@ -194,8 +185,7 @@ const BillingPage = ({ params }: { params: { companyId: string } }) => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Billing History</CardTitle>
-          <CardDescription>View and download your past invoices.</CardDescription>
+          <CardTitle>Invoice History</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -204,6 +194,7 @@ const BillingPage = ({ params }: { params: { companyId: string } }) => {
                 <TableHead>Invoice ID</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Amount</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -211,8 +202,13 @@ const BillingPage = ({ params }: { params: { companyId: string } }) => {
               {invoices.map((invoice) => (
                 <TableRow key={invoice.id}>
                   <TableCell className="font-medium">{invoice.id}</TableCell>
-                  <TableCell>{format(new Date(invoice.date), 'MMMM d, yyyy')}</TableCell>
+                  <TableCell>{format(new Date(invoice.date), 'MMM d, yyyy')}</TableCell>
                   <TableCell>${invoice.amount.toFixed(2)}</TableCell>
+                  <TableCell>
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                      Paid
+                    </span>
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button variant="outline" size="sm" asChild>
                       <a href={invoice.pdf_url} target="_blank" rel="noopener noreferrer">
