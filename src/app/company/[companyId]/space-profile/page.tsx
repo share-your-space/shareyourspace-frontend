@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { useAuthStore } from "@/store/authStore";
 import { Space } from "@/types/space";
 import { apiClient } from "@/lib/api/base";
-import { PackageOpen, Upload, Wifi, Coffee, Users, Loader2, AlertCircle, Briefcase } from 'lucide-react';
+import { PackageOpen, Upload, Wifi, Coffee, Users, Loader2, AlertCircle, Briefcase, Utensils, Printer, Sofa, Phone, Car, ConciergeBell, Mail, Clock, Calendar } from 'lucide-react';
 import Image from 'next/image';
 
 const allAmenities = [
