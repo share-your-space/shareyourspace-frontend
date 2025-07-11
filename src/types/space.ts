@@ -9,6 +9,7 @@ export interface BasicUser {
 export interface SpaceImage {
   id: number;
   image_url: string;
+  signed_url?: string; // Add this to handle new uploads before they are saved
 }
 
 export interface Space {
@@ -197,11 +198,6 @@ export interface Interest {
     startup?: Startup;
     created_at: string;
 } 
-
-export interface SpaceImage {
-  id: number;
-  image_url: string;
-}
 
 export interface Space {
   id: number;

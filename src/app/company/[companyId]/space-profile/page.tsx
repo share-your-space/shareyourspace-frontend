@@ -99,7 +99,7 @@ const SpaceProfilePage = () => {
             });
             setSelectedSpace({
                 ...selectedSpace,
-                images: [...(selectedSpace.images || []), { id: Date.now(), url: response.data.signed_url, signed_url: response.data.signed_url }]
+                images: [...(selectedSpace.images || []), { id: Date.now(), image_url: response.data.signed_url, signed_url: response.data.signed_url }]
             });
             toast.success("Image uploaded successfully!");
         } catch (uploadError) {
