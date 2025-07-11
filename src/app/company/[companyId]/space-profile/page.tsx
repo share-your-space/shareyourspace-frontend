@@ -38,9 +38,10 @@ const SpaceProfilePage = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const user = useAuthStore((state) => state.user);
+    const token = useAuthStore((state) => state.token);
 
     const fetchSpaces = useCallback(async () => {
-        if (!companyId) return;
+        if (!companyId || !token) return;
         setIsLoading(true);
         setError(null);
         try {
@@ -57,7 +58,7 @@ const SpaceProfilePage = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [companyId]);
+    }, [companyId, token]);
 
     useEffect(() => {
         fetchSpaces();
