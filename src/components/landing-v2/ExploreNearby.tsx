@@ -2,10 +2,10 @@ import React from 'react';
 import Image from 'next/image';
 
 const locations = [
-  { name: 'Pixida Innovation Hub', location: 'Munich', img: 'https://images.unsplash.com/photo-1560439514-4e9645039924?q=80&w=2070&auto=format&fit=crop' },
-  { name: 'Tech Forward Ventures', location: 'Berlin', img: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070&auto=format&fit=crop' },
-  { name: 'Creative Assembly', location: 'Hamburg', img: 'https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=2070&auto=format&fit=crop' },
-  { name: 'The Green Desk', location: 'Frankfurt', img: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=2070&auto=format&fit=crop' },
+  { name: 'London Innovation Hub', location: 'London', img: '/images/landing/london.png' },
+  { name: 'NYC Tech Forward', location: 'New York', img: '/images/landing/new-york.png' },
+  { name: 'SF Creative Assembly', location: 'San Francisco', img: '/images/landing/san-francisco.png' },
+  { name: 'Berlin Green Desk', location: 'Berlin', img: '/images/landing/berlin.png' },
 ];
 
 const ExploreNearby = () => {

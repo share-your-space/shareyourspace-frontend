@@ -2,10 +2,10 @@ import React from 'react';
 import Image from 'next/image';
 
 const cardData = [
-  { img: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=1911&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', title: 'Flexible Hot Desks' },
-  { img: 'https://images.unsplash.com/photo-1521737852577-684897f092a3?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', title: 'Private Offices for Teams' },
-  { img: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', title: 'Collaborative Project Spaces' },
-  { img: 'https://images.unsplash.com/photo-1560439514-4e9645039924?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', title: 'Inspiring Meeting Rooms' },
+  { img: '/images/landing/hot-desks.png', title: 'Flexible Hot Desks' },
+  { img: '/images/landing/private-offices.png', title: 'Private Offices for Teams' },
+  { img: '/images/landing/project-spaces.png', title: 'Collaborative Project Spaces' },
+  { img: '/images/landing/meeting-rooms.png', title: 'Inspiring Meeting Rooms' },
 ];
 
 const ANewWayToWork = () => {
