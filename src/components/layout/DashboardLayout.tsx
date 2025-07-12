@@ -123,7 +123,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                 ))}
             </nav>
             <div className="p-4 border-t mt-auto">
-                 <Link href="/dashboard/profile" className="flex items-center gap-3 group">
+                 <Link href={`/users/${user?.id}`} className="flex items-center gap-3 group">
                     <Avatar className="h-10 w-10">
                         <AvatarImage src={user?.profile?.profile_picture_signed_url || undefined} />
                         <AvatarFallback>{getInitials(user?.full_name)}</AvatarFallback>

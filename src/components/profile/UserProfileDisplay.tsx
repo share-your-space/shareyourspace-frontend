@@ -47,7 +47,7 @@ export default function UserProfileDisplay({ userDetail }: UserProfileDisplayPro
             <p className="text-md text-gray-500">{userDetail.profile?.title}</p>
           </div>
           {canEditProfile && (
-             <Link href={`/dashboard/profile/edit`}> 
+             <Link href={`/dashboard/settings/profile`}> 
               <Button variant="outline">
                 <Settings className="mr-2 h-4 w-4" /> Edit Profile
               </Button>

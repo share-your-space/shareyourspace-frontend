@@ -18,7 +18,7 @@ const AuthenticatedLayout: React.FC<AuthenticatedLayoutProps> = ({ children }) =
   useEffect(() => {
     const hasSeenPopup = sessionStorage.getItem('hasSeenProfilePopup');
     
-    if (user && !hasSeenPopup && pathname !== '/dashboard/profile/edit' && !pathname.startsWith('/chat')) {
+    if (user && !hasSeenPopup && pathname !== '/dashboard/settings/profile' && !pathname.startsWith('/chat')) {
       const profile = user.profile;
       const isProfileConsideredEmpty = !profile || (
         !profile.bio &&

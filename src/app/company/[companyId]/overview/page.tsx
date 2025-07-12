@@ -9,6 +9,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LucideIcon } from "lucide-react";
 import { Building, Briefcase, Users, UserCheck, Mail, CalendarCheck } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import Link from 'next/link';
+import { formatDistanceToNow } from 'date-fns';
+import { PaginatedActivityResponse, Activity } from '@/types/activity';
 
 interface DashboardStats {
   total_spaces: number;
@@ -18,6 +22,75 @@ interface DashboardStats {
   pending_invites: number;
   active_bookings: number;
 }
+
+const RecentActivity = ({ companyId }: { companyId: string | string[] }) => {
+    const [activity, setActivity] = useState<Activity[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        if (companyId) {
+            const fetchActivity = async () => {
+                setIsLoading(true);
+                try {
+                    const response = await apiClient.get<PaginatedActivityResponse>(`/company/${companyId}/dashboard/activity?limit=7`);
+                    setActivity(response.data.activities);
+                } catch (error) {
+                    toast.error('Failed to load recent activity.');
+                    console.error("Failed to fetch activity:", error);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            fetchActivity();
+        }
+    }, [companyId]);
+
+    return (
+        <Card className="col-span-3">
+            <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+            </CardHeader>
+            <CardContent>
+                {isLoading ? (
+                    <div className="space-y-4">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="flex items-center space-x-4">
+                                <Skeleton className="h-10 w-10 rounded-full" />
+                                <div className="space-y-2">
+                                    <Skeleton className="h-4 w-[250px]" />
+                                    <Skeleton className="h-3 w-[150px]" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : activity.length > 0 ? (
+                    <div className="space-y-6">
+                        {activity.map((item) => (
+                            <div key={item.id} className="flex items-center">
+                                <Avatar className="h-9 w-9">
+                                    <AvatarImage src={item.user_avatar_url} alt="Avatar" />
+                                    <AvatarFallback>{item.type.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <div className="ml-4 space-y-1">
+                                    <p className="text-sm font-medium leading-none">
+                                        {item.link ? <Link href={item.link} className="hover:underline">{item.description}</Link> : item.description}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                        {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center text-muted-foreground py-8">
+                        No recent activity to display.
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+};
 
 const StatCard = ({ title, value, icon: Icon, isLoading, description }: { title: string, value: string | number, icon: LucideIcon, isLoading: boolean, description?: string }) => (
     <Card>
@@ -48,7 +121,7 @@ const CompanyDashboardOverviewPage = () => {
                 setIsLoading(true);
                 try {
                     // The endpoint is not company-specific in the backend yet, but we call it when a companyId is present.
-                    const response = await apiClient.get<DashboardStats>(`/corp-admin/dashboard/stats`);
+                    const response = await apiClient.get<DashboardStats>(`/company/${companyId}/dashboard/stats`);
                     setStats(response.data);
                 } catch (error) {
                     toast.error('Failed to load dashboard statistics.');
@@ -112,17 +185,7 @@ const CompanyDashboardOverviewPage = () => {
                          )}
                     </CardContent>
                 </Card>
-                <Card className="col-span-3">
-                    <CardHeader>
-                        <CardTitle>Recent Activity</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {/* Placeholder for recent activity feed */}
-                        <div className="text-center text-muted-foreground py-8">
-                            Activity feed coming soon.
-                        </div>
-                    </CardContent>
-                </Card>
+                <RecentActivity companyId={companyId} />
             </div>
         </div>
     );

@@ -159,7 +159,7 @@ export default function DiscoverPage() {
               </AlertDescription>
               <div className="mt-6 flex items-center justify-center gap-x-4">
                 <Button asChild>
-                  <Link href="/dashboard/profile/edit">Complete Your Profile</Link>
+                  <Link href="/dashboard/settings/profile">Complete Your Profile</Link>
                 </Button>
                 <Button asChild variant="outline">
                   <Link href="/dashboard">Go to Dashboard</Link>
@@ -179,7 +179,7 @@ export default function DiscoverPage() {
                     The Discover feature is where you&apos;ll find other members inside your workspace.
                     Since you&apos;re not part of a space yet, your next step is to explore potential spaces or get invited by a Corporate Admin.
                     <br /><br />
-                    Keep your <Link href="/dashboard/profile/edit" className="text-primary hover:underline">profile</Link> updated to increase your chances of being discovered!
+                    Keep your <Link href="/dashboard/settings/profile" className="text-primary hover:underline">profile</Link> updated to increase your chances of being discovered!
                 </AlertDescription>
             </Alert>
         );
@@ -194,7 +194,7 @@ export default function DiscoverPage() {
                 {error}
                 <div className="mt-4">
                     <Button asChild>
-                        <Link href="/dashboard/profile/edit">Go to Profile</Link>
+                        <Link href="/dashboard/settings/profile">Go to Profile</Link>
                     </Button>
                 </div>
             </AlertDescription>

@@ -49,24 +49,29 @@ interface ClientToServerEvents {
   // Add other events the client will emit
 }
 
-const getSocketUrl = () => {
+const getSocketUrl = (): string => {
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
   if (baseUrl) {
-    // If a full URL is provided, use it.
-    // This is expected in production.
-    return baseUrl;
+    try {
+      const url = new URL(baseUrl);
+      // Return just the origin (e.g., 'http://localhost:8000' or 'https://your-prod-domain.com')
+      return url.origin;
+    } catch (error) {
+      console.error('Invalid NEXT_PUBLIC_API_BASE_URL:', error);
+      // Fallback for local development if the URL is malformed
+      return 'http://localhost:8000';
+    }
   }
   // Fallback for local development if the env var isn't set.
-  // Assumes the backend runs on port 8000 locally.
   return 'http://localhost:8000';
 };
 
 
-const URL = getSocketUrl();
+const socketURL: string = getSocketUrl();
 
 // Initialize socket instance
 // Use the defined event types for better type safety
-export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(URL, {
+export const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(socketURL, {
   autoConnect: false, // Only connect manually when authenticated
   transports: ['websocket'], // Force websocket connection, prevent polling
   // You might need withCredentials: true if using cookies for auth later

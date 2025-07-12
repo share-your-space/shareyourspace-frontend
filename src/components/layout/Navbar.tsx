@@ -276,7 +276,7 @@ const Navbar = () => {
                                         </div>
                                     </DropdownMenuLabel>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={() => router.push('/dashboard/profile')}>
+                                    <DropdownMenuItem onClick={() => router.push('/dashboard/settings')}>
                                         <UserIcon className="mr-2 h-4 w-4" />
                                         <span>Profile</span>
                                     </DropdownMenuItem>

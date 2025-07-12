@@ -21,7 +21,7 @@ export const CompleteProfileDialog: React.FC<CompleteProfileDialogProps> = ({ is
   const router = useRouter();
 
   const handleCompleteProfile = () => {
-    router.push('/dashboard/profile/edit');
+    router.push('/dashboard/settings/profile');
     onClose();
   };
 
@@ -45,4 +45,4 @@ export const CompleteProfileDialog: React.FC<CompleteProfileDialogProps> = ({ is
       </DialogContent>
     </Dialog>
   );
-}; 
+};
