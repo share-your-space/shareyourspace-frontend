@@ -185,7 +185,7 @@ const CompanyDashboardOverviewPage = () => {
                          )}
                     </CardContent>
                 </Card>
-                <RecentActivity companyId={companyId} />
+                {companyId && <RecentActivity companyId={companyId} />}
             </div>
         </div>
     );
