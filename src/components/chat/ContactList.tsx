@@ -7,13 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { UserX, Search } from "lucide-react";
-
-const getInitials = (name?: string | null): string => {
-    if (!name) return '?';
-    const names = name.split(' ');
-    if (names.length === 1) return names[0][0].toUpperCase();
-    return (names[0][0] + names[names.length - 1][0]).toUpperCase();
-};
+import { getInitials } from '@/lib/helpers';
 
 export function ContactList() {
   const { conversations, setActiveConversationId, activeConversationId } = useChatStore();

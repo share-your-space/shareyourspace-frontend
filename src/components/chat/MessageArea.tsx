@@ -62,7 +62,7 @@ const MessageArea: React.FC = () => {
     }
 
     if (messages.length === 0) {
-        const otherUser = activeConversation?.participants.find(p => p.id !== user?.id);
+        const otherUser = activeConversation?.other_user;
         return (
             <div className="flex flex-col items-center justify-center h-full text-center p-4">
                 <Alert>

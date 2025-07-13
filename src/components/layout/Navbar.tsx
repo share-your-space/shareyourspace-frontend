@@ -18,26 +18,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { UserRole } from '@/types/enums';
+import { Notification } from '@/types/notification';
+import { mockNotifications } from '@/lib/mock-data';
+import { getInitials } from '@/lib/helpers';
 
-// Mock Notification Type
-interface Notification {
-  id: number;
-  type: string;
-  message: string;
-  is_read: boolean;
-  created_at: string;
-  link?: string;
-}
-
-// Mock Notifications Data
-const mockNotifications: Notification[] = [
-  { id: 1, type: 'NEW_MESSAGE', message: 'You have a new message from Jane Doe.', is_read: false, created_at: '2025-07-13T10:00:00Z', link: '/chat' },
-  { id: 2, type: 'CONNECTION_ACCEPTED', message: 'John Smith accepted your connection request.', is_read: false, created_at: '2025-07-13T09:30:00Z', link: '/connections' },
-  { id: 3, type: 'SPACE_UPDATE', message: 'Creative Hub has updated their amenities.', is_read: true, created_at: '2025-07-12T15:00:00Z', link: '/browse-spaces' },
-  { id: 4, type: 'BOOKING_CONFIRMED', message: 'Your workstation booking for tomorrow is confirmed.', is_read: true, created_at: '2025-07-12T11:00:00Z', link: '/dashboard' },
-];
-
-// Define navigation links for different roles
 const memberUserLinks = [
     { href: "/dashboard", label: "Dashboard", icon: Home },
     { href: "/discover", label: "Discover", icon: Users },
@@ -55,11 +39,9 @@ const Navbar = () => {
     const user = useAuthStore((state) => state.user);
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
     const logout = useAuthStore((state) => state.logout);
-
-    const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+    const [notifications, setNotifications] = useState<Notification[]>(mockNotifications.filter(n => n.user_id === user?.id));
     const [popoverOpen, setPopoverOpen] = useState(false);
-
-    const getLinksForRole = (role: UserRole | undefined, companyId?: number | null) => {
+    const getLinksForRole = (role: UserRole | undefined, companyId?: string | null) => {
         switch (role) {
             case UserRole.FREELANCER:
             case UserRole.STARTUP_ADMIN:
@@ -80,6 +62,8 @@ const Navbar = () => {
         }
     };
 
+    const navLinks = getLinksForRole(user?.role, user?.company_id);
+
     const handleNotificationClick = (notification: Notification) => {
         if (notification.link) {
             router.push(notification.link);
@@ -98,13 +82,6 @@ const Navbar = () => {
         router.push('/login');
     };
 
-    const getInitials = (name: string | undefined | null) => {
-        if (!name) return "?";
-        const names = name.split(' ');
-        return names.map((n) => n[0]).join('').toUpperCase();
-    };
-
-    const navLinks = getLinksForRole(user?.role, user?.company?.id);
     const unreadCount = notifications.filter(n => !n.is_read).length;
 
     return (

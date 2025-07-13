@@ -4,20 +4,17 @@ import { UserRole } from '@/types/enums';
 
 // Mock user data for frontend-only development
 const mockUser: User = {
-  id: 1,
+  id: 'user-1',
   email: 'corpadmin@example.com',
   full_name: 'Corporate Admin',
   role: UserRole.CORP_ADMIN,
   status: 'ACTIVE',
-  space_id: 1,
-  company_id: 1,
-  company: {
-    id: 1,
-    name: 'ShareYourSpace Inc.',
-  },
+  company_id: 'comp-1',
+  company_name: 'ShareYourSpace Inc.',
   is_active: true,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
+  profile_picture_url: 'https://i.pravatar.cc/150?u=corpadmin@example.com'
 };
 
 interface AuthState {

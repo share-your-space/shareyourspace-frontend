@@ -17,7 +17,7 @@ export { UserRole };
 export interface User {
   id: string;
   email: string;
-  name?: string;
+  full_name?: string;
   role: UserRole;
   profile_picture_url?: string;
   company_id?: string | null;
@@ -47,11 +47,11 @@ export interface UserCreateAcceptInvitation {
 
 // Corresponds to app.schemas.invitation.Invitation
 export interface Invitation {
-  id: number;
+  id: string;
   email: string;
   role: UserRole;
-  startup_id?: number | null;
-  company_id?: number | null;
+  startup_id?: string | null;
+  company_id?: string | null;
   invitation_token?: string;
   status: InvitationStatus;
   expires_at: string; // ISO datetime string
@@ -80,7 +80,7 @@ export interface UserDetail extends User {
     startup?: BasicStartup | null;
     spaces?: BasicSpace[];
     interests: { id: number; name: string }[];
-    space_id?: number | null; // For freelancers
+    space_id?: string | null; // For freelancers
 }
 
 // Corresponds to app.schemas.invitation.InvitationListResponse

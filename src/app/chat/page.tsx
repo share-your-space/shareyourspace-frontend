@@ -1,100 +1,70 @@
-'use client';
-
-import React, { useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { ContactList } from '@/components/chat/ContactList';
-import { ChatBubble } from "@/components/chat/ChatBubble";
-import ChatList from "@/components/chat/ChatList";
-import { ChatHeader } from "@/components/chat/ChatHeader";
-import { MessageArea } from "@/components/chat/MessageArea";
-import MessageInput from "@/components/chat/MessageInput";
+"use client";
+import React, { useEffect, Suspense } from "react";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import { ContactList } from "@/components/chat/ContactList";
+import ChatHeader from "@/components/chat/ChatHeader";
+import MessageArea from "@/components/chat/MessageArea";
+import { MessageInput } from "@/components/chat/MessageInput";
 import { useChatStore } from "@/store/chatStore";
-import { useAuthStore } from '@/store/authStore';
-import { Conversation, Message, User } from '@/types/chat';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { mockConversations, mockUsers } from "@/lib/mock-data";
+import { useAuthStore } from "@/store/authStore";
+import { ChatMessageData } from "@/types/chat";
 import { Loader2, MessageSquare } from "lucide-react";
-
-// --- MOCK DATA ---
-const mockUsers: Record<string, User> = {
-  '1': { id: 1, full_name: 'Test User', email: 'testuser@example.com', profile_picture_url: 'https://i.pravatar.cc/150?u=testuser' },
-  '2': { id: 2, full_name: 'Alice Johnson', email: 'alice@example.com', profile_picture_url: 'https://i.pravatar.cc/150?u=alice' },
-  '3': { id: 3, full_name: 'Bob Williams', email: 'bob@example.com', profile_picture_url: 'https://i.pravatar.cc/150?u=bob' },
-};
-
-const mockMessages: Record<string, Message[]> = {
-  '101': [
-    { id: 1, sender_id: 2, recipient_id: 1, conversation_id: 101, content: 'Hey! How are you?', created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString(), is_deleted: false, sender: mockUsers['2'] },
-    { id: 2, sender_id: 1, recipient_id: 2, conversation_id: 101, content: 'I am good, thanks! How about you?', created_at: new Date(Date.now() - 1000 * 60 * 4).toISOString(), is_deleted: false, sender: mockUsers['1'] },
-  ],
-  '102': [
-    { id: 3, sender_id: 3, recipient_id: 1, conversation_id: 102, content: 'Hi there, wanted to discuss the project.', created_at: new Date(Date.now() - 1000 * 60 * 10).toISOString(), is_deleted: false, sender: mockUsers['3'] },
-  ],
-};
-
-const mockConversations: Conversation[] = [
-  {
-    id: 101,
-    participants: [mockUsers['1'], mockUsers['2']],
-    other_user: mockUsers['2'],
-    last_message: mockMessages['101'][1],
-    unread_count: 0,
-    messages: mockMessages['101'],
-    isLoadingMessages: false,
-    hasMoreMessages: false,
-    messagesFetched: true,
-  },
-  {
-    id: 102,
-    participants: [mockUsers['1'], mockUsers['3']],
-    other_user: mockUsers['3'],
-    last_message: mockMessages['102'][0],
-    unread_count: 1,
-    messages: mockMessages['102'],
-    isLoadingMessages: false,
-    hasMoreMessages: true,
-    messagesFetched: true,
-  },
-];
-// --- END MOCK DATA ---
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 function ChatPageContent() {
-  const { 
-    conversations, 
-    setConversations, 
-    activeConversationId, 
+  const {
+    conversations,
+    setConversations,
+    activeConversationId,
     setActiveConversationId,
     addMessage,
   } = useChatStore();
-  const { user: currentUser, isLoading: isLoadingAuth } = useAuthStore();
-  const searchParams = useSearchParams();
-
-  const activeConversation = conversations.find(c => c.id === activeConversationId);
+  const { user: currentUser, isLoading: isLoadingAuth, setUser } = useAuthStore();
 
   useEffect(() => {
-    if (!isLoadingAuth && currentUser) {
-      setConversations(mockConversations);
-      const convIdStr = searchParams.get('conversationId');
-      if (convIdStr) {
-        setActiveConversationId(parseInt(convIdStr, 10));
-      } else if (mockConversations.length > 0) {
-        setActiveConversationId(mockConversations[0].id);
-      }
+    // Set mock user and conversations on initial load
+    if (!currentUser) {
+      setUser(mockUsers.find((u) => u.id === "user-1")!); // Set a default user
     }
-  }, [currentUser, isLoadingAuth, setConversations, setActiveConversationId, searchParams]);
+    if (conversations.length === 0) {
+        setConversations(mockConversations);
+    }
+    if (!activeConversationId && mockConversations.length > 0) {
+      setActiveConversationId(mockConversations[0].id);
+    }
+  }, [currentUser, setUser, setConversations, setActiveConversationId, activeConversationId, conversations]);
 
   const handleSendMessage = (content: string) => {
-    if (!currentUser || !activeConversationId) return;
+    if (!activeConversationId || !currentUser) return;
+    const activeConversation = conversations.find((c) => c.id === activeConversationId);
+    if (!activeConversation || !activeConversation.other_user) return;
 
-    const newMessage: Message = {
-      id: Date.now(),
-      sender_id: currentUser.id,
-      recipient_id: activeConversation?.other_user?.id || 0,
+    const newMessage: ChatMessageData = {
+      id: `msg-${Date.now()}`,
       conversation_id: activeConversationId,
+      sender_id: currentUser.id,
+      recipient_id: activeConversation.other_user.id,
       content,
       created_at: new Date().toISOString(),
       is_deleted: false,
-      sender: mockUsers[currentUser.id.toString()],
+      sender: {
+        id: currentUser.id,
+        full_name: currentUser.full_name || "User",
+        email: currentUser.email,
+        profile_picture_url: currentUser.profile_picture_url || undefined,
+        role: currentUser.role,
+      },
+      read_at: null,
+      updated_at: null,
+      attachment_url: null,
+      attachment_filename: null,
+      attachment_mimetype: null,
+      reactions: [],
     };
     addMessage(activeConversationId, newMessage);
   };
@@ -127,19 +97,21 @@ function ChatPageContent() {
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel defaultSize={75}>
-        {activeConversation ? (
-          <div className="flex flex-col h-full">
-            <ChatHeader />
-            <MessageArea />
-            <MessageInput onSendMessage={handleSendMessage} />
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <MessageSquare className="h-16 w-16 text-muted-foreground" />
-            <h2 className="mt-4 text-2xl font-semibold">Select a conversation</h2>
-            <p className="text-muted-foreground">Choose from your existing conversations to start chatting.</p>
-          </div>
-        )}
+        <div className="flex flex-col h-full">
+          {activeConversationId ? (
+            <>
+              <ChatHeader />
+              <MessageArea />
+              <MessageInput onSendMessage={handleSendMessage} />
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <MessageSquare className="h-16 w-16 text-muted-foreground" />
+              <h2 className="mt-4 text-2xl font-semibold">Select a conversation</h2>
+              <p className="text-muted-foreground">Choose from your existing conversations to start chatting.</p>
+            </div>
+          )}
+        </div>
       </ResizablePanel>
     </ResizablePanelGroup>
   );

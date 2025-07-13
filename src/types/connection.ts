@@ -1,20 +1,12 @@
-export interface UserSimpleInfo {
-    id: number;
-    full_name: string | null;
-    email: string;
-    profile: {
-        title?: string | null;
-        profile_picture_url?: string | null;
-    } | null;
-}
+import { User } from './auth';
 
 export interface Connection {
-    id: number;
-    requester_id: number;
-    recipient_id: number;
+    id: string;
+    requester_id: string;
+    recipient_id: string;
     status: 'pending' | 'accepted' | 'declined' | 'blocked';
     created_at: string;
-    updated_at: string;
-    requester: UserSimpleInfo;
-    recipient: UserSimpleInfo;
-} 
+    updated_at?: string;
+    requester: User;
+    recipient: User;
+}

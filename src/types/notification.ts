@@ -1,21 +1,13 @@
 import { User } from './auth';
-import { BasicUser } from './space';
 
 export interface Notification {
-  id: number;
-  user_id: number;
+  id: string;
+  user_id: string;
   type: string; // Or a more specific enum type like NotificationType
   message: string;
   is_read: boolean;
-  is_actioned: boolean;
   created_at: string; // ISO 8601 date string
-  related_entity_id: number | null;
-  reference: string | null;
+  related_entity_id: string | null;
   link: string | null;
-  sender: BasicUser; // Member request notifications will have a sender
-  reference_meta?: { // And may have metadata in the reference
-    startup_name?: string;
-    [key: string]: any;
-  };
-  requesting_user?: User; // Optional nested user object
-} 
+  sender: User; // Member request notifications will have a sender
+}

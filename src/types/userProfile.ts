@@ -2,8 +2,8 @@ import { ContactVisibility } from './enums';
 import { UserRole } from './enums';
 
 export interface UserProfile {
-  id: number;
-  user_id: number;
+  id: string;
+  user_id: string;
   first_name: string;
   last_name: string;
   role: UserRole;
@@ -26,7 +26,7 @@ export interface UserProfile {
   cover_photo_signed_url?: string | null; // Temporary signed URL for cover
   location?: string;
   website?: string;
-  interests?: { id: number; name: string }[];
+  interests?: { id: string; name: string }[];
   is_profile_complete?: boolean;
 }
 

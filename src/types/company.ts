@@ -1,5 +1,4 @@
 import { TeamSize } from "./enums";
-import { UserSimpleInfo } from "./connection";
 import { User } from "./auth";
 
 export interface CompanySettings {
@@ -10,7 +9,7 @@ export interface CompanySettings {
 }
 
 export interface Company {
-  id: number;
+  id: string;
   name: string;
   description: string;
   website: string | null;
@@ -19,9 +18,9 @@ export interface Company {
   looking_for?: string[] | null;
   created_at?: string;
   updated_at?: string;
-  owner_id?: number;
-  admin?: UserSimpleInfo | null;
+  owner_id?: string;
+  admin?: User | null;
   direct_members?: User[] | null;
   profile_image_url?: string;
-  type: 'Company' | 'Startup';
+  type?: 'Company' | 'Startup';
 }

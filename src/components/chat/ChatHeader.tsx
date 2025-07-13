@@ -7,13 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { MoreVertical } from 'lucide-react';
 import { Button } from '../ui/button';
-
-const getInitials = (name?: string | null): string => {
-    if (!name) return '?';
-    const names = name.split(' ');
-    if (names.length === 1) return names[0][0].toUpperCase();
-    return (names[0][0] + names[names.length - 1][0]).toUpperCase();
-};
+import { getInitials } from '@/lib/helpers';
 
 const ChatHeader = () => {
     const { conversations, activeConversationId, onlineUserIds } = useChatStore();
@@ -26,11 +20,7 @@ const ChatHeader = () => {
 
     const otherUser = useMemo(() => {
         if (!activeConversation) return null;
-        // This logic needs to be adapted based on how `other_user` is structured in your mock data
-        // Assuming participants array and a currentUser from another store
-        // const currentUser = useAuthStore.getState().user;
-        // return activeConversation.participants.find(p => p.id !== currentUser?.id);
-        return activeConversation.participants[1]; // Simplified for mock
+        return activeConversation.other_user;
     }, [activeConversation]);
 
 
@@ -48,7 +38,7 @@ const ChatHeader = () => {
         }
     }, [otherUser]);
 
-    if (!otherUser) {
+    if (!activeConversation || !otherUser) {
         return (
             <div className="p-3 border-b flex items-center justify-between h-[73px]">
                 <div className="flex items-center gap-3">

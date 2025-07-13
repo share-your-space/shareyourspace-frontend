@@ -1,16 +1,16 @@
 import { create } from 'zustand';
-import { User, Message, Conversation } from '@/types/chat';
+import { User, Conversation, ChatMessageData } from '@/types/chat';
 
 interface ChatState {
-  onlineUserIds: Set<number>;
-  setOnlineUsers: (userIds: number[]) => void;
-  addOnlineUser: (userId: number) => void;
-  removeOnlineUser: (userId: number) => void;
+  onlineUserIds: Set<string>;
+  setOnlineUsers: (userIds: string[]) => void;
+  addOnlineUser: (userId: string) => void;
+  removeOnlineUser: (userId: string) => void;
   conversations: Conversation[];
-  activeConversationId: number | null;
+  activeConversationId: string | null;
   setConversations: (conversations: Conversation[]) => void;
-  addMessage: (conversationId: number, message: Message) => void;
-  setActiveConversationId: (conversationId: number | null) => void;
+  addMessage: (conversationId: string, message: ChatMessageData) => void;
+  setActiveConversationId: (conversationId: string | null) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({

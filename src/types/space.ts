@@ -1,23 +1,23 @@
 // Based on app.schemas.user.User (BasicUser in space.py context)
 export interface BasicUser {
-  id: number;
+  id: string;
   first_name: string;
   last_name: string;
   profile_image_url?: string;
 }
 
 export interface SpaceImage {
-  id: number;
+  id: string;
   image_url: string;
   signed_url?: string; // Add this to handle new uploads before they are saved
 }
 
 // Based on app.schemas.organization.Startup (BasicStartup in space.py context)
 export interface BasicStartup {
-  id: number;
+  id: string;
   name: string;
   description?: string;
-  space_id?: number | null;
+  space_id?: string | null;
 }
 
 // Based on app.schemas.space.StartupTenantInfo
@@ -43,14 +43,14 @@ export interface SpaceTenantResponse {
 
 // Based on app.schemas.space.ManagedSpaceDetail
 export interface ManagedSpaceDetail {
-  id: number;
+  id: string;
   name: string;
   address: string | null;
   total_workstations: number;
   occupied_workstations: number;
   available_workstations: number;
   maintenance_workstations: number;
-  company_id: number | null;
+  company_id: string | null;
 }
 
 // Based on app.schemas.space.WorkstationStatus (Enum)
@@ -63,17 +63,17 @@ export enum WorkstationStatus {
 
 // Based on app.schemas.space.WorkstationTenantInfo
 export interface WorkstationTenantInfo {
-  user_id: number;
+  user_id: string;
   full_name: string | null;
   email: string | null;
 }
 
 // Based on app.schemas.space.WorkstationDetail
 export interface WorkstationDetail {
-  id: number;
+  id: string;
   name: string;
   status: WorkstationStatus;
-  space_id: number;
+  space_id: string;
   occupant: WorkstationTenantInfo | null;
 }
 
@@ -84,199 +84,155 @@ export interface SpaceWorkstationListResponse {
 
 // Based on app.schemas.space.WorkstationAssignmentRequest
 export interface WorkstationAssignmentRequest {
-  user_id: number;
-  workstation_id: number;
+  user_id: string;
+  workstation_id: string;
 }
 
 // Based on app.schemas.space.WorkstationAssignmentResponse
 export interface WorkstationAssignmentResponse {
-  assignment_id: number;
-  user_id: number;
-  workstation_id: number;
-  space_id: number;
+  assignment_id: string;
+  user_id: string;
+  workstation_id: string;
+  space_id: string;
 }
 
 // Based on app.schemas.space.WorkstationUnassignRequest
 export interface WorkstationUnassignRequest {
-  workstation_id: number;
+  workstation_id: string;
 }
 
-// Corresponds to app.schemas.space.Space for browsing
-export interface BrowsableSpace {
+// Based on app.schemas.space.SpaceAmenity
+export interface SpaceAmenity {
   id: string;
   name: string;
-  description: string;
-  image_url: string;
-  address: string;
-  company_name: string;
-  total_workstations: number;
-  interest_status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | null;
-  amenities: { id: number; name: string; }[];
-  headline: string;
-  vibe: string;
 }
 
-// Corresponds to app.schemas.space.SpaceWithAdmin
-export interface SpaceWithAdmin {
-  id: number;
-  name: string;
-  address: string | null;
-  amenities: string[];
-  images: SpaceImage[];
-  company_id: number | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  total_workstations: number;
-  headline: string;
-  house_rules: string[];
-  vibe: string[];
-  opening_hours: string;
-  key_highlights: string[];
-  neighborhood_description: string;
-  admin_contact: BasicUser; // Assuming admin is a BasicUser for now
-}
-
-// Based on app.schemas.space.WorkstationStatusUpdateRequest
-export interface WorkstationStatusUpdateRequest {
-  status: WorkstationStatus;
-}
-
-// For app.routers.spaces.list_my_space_employees which returns List[UserSchema]
-// Assuming UserSchema is more detailed than BasicUser for this context if needed,
-// but for now, let's assume it returns a list of BasicUser.
-// If it's the full User schema from app.schemas.user.User, we might need a more detailed interface.
-// For simplicity now, reusing BasicUser:
-
-// Generic message response (app.schemas.message.Message)
-export interface MessageResponse {
-  message: string;
-}
-
-export interface SpaceUsersListResponse {
-  users: BasicUser[];
-}
-
-// New interface for connection statistics
-export interface SpaceConnectionStatsResponse {
-    total_tenants: number;
-    total_workstations: number;
-    occupied_workstations: number;
-    connections_this_month: number;
-}
-
-// Basic Company Information
-export interface BasicCompany {
-  id: number;
-  name: string;
-  logo_url?: string | null;
-}
-
-// Basic Space Information
-export interface BasicSpace {
-  id: number;
-  name: string;
-}
-
-// Information about a user's current workstation assignment
-export interface UserWorkstationInfo {
-  workstation_id: number;
-  workstation_name: string;
-  assignment_start_date: string; // ISO datetime string
-}
-
-export interface WorkstationCreate {
-    name: string;
-    status?: WorkstationStatus;
-}
-
-export interface WorkstationUpdate {
-    name?: string;
-    status?: WorkstationStatus;
-}
-
-import { User } from '../types/auth';
-import { Startup } from '../types/organization';
-import { UserRole } from './enums';
-
-export interface Interest {
-    id: number;
-    user: User;
-    status: string;
-    startup?: Startup;
-    created_at: string;
-} 
-
+// Based on app.schemas.space.Space
 export interface Space {
-  id: number;
+  id: string;
   name: string;
+  description?: string;
   address: string | null;
-  amenities: string[];
+  image_url: string;
   images: SpaceImage[];
-  company_id: number | null;
+  amenities: SpaceAmenity[];
+  company_id: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
   total_workstations: number;
-  headline: string;
-  house_rules: string[];
-  vibe: string[];
-  opening_hours: string;
-  key_highlights: string[];
-  neighborhood_description: string;
-}
-
-// Based on app.schemas.space.SpaceProfileResponse
-export interface SpaceProfileResponse {
-  id: number;
-  name: string;
-  address?: string;
   headline?: string;
-  description?: string;
-  amenities?: string[];
-  house_rules?: string;
-  vibe?: string;
+  house_rules?: string[];
+  vibe?: string[];
+  opening_hours?: string;
   key_highlights?: string[];
-  images: SpaceImage[];
-  company?: BasicCompany | null;
+  neighborhood_description?: string;
 }
 
-export interface SpaceProfileUpdate {
-  name?: string;
-  address?: string;
-  headline?: string;
-  description?: string;
-  amenities?: string[];
-  house_rules?: string;
-  vibe?: string;
-  key_highlights?: string[];
-}
-
+// Based on app.schemas.space.SpaceCreate
 export interface SpaceCreate {
   name: string;
   address: string;
+  description?: string;
   total_workstations: number;
-  corporate_admin_id?: number;
-  company_id?: number | null;
+  amenities: string[]; // List of amenity names
+  headline?: string;
+  house_rules?: string[];
+  vibe?: string[];
+  opening_hours?: string;
+  key_highlights?: string[];
+  neighborhood_description?: string;
 }
 
-interface WaitlistedMember {
-  id: number;
-  role: UserRole;
-  full_name?: string;
+// Based on app.schemas.space.SpaceUpdate
+export interface SpaceUpdate {
+  name?: string;
+  address?: string;
+  description?: string;
+  total_workstations?: number;
+  amenities?: string[];
+  headline?: string;
+  house_rules?: string[];
+  vibe?: string[];
+  opening_hours?: string;
+  key_highlights?: string[];
+  neighborhood_description?: string;
 }
 
-export interface WaitlistedUser {
-  id: number;
-  name?: string; // For startups
-  full_name?: string; // For freelancers
-  type: 'freelancer' | 'startup';
-  expressed_interest: boolean;
-  interest_id?: number;
-  entity_type: 'user' | 'startup';
-  direct_members?: WaitlistedMember[];
-} 
+// Based on app.schemas.space.BrowsableSpace
+export interface BrowsableSpace extends Space {
+  company_name: string;
+  available_workstations: number;
+  interest_status: 'interested' | 'not_interested' | 'undecided' | null;
+}
 
-export interface AddUserToSpaceRequest {
-  user_id: number;
+// Based on app.schemas.space.SpaceInterestResponse
+export interface SpaceInterestResponse {
+  space_id: string;
+  user_id: string;
+  interested: boolean;
+}
+
+// Based on app.schemas.space.SpaceWithMyInterest
+export interface SpaceWithMyInterest extends Space {
+  my_interest: boolean | null;
+}
+
+// Based on app.schemas.space.SpaceWithStartupInterest
+export interface SpaceWithStartupInterest extends Space {
+  startup_interest: boolean | null;
+}
+
+// Based on app.schemas.space.SpaceWithAllInterests
+export interface SpaceWithAllInterests extends Space {
+  my_interest: boolean | null;
+  startup_interest: boolean | null;
+}
+
+// Based on app.schemas.space.SpaceListResponse
+export interface SpaceListResponse {
+  spaces: Space[];
+}
+
+// Based on app.schemas.space.BrowsableSpaceListResponse
+export interface BrowsableSpaceListResponse {
+  spaces: BrowsableSpace[];
+}
+
+// Based on app.schemas.space.SpaceDetail
+export interface SpaceDetail extends Space {
+  company: {
+    id: string;
+    name: string;
+    profile_image_url?: string;
+  };
+  tenants: TenantInfo[];
+  workstations: {
+    total: number;
+    available: number;
+    occupied: number;
+
+  };
+}
+
+// Based on app.schemas.user.UserWorkstationInfo
+export interface UserWorkstationInfo {
+  workstation_id: string;
+  workstation_name: string;
+  space_id: string;
+  space_name: string;
+}
+
+// Based on app.schemas.space.BasicCompany
+export interface BasicCompany {
+  id: string;
+  name: string;
+  profile_image_url?: string;
+}
+
+// Based on app.schemas.space.BasicSpace
+export interface BasicSpace {
+  id: string;
+  name: string;
+  image_url?: string;
 }
