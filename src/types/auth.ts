@@ -17,6 +17,7 @@ export interface User {
   full_name: string;
   email: string;
   role: UserRole;
+  status: string; // Added status
   is_active: boolean;
   is_verified: boolean;
   profile?: UserProfile | null;

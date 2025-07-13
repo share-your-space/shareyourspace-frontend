@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/table"
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Invitation, InvitationStatus } from '@/types/invitation';
+import { Invitation, InvitationStatus } from '@/types/auth';
 import { UserRole } from '@/types/enums';
 
 // Mock Data
