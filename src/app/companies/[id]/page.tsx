@@ -24,7 +24,7 @@ const CompanyProfilePageContent = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const companyId = Number(params.id);
+  const companyId = params.id as string;
 
   const form = useForm<CompanyFormData>({
     resolver: zodResolver(companySchema),
@@ -33,7 +33,7 @@ const CompanyProfilePageContent = () => {
   const { reset } = form;
 
   const fetchCompany = useCallback(() => {
-    if (isNaN(companyId)) {
+    if (!companyId) {
       setError("Invalid company ID.");
       setLoading(false);
       return;
