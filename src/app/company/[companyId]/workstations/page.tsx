@@ -1,134 +1,147 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Users2, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { apiClient } from '@/lib/api/base';
+import { Workstation, WorkstationStatus, WorkstationType } from '@/types/workstation';
 import { toast } from 'sonner';
-import { Workstation } from '@/types/workstation';
-import { Skeleton } from '@/components/ui/skeleton';
 
-const getStatusVariant = (status: string) => {
-    switch (status.toLowerCase()) {
-        case 'available':
-            return 'default';
-        case 'occupied':
-            return 'secondary';
-        case 'maintenance':
-            return 'destructive';
-        default:
-            return 'outline';
-    }
+const mockWorkstations: Workstation[] = [
+	{
+		id: 1,
+		name: 'Desk 101',
+		type: WorkstationType.HOT_DESK,
+		status: WorkstationStatus.AVAILABLE,
+		space_id: 1,
+		space: { id: 1, name: 'Downtown Hub' },
+		current_booking: null,
+	},
+	{
+		id: 2,
+		name: 'Desk 102',
+		type: WorkstationType.HOT_DESK,
+		status: WorkstationStatus.OCCUPIED,
+		space_id: 1,
+		space: { id: 1, name: 'Downtown Hub' },
+		current_booking: { id: 1, user: { id: 101, full_name: 'Alice Johnson', email: 'alice@example.com' } },
+	},
+	{
+		id: 3,
+		name: 'Private Office A',
+		type: WorkstationType.PRIVATE_OFFICE,
+		status: WorkstationStatus.MAINTENANCE,
+		space_id: 1,
+		space: { id: 1, name: 'Downtown Hub' },
+		current_booking: null,
+	},
+	{
+		id: 4,
+		name: 'Dedicated Desk 12',
+		type: WorkstationType.PRIVATE_DESK,
+		status: WorkstationStatus.OCCUPIED,
+		space_id: 2,
+		space: { id: 2, name: 'Tech Park Oasis' },
+		current_booking: { id: 2, user: { id: 102, full_name: 'Bob Williams', email: 'bob@startup.io' } },
+	},
+	{
+		id: 5,
+		name: 'Desk 201',
+		type: WorkstationType.HOT_DESK,
+		status: WorkstationStatus.AVAILABLE,
+		space_id: 2,
+		space: { id: 2, name: 'Tech Park Oasis' },
+		current_booking: null,
+	},
+];
+
+const getStatusVariant = (status: WorkstationStatus): 'default' | 'secondary' | 'destructive' | 'outline' => {
+	switch (status) {
+		case WorkstationStatus.AVAILABLE:
+			return 'default';
+		case WorkstationStatus.OCCUPIED:
+			return 'secondary';
+		case WorkstationStatus.MAINTENANCE:
+			return 'destructive';
+		default:
+			return 'outline';
+	}
 };
 
-const LoadingSkeleton = () => (
-    <Table>
-        <TableHeader>
-            <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Space</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Current Occupant</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-        </TableHeader>
-        <TableBody>
-            {[...Array(5)].map((_, i) => (
-                <TableRow key={i}>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-8 w-20" /></TableCell>
-                </TableRow>
-            ))}
-        </TableBody>
-    </Table>
-);
+const handleAddWorkstation = () => {
+	toast.info('This would open a modal to add a new workstation.');
+};
+
+const handleEditWorkstation = (id: number) => {
+	toast.info(`Editing workstation ${id}. This would open an edit form.`);
+};
 
 export default function WorkstationsPage() {
-    const params = useParams();
-    const companyId = params.companyId;
-    const [workstations, setWorkstations] = useState<Workstation[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+	const workstations = mockWorkstations;
 
-    useEffect(() => {
-        const fetchWorkstations = async () => {
-            if (!companyId) return;
-            setIsLoading(true);
-            try {
-                const response = await apiClient.get<Workstation[]>('/corp-admin/workstations');
-                setWorkstations(response.data);
-            } catch (error) {
-                toast.error("Failed to load workstations.");
-                console.error("Failed to fetch workstations:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchWorkstations();
-    }, [companyId]);
-
-    return (
-        <div className="space-y-6">
-            <Card>
-                <CardHeader className="sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <CardTitle className="flex items-center">
-                            <Users2 className="mr-3 h-6 w-6" />
-                            Workstation Management
-                        </CardTitle>
-                        <CardDescription>Oversee all workstations across all your spaces.</CardDescription>
-                    </div>
-                    <Button className="mt-4 sm:mt-0">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add Workstation
-                    </Button>
-                </CardHeader>
-                <CardContent>
-                    {isLoading ? (
-                        <LoadingSkeleton />
-                    ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>ID</TableHead>
-                                    <TableHead>Space</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Current Occupant</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {workstations.map((ws) => (
-                                    <TableRow key={ws.id}>
-                                        <TableCell className="font-medium">{ws.name}</TableCell>
-                                        <TableCell>{ws.space?.name || 'N/A'}</TableCell>
-                                        <TableCell>{ws.type}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={getStatusVariant(ws.status)}>
-                                                {ws.status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>{ws.current_booking?.user?.full_name || 'N/A'}</TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="sm">Manage</Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
-    );
+	return (
+		<div className="space-y-6">
+			<Card>
+				<CardHeader className="sm:flex-row sm:items-center sm:justify-between">
+					<div>
+						<CardTitle className="flex items-center">
+							<Users2 className="mr-3 h-6 w-6" />
+							Workstation Management
+						</CardTitle>
+						<CardDescription>Oversee all workstations across all your spaces.</CardDescription>
+					</div>
+					<Button className="mt-4 sm:mt-0" onClick={handleAddWorkstation}>
+						<PlusCircle className="mr-2 h-4 w-4" />
+						Add Workstation
+					</Button>
+				</CardHeader>
+				<CardContent>
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>ID</TableHead>
+								<TableHead>Name</TableHead>
+								<TableHead>Space</TableHead>
+								<TableHead>Type</TableHead>
+								<TableHead>Status</TableHead>
+								<TableHead>Current Occupant</TableHead>
+								<TableHead className="text-right">Actions</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{workstations.map((ws) => (
+								<TableRow key={ws.id}>
+									<TableCell className="font-mono text-xs">
+										WS-{ws.id.toString().padStart(4, '0')}
+									</TableCell>
+									<TableCell className="font-medium">{ws.name}</TableCell>
+									<TableCell>{ws.space?.name || 'N/A'}</TableCell>
+									<TableCell className="capitalize">
+										{ws.type.replace(/_/g, ' ').toLowerCase()}
+									</TableCell>
+									<TableCell>
+										<Badge variant={getStatusVariant(ws.status)} className="capitalize">
+											{ws.status.toLowerCase()}
+										</Badge>
+									</TableCell>
+									<TableCell>{ws.current_booking?.user.full_name || '—'}</TableCell>
+									<TableCell className="text-right">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => handleEditWorkstation(ws.id)}
+										>
+											Edit
+										</Button>
+									</TableCell>
+								</TableRow>
+							))}
+						</TableBody>
+					</Table>
+				</CardContent>
+			</Card>
+		</div>
+	);
 }

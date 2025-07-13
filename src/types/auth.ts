@@ -1,5 +1,6 @@
 import { BasicStartup, BasicSpace, UserWorkstationInfo, BasicCompany } from "./space";
 import { UserProfile } from "./userProfile"; // Import UserProfile
+import { UserRole as AppUserRole } from './enums';
 
 // Corresponds to app.models.invitation.InvitationStatus enum
 export enum InvitationStatus {
@@ -15,7 +16,7 @@ export interface User {
   id: number;
   email: string;
   full_name: string;
-  role: string;
+  role: AppUserRole;
   status: string; // Consider using an enum if you have UserStatus on frontend
   is_active: boolean;
   created_at: string; // ISO datetime string
@@ -26,6 +27,8 @@ export interface User {
   company_id?: number | null;
   profile?: UserProfile | null;
   company?: BasicCompany | null;
+  interests?: { id: number; name: string }[] | null;
+  profile_picture_url?: string | null;
 }
 
 // Corresponds to app.schemas.auth.Token
@@ -70,6 +73,13 @@ export interface Invitation {
   revoked_by_admin?: User | null;
 }
 
+// Corresponds to app.schemas.user.UserDetail in the backend
+export interface UserDetail extends User {
+    profile: UserProfile;
+    company: BasicCompany | null;
+    interests: { id: number; name: string }[];
+}
+
 // Corresponds to app.schemas.invitation.InvitationListResponse
 export interface InvitationListResponse {
   invitations: Invitation[];
@@ -97,19 +107,6 @@ export interface StartupDirectInviteCreate {
   email: string;
   startup_id: number;
   full_name?: string | null;
-}
-
-// Corresponds to app.schemas.user.UserDetail
-export interface UserDetail extends User { // Extends the base User type
-  profile?: UserProfile | null;
-  company?: BasicCompany | null;
-  startup?: BasicStartup & { space_id?: number | null } | null;
-  space?: BasicSpace | null;         // Space user BELONGS to
-  managed_space?: BasicSpace | null; // Space user MANAGES (if CORP_ADMIN)
-  current_workstation?: UserWorkstationInfo | null;
-  is_profile_complete?: boolean;
-  role: string;
-  space_id?: number | null;
 }
 
 export interface AuthState {

@@ -9,12 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ArrowRight, Building, Rocket, User, Users } from 'lucide-react';
-import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
-import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from "sonner";
 import { UserRole, TeamSize, StartupStage } from '@/types/enums';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Company } from '@/types/company';
+import { Startup } from '@/types/startup';
 
 
 const OnboardingChoiceCard: React.FC<{title: string, description: string, onClick: () => void, icon: React.ReactNode}> = ({ title, description, onClick, icon }) => (
@@ -35,28 +35,27 @@ export default function StartOnboardingPage() {
   const router = useRouter();
   const [modalType, setModalType] = useState<'startup' | 'corporation' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [startupName, setStartupName] = useState('');
-  const { loginWithNewToken, token } = useAuthStore();
+  const { setUser, user } = useAuthStore();
 
-  const handleFreelancerChoice = async () => {
+  const handleFreelancerChoice = () => {
     setIsLoading(true);
     const toastId = toast.loading("Setting your role to Freelancer...");
-    try {
-        const response = await api.post('/onboarding/role',
-            { role: UserRole.FREELANCER },
-            { headers: { Authorization: `Bearer ${token}` } }
-        );
-        loginWithNewToken(response.data.access_token);
-        toast.success("Profile created! Welcome.", { id: toastId });
-        router.push('/dashboard');
-    } catch (error: any) {
-        toast.error(error.response?.data?.detail || "Failed to setup profile.", { id: toastId });
-    } finally {
-        setIsLoading(false);
-    }
+    
+    setTimeout(() => {
+      if (user) {
+        setUser({
+          ...user,
+          role: UserRole.FREELANCER,
+          status: 'ACTIVE',
+        });
+      }
+      toast.success("Profile updated! Welcome, Freelancer.", { id: toastId });
+      router.push('/dashboard');
+      setIsLoading(false);
+    }, 500);
   };
 
-  const handleOrgSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleOrgSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
     const toastId = toast.loading(`Registering your ${modalType}...`);
@@ -64,83 +63,100 @@ export default function StartOnboardingPage() {
     const formData = new FormData(event.currentTarget);
     const data = Object.fromEntries(formData.entries());
 
-    let payload;
-    if (modalType === 'startup') {
-        payload = {
-            role: UserRole.STARTUP_ADMIN,
-            startup_data: {
-                ...data,
-                name: startupName,
-            },
-        };
-    } else {
-        payload = {
-            role: UserRole.CORP_ADMIN,
-            company_data: data,
-    };
-    }
-
-    try {
-        const response = await api.post('/onboarding/role', payload, {
-             headers: { Authorization: `Bearer ${token}` }
-        });
-        loginWithNewToken(response.data.access_token);
-        toast.success(`${modalType === 'startup' ? 'Startup' : 'Corporation'} registered!`, { id: toastId });
-        router.push('/dashboard');
-    } catch (error: any) {
-        const detail = error.response?.data?.detail;
-        if (Array.isArray(detail)) {
-            // Handle Pydantic validation errors
-            const errorMessage = detail.map(err => `${err.loc[1]}: ${err.msg}`).join(', ');
-            toast.error(`Registration failed: ${errorMessage}`, { id: toastId });
-        } else {
-            // Handle other errors
-            toast.error(detail || `Failed to register ${modalType}.`, { id: toastId });
-        }
-    } finally {
+    setTimeout(() => {
+      if (!user) {
+        toast.error("User not found. Please log in again.", { id: toastId });
         setIsLoading(false);
-        setModalType(null);
-    }
+        return;
+      }
+
+      if (modalType === 'startup') {
+        const newStartup: Startup = {
+          id: Math.floor(Math.random() * 1000) + 1,
+          name: data.name as string,
+          description: data.description as string,
+          website: data.website as string,
+          industry_focus: data.industry_focus as string,
+          team_size: data.team_size as TeamSize,
+          mission: data.mission as string,
+          stage: data.stage as StartupStage,
+          pitch_deck_url: data.pitch_deck_url as string,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          owner_id: user.id,
+        };
+        setUser({
+          ...user,
+          role: UserRole.STARTUP_ADMIN,
+          status: 'ACTIVE',
+          startup: newStartup,
+          company: null,
+        });
+        toast.success(`Startup "${newStartup.name}" registered!`, { id: toastId });
+      } else if (modalType === 'corporation') {
+        const newCompany: Company = {
+          id: Math.floor(Math.random() * 1000) + 1,
+          name: data.name as string,
+          description: data.description as string,
+          website: data.website as string,
+          industry_focus: data.industry_focus as string,
+          team_size: data.team_size as TeamSize,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          owner_id: user.id,
+        };
+        setUser({
+          ...user,
+          role: UserRole.CORP_ADMIN,
+          status: 'ACTIVE',
+          company: newCompany,
+          startup: null,
+        });
+        toast.success(`Corporation "${newCompany.name}" registered!`, { id: toastId });
+      }
+      
+      setIsLoading(false);
+      setModalType(null);
+      router.push('/dashboard');
+    }, 1000);
   };
 
   return (
-    <AuthenticatedLayout>
-      <div className="flex justify-center items-center min-h-screen bg-background">
-        <Card className="w-full max-w-2xl">
-          <CardHeader>
-            <CardTitle className="text-2xl">Welcome to ShareYourSpace!</CardTitle>
-            <CardDescription>Let's get you set up. What brings you here today?</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <OnboardingChoiceCard
-              title="Register Your Corporation"
-              description="Offer your physical office spaces to startups and freelancers."
-              onClick={() => setModalType('corporation')}
-              icon={<Building className="h-8 w-8" />}
-            />
-            <OnboardingChoiceCard
-              title="Register Your Startup"
-              description="Find a flexible workspace within a corporate environment."
-              onClick={() => setModalType('startup')}
-              icon={<Rocket className="h-8 w-8" />}
-            />
-             <OnboardingChoiceCard
-              title="I'm a Freelancer"
-              description="Discover inspiring workspaces and connect with innovators."
-              onClick={handleFreelancerChoice}
-              icon={<User className="h-8 w-8" />}
-            />
-            <OnboardingChoiceCard
-              title="Join an Existing Organization"
-              description="Already have a team on ShareYourSpace? Find them here."
-              onClick={() => router.push('/onboarding/join-organization')}
-              icon={<Users className="h-8 w-8" />}
-            />
-          </CardContent>
-        </Card>
-      </div>
+    <div className="flex justify-center items-center min-h-screen bg-background p-4">
+      <Card className="w-full max-w-2xl">
+        <CardHeader>
+          <CardTitle className="text-2xl">Welcome to ShareYourSpace!</CardTitle>
+          <CardDescription>Let&apos;s get you set up. What brings you here today?</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <OnboardingChoiceCard
+            title="Register Your Corporation"
+            description="Offer your physical office spaces to startups and freelancers."
+            onClick={() => setModalType('corporation')}
+            icon={<Building className="h-8 w-8" />}
+          />
+          <OnboardingChoiceCard
+            title="Register Your Startup"
+            description="Find a flexible workspace within a corporate environment."
+            onClick={() => setModalType('startup')}
+            icon={<Rocket className="h-8 w-8" />}
+          />
+           <OnboardingChoiceCard
+            title="I'm a Freelancer"
+            description="Discover inspiring workspaces and connect with innovators."
+            onClick={handleFreelancerChoice}
+            icon={<User className="h-8 w-8" />}
+          />
+          <OnboardingChoiceCard
+            title="Join an Existing Organization"
+            description="Already have a team on ShareYourSpace? Find them here."
+            onClick={() => router.push('/onboarding/join-organization')}
+            icon={<Users className="h-8 w-8" />}
+          />
+        </CardContent>
+      </Card>
 
-      <Dialog open={modalType !== null} onOpenChange={() => setModalType(null)}>
+      <Dialog open={modalType !== null} onOpenChange={(value) => !value && setModalType(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Register Your {modalType === 'startup' ? 'Startup' : 'Corporation'}</DialogTitle>
@@ -149,7 +165,7 @@ export default function StartOnboardingPage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleOrgSubmit}>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
                 <div className="space-y-2">
                     <Label htmlFor="name">Name</Label>
                     <Input 
@@ -157,8 +173,6 @@ export default function StartOnboardingPage() {
                         name="name" 
                         placeholder="Your Organization's Name" 
                         required 
-                        value={startupName}
-                        onChange={(e) => setStartupName(e.target.value)}
                     />
                 </div>
                 <div className="space-y-2">
@@ -167,7 +181,7 @@ export default function StartOnboardingPage() {
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="website">Website</Label>
-                    <Input id="website" name="website" placeholder="https://example.com" />
+                    <Input id="website" name="website" type="url" placeholder="https://example.com" />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="industry_focus">Industry</Label>
@@ -175,13 +189,13 @@ export default function StartOnboardingPage() {
                 </div>
                 <div className="space-y-2">
                     <Label>Team Size</Label>
-                    <Select name="team_size">
+                    <Select name="team_size" required>
                         <SelectTrigger>
                             <SelectValue placeholder="Select team size" />
                         </SelectTrigger>
                         <SelectContent>
                             {Object.values(TeamSize).map((size) => (
-                                <SelectItem key={size} value={size}>{size}</SelectItem>
+                                <SelectItem key={size} value={size}>{size.replace('_', ' ')}</SelectItem>
                             ))}
                         </SelectContent>
                     </Select>
@@ -194,7 +208,7 @@ export default function StartOnboardingPage() {
                         </div>
                         <div className="space-y-2">
                             <Label>Stage</Label>
-                            <Select name="stage">
+                            <Select name="stage" required>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select startup stage" />
                                 </SelectTrigger>
@@ -207,7 +221,7 @@ export default function StartOnboardingPage() {
                         </div>
                          <div className="space-y-2">
                             <Label htmlFor="pitch_deck_url">Pitch Deck URL</Label>
-                            <Input id="pitch_deck_url" name="pitch_deck_url" placeholder="https://link-to-your-deck.com" />
+                            <Input id="pitch_deck_url" name="pitch_deck_url" type="url" placeholder="https://link-to-your-deck.com" />
                         </div>
                     </>
                 )}
@@ -221,6 +235,6 @@ export default function StartOnboardingPage() {
           </form>
         </DialogContent>
       </Dialog>
-    </AuthenticatedLayout>
+    </div>
   );
 }

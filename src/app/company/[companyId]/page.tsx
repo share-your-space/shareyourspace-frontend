@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Link as LinkIcon, BarChart2 } from 'lucide-react';
 
-const OverviewPage = () => {
+const CompanyOverviewPage = () => {
   // Dummy data for demonstration
   const stats = {
     totalMembers: 128,
@@ -65,7 +65,7 @@ const OverviewPage = () => {
         </Card>
         <Card>
             <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
+                <CardTitle>Action Buttons</CardTitle>
             </CardHeader>
             <CardContent>
                 <p className="text-muted-foreground">Action buttons coming soon...</p>
@@ -76,4 +76,4 @@ const OverviewPage = () => {
   );
 };
 
-export default OverviewPage;
+export default CompanyOverviewPage;

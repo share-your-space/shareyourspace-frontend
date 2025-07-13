@@ -7,7 +7,7 @@ export enum ContactVisibility {
 export enum UserRole {
     SYS_ADMIN = "SYS_ADMIN",
     CORP_ADMIN = "CORP_ADMIN",
-    CORP_EMPLOYEE = "CORP_EMPLOYEE",
+    CORP_MEMBER = "CORP_MEMBER",
     STARTUP_ADMIN = "STARTUP_ADMIN",
     STARTUP_MEMBER = "STARTUP_MEMBER",
     FREELANCER = "FREELANCER",
@@ -46,4 +46,4 @@ export enum WorkstationStatus {
     MAINTENANCE = "MAINTENANCE",
 }
 
-// Add other shared enums here 
+// Add other shared enums here

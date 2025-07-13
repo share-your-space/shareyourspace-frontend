@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
     Home, Users, BarChart2, CreditCard, Settings, Menu, Building,
-    Briefcase, Calendar, UserPlus, Search, Users2, type LucideIcon
+    Briefcase, Calendar, UserPlus, Search, Users2, type LucideIcon, Mail
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -51,7 +51,7 @@ const DashboardNavLink: React.FC<NavLinkProps> = ({ href, icon: Icon, label, isM
 
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     const { user } = useAuthStore();
-    const companyId = user?.company?.id;
+    const companyId = user?.company_id;
     const [isSheetOpen, setIsSheetOpen] = React.useState(false);
 
     if (!companyId) {
@@ -71,7 +71,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             links: [
                 { href: `/company/${companyId}`, icon: Home, label: 'Overview' },
                 { href: `/company/${companyId}/analytics`, icon: BarChart2, label: 'Analytics' },
-                // { href: `/company/${companyId}/inbox`, icon: Mail, label: 'Inbox' },
+                { href: `/company/${companyId}/inbox`, icon: Mail, label: 'Inbox' },
             ]
         },
         {

@@ -33,6 +33,7 @@ export interface Space {
 export interface BasicStartup {
   id: number;
   name: string;
+  description?: string;
 }
 
 // Based on app.schemas.space.StartupTenantInfo

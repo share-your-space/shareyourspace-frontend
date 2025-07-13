@@ -49,6 +49,9 @@ export interface Startup extends OrganizationBase {
   founder?: UserSimpleInfo | null;
   contact_email?: string | null;
   profile?: {
+    id?: number;
+    startup_id?: number;
+    tagline?: string;
     logo_signed_url?: string;
   };
 }

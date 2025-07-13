@@ -5,8 +5,6 @@ import { Toaster } from "@/components/ui/sonner";
 import { DialogProvider } from "@/context/DialogContext";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
-import { useAuthStore } from '@/store/authStore';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -38,4 +36,4 @@ export default function RootLayout({
       </body>
     </html>
   );
-} 
+}

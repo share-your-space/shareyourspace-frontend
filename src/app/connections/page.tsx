@@ -1,17 +1,32 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button"
+import React, { useState } from 'react';
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from "@/components/ui/card";
-import { Alert, AlertDescription as AlertDesc, AlertTitle } from "@/components/ui/alert";
-import { Loader2, UserCheck, UserX, Inbox, Send, UserPlus, Trash2, MessageSquare, Users, MailQuestion } from 'lucide-react';
-import { api } from '@/lib/api';
+import { UserCheck, UserX, Inbox, Send, UserPlus, Trash2, MessageSquare, Users, MailQuestion } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
-import { AxiosError } from 'axios';
-import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
+
+// --- Mock Data ---
+
+const mockUsers: Record<number, UserReference> = {
+    1: { id: 1, full_name: 'Sarah Lee', title: 'Product Manager at Innovate Inc.', profile_picture_signed_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=400&auto=format&fit=crop' },
+    2: { id: 2, full_name: 'Tom Chen', title: 'Frontend Developer at TechCorp', profile_picture_signed_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=400&auto=format&fit=crop' },
+    3: { id: 3, full_name: 'Maria Garcia', title: 'UX Designer at Creative Minds', profile_picture_signed_url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=400&auto=format&fit=crop' },
+    4: { id: 4, full_name: 'David Miller', title: 'Data Scientist at DataDriven', profile_picture_signed_url: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=400&auto=format&fit=crop' },
+    5: { id: 5, full_name: 'Jessica Brown', title: 'CEO of StartupX', profile_picture_signed_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=400&auto=format&fit=crop' },
+    6: { id: 6, full_name: 'Michael Wilson', title: 'Backend Engineer at Cloud Solutions', profile_picture_signed_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=400&auto=format&fit=crop' },
+};
+
+const initialConnections: ConnectionItem[] = [
+    { id: 101, requester_id: 2, recipient_id: 1, status: 'pending', created_at: '2025-07-10T10:00:00Z', requester: mockUsers[2], recipient: mockUsers[1] },
+    { id: 102, requester_id: 3, recipient_id: 1, status: 'pending', created_at: '2025-07-09T14:30:00Z', requester: mockUsers[3], recipient: mockUsers[1] },
+    { id: 103, requester_id: 1, recipient_id: 4, status: 'pending', created_at: '2025-07-11T09:00:00Z', requester: mockUsers[1], recipient: mockUsers[4] },
+    { id: 104, requester_id: 5, recipient_id: 1, status: 'accepted', created_at: '2025-06-20T11:00:00Z', requester: mockUsers[5], recipient: mockUsers[1] },
+    { id: 105, requester_id: 1, recipient_id: 6, status: 'accepted', created_at: '2025-06-15T18:00:00Z', requester: mockUsers[1], recipient: mockUsers[6] },
+];
 
 // Types
 interface UserReference {
@@ -28,7 +43,7 @@ interface ConnectionItem {
     recipient_id: number;
     status: 'pending' | 'accepted' | 'declined' | 'blocked';
     created_at: string;
-    updated_at: string;
+    updated_at?: string;
     requester: UserReference;
     recipient: UserReference;
 }
@@ -44,8 +59,7 @@ const ConnectionActionCard: React.FC<{
     connection: ConnectionItem;
     perspective: 'incoming' | 'sent';
     onAction: (action: 'accept' | 'decline' | 'cancel', connectionId: number) => void;
-    isProcessingAction: Record<number, boolean>;
-}> = ({ connection, perspective, onAction, isProcessingAction }) => {
+}> = ({ connection, perspective, onAction }) => {
     
     const otherUser = perspective === 'incoming' ? connection.requester : connection.recipient;
 
@@ -73,17 +87,17 @@ const ConnectionActionCard: React.FC<{
                 <div className="flex gap-2 self-end sm:self-center">
                     {perspective === 'incoming' && (
                         <>
-                            <Button size="sm" variant="outline" onClick={() => onAction('decline', connection.id)} disabled={isProcessingAction[connection.id]}>
-                                {isProcessingAction[connection.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserX className="mr-1 h-4 w-4" />}Decline
+                            <Button size="sm" variant="outline" onClick={() => onAction('decline', connection.id)}>
+                                <UserX className="mr-1 h-4 w-4" />Decline
                             </Button>
-                            <Button size="sm" onClick={() => onAction('accept', connection.id)} disabled={isProcessingAction[connection.id]}>
-                                {isProcessingAction[connection.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="mr-1 h-4 w-4" />}Accept
+                            <Button size="sm" onClick={() => onAction('accept', connection.id)}>
+                                <UserCheck className="mr-1 h-4 w-4" />Accept
                             </Button>
                         </>
                     )}
                     {perspective === 'sent' && (
-                        <Button size="sm" variant="destructive" onClick={() => onAction('cancel', connection.id)} disabled={isProcessingAction[connection.id]}>
-                           {isProcessingAction[connection.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />}Cancel
+                        <Button size="sm" variant="destructive" onClick={() => onAction('cancel', connection.id)}>
+                           <Trash2 className="mr-1 h-4 w-4" />Cancel
                         </Button>
                     )}
                 </div>
@@ -96,8 +110,7 @@ const UserConnectionCard: React.FC<{
     connection: ConnectionItem;
     currentUserActualId: number | undefined;
     onAction: (action: 'remove', connectionId: number) => void;
-    isProcessingAction: Record<number, boolean>;
-}> = ({ connection, currentUserActualId, onAction, isProcessingAction }) => {
+}> = ({ connection, currentUserActualId, onAction }) => {
     const otherUser = connection.requester_id === currentUserActualId ? connection.recipient : connection.requester;
 
     return (
@@ -118,8 +131,8 @@ const UserConnectionCard: React.FC<{
                 <Button asChild size="sm" className="flex-1">
                     <Link href={`/chat?userId=${otherUser.id}`}><MessageSquare className="mr-2 h-4 w-4"/>Chat</Link>
                 </Button>
-                <Button variant="destructive" size="sm" onClick={() => onAction('remove', connection.id)} disabled={isProcessingAction[connection.id]} className="flex-1">
-                    {isProcessingAction[connection.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : <><UserX className="mr-2 h-4 w-4" />Remove</>}
+                <Button variant="destructive" size="sm" onClick={() => onAction('remove', connection.id)} className="flex-1">
+                    <UserX className="mr-2 h-4 w-4" />Remove
                 </Button>
             </div>
         </Card>
@@ -153,217 +166,127 @@ const EmptyState: React.FC<{
 
 
 const ConnectionsPage = () => {
-    const [incoming, setIncoming] = useState<ConnectionItem[]>([]);
-    const [sent, setSent] = useState<ConnectionItem[]>([]);
-    const [active, setActive] = useState<ConnectionItem[]>([]);
-    
-    const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null);
-    const [isProcessingAction, setIsProcessingAction] = useState<Record<number, boolean>>({});
-    const [refetchTrigger, setRefetchTrigger] = useState(0);
-
+    const [connections, setConnections] = useState<ConnectionItem[]>(initialConnections);
     const currentUser = useAuthStore(state => state.user);
-    const isLoadingAuth = useAuthStore((state) => state.isLoading);
+    const currentUserActualId = currentUser?.id || 1; // Default to 1 for mock
 
-    useEffect(() => {
-        const fetchData = async () => {
-            if (isLoadingAuth || !currentUser || currentUser.status === 'WAITLISTED') {
-                setIsLoading(false);
-                return;
-            }
+    const incoming = connections.filter(c => c.recipient_id === currentUserActualId && c.status === 'pending');
+    const sent = connections.filter(c => c.requester_id === currentUserActualId && c.status === 'pending');
+    const active = connections.filter(c => c.status === 'accepted' && (c.requester_id === currentUserActualId || c.recipient_id === currentUserActualId));
 
-            setIsLoading(true);
-            setError(null);
-
-            try {
-                const [incomingRes, sentRes, activeRes] = await Promise.all([
-                    api.get<ConnectionItem[]>('/connections/pending'),
-                    api.get<ConnectionItem[]>('/connections/sent'),
-                    api.get<ConnectionItem[]>('/connections/accepted')
-                ]);
-
-                setIncoming(incomingRes.data);
-                setSent(sentRes.data);
-                setActive(activeRes.data);
-
-            } catch (err) {
-                console.error('Error fetching connections:', err);
-                setError((err as Error).message || 'Failed to fetch connections.');
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchData();
-    }, [currentUser, isLoadingAuth, refetchTrigger]);
-
-    const handleAction = async (action: 'accept' | 'decline' | 'cancel' | 'remove', connectionId: number) => {
-        if (currentUser?.status === 'WAITLISTED') return;
-        setIsProcessingAction(prev => ({ ...prev, [connectionId]: true }));
-        let promise;
+    const handleAction = (action: 'accept' | 'decline' | 'cancel' | 'remove', connectionId: number) => {
         let successMessage = '';
+        
+        setConnections(prevConnections => {
+            const connIndex = prevConnections.findIndex(c => c.id === connectionId);
+            if (connIndex === -1) return prevConnections;
 
-        try {
+            const newConnections = [...prevConnections];
+            const connection = newConnections[connIndex];
+
             switch (action) {
                 case 'accept':
-                    promise = api.put(`/connections/${connectionId}/accept`);
-                    successMessage = 'Connection accepted!';
+                    newConnections[connIndex] = { ...connection, status: 'accepted' };
+                    successMessage = `You are now connected with ${connection.requester.full_name}!`;
                     break;
                 case 'decline':
-                    promise = api.put(`/connections/${connectionId}/decline`);
-                    successMessage = 'Connection declined.';
+                    newConnections.splice(connIndex, 1);
+                    successMessage = `Declined connection request from ${connection.requester.full_name}.`;
                     break;
                 case 'cancel':
-                    promise = api.delete(`/connections/${connectionId}`);
+                    newConnections.splice(connIndex, 1);
                     successMessage = 'Connection request cancelled.';
                     break;
                 case 'remove':
-                    promise = api.delete(`/connections/${connectionId}`);
-                    successMessage = 'Connection removed.';
+                    const otherUser = connection.requester_id === currentUserActualId ? connection.recipient : connection.requester;
+                    newConnections.splice(connIndex, 1);
+                    successMessage = `Connection with ${otherUser.full_name} removed.`;
                     break;
                 default:
-                    throw new Error('Unknown action');
+                    return prevConnections;
             }
-            await promise;
-            toast.success(successMessage);
-            setRefetchTrigger(prev => prev + 1);
-        } catch (err) {
-            console.error(`Error performing action ${action}:`, err);
-            if (err instanceof AxiosError) {
-                toast.error(err.response?.data?.detail || `Failed to ${action} connection.`);
-            } else {
-                toast.error(`An unexpected error occurred.`);
-            }
-        } finally {
-            setIsProcessingAction(prev => ({ ...prev, [connectionId]: false }));
-        }
-    };
+            return newConnections;
+        });
 
-    const renderContent = () => {
-        if (isLoading || isLoadingAuth) {
-            return (
-                <div>
-                    <div className="h-8 w-1/4 bg-gray-200 rounded animate-pulse mb-4"></div>
-                    <Card className="p-4 mb-3">
-                        <div className="flex items-center space-x-4">
-                            <div className="h-16 w-16 bg-gray-200 rounded-full animate-pulse"></div>
-                            <div className="space-y-2">
-                                <div className="h-4 w-48 bg-gray-200 rounded animate-pulse"></div>
-                                <div className="h-3 w-32 bg-gray-200 rounded animate-pulse"></div>
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-            );
-        }
-
-        if (currentUser?.status === 'WAITLISTED') {
-            return (
-                <Alert variant="default" className="border-orange-500">
-                    <AlertTitle className="text-orange-700">Feature Locked</AlertTitle>
-                    <AlertDesc>
-                        Your connections will appear here once you are actively assigned to a space.
-                    </AlertDesc>
-                </Alert>
-            );
-        }
-
-        if (error) {
-            return (
-                <Alert variant="destructive">
-                    <AlertTitle>Error</AlertTitle>
-                    <AlertDesc>{error}</AlertDesc>
-                </Alert>
-            );
-        }
-
-        return (
-            <>
-                {/* --- Incoming Requests --- */}
-                <section className="mb-12">
-                    <h2 className="text-2xl font-semibold tracking-tight mb-4 flex items-center">
-                        <Inbox className="mr-3 h-6 w-6 text-primary" /> Invitations ({incoming.length})
-                    </h2>
-                    {incoming.length > 0 ? (
-                        incoming.map(conn => (
-                            <ConnectionActionCard
-                                key={conn.id}
-                                connection={conn}
-                                perspective="incoming"
-                                onAction={handleAction}
-                                isProcessingAction={isProcessingAction}
-                            />
-                        ))
-                    ) : (
-                        <EmptyState 
-                            icon={MailQuestion}
-                            title="No pending invitations"
-                            description="When someone requests to connect with you, you'll see their invitation here."
-                        />
-                    )}
-                </section>
-
-                {/* --- Active Connections --- */}
-                <section className="mb-12">
-                    <h2 className="text-2xl font-semibold tracking-tight mb-4 flex items-center">
-                        <Users className="mr-3 h-6 w-6 text-primary" /> Your Connections ({active.length})
-                    </h2>
-                    {active.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {active.map(conn => (
-                                <UserConnectionCard
-                                    key={conn.id}
-                                    connection={conn}
-                                    currentUserActualId={currentUser?.id}
-                                    onAction={handleAction}
-                                    isProcessingAction={isProcessingAction}
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                         <EmptyState 
-                            icon={Users}
-                            title="Find your community"
-                            description="You haven't made any connections yet. Start exploring to find and connect with others."
-                            action={{ href: '/discover', label: 'Discover People' }}
-                        />
-                    )}
-                </section>
-
-                {/* --- Sent Requests --- */}
-                <section>
-                    <h2 className="text-2xl font-semibold tracking-tight mb-4 flex items-center">
-                        <Send className="mr-3 h-6 w-6 text-primary" /> Sent Requests ({sent.length})
-                    </h2>
-                    {sent.length > 0 ? (
-                        sent.map(conn => (
-                            <ConnectionActionCard
-                                key={conn.id}
-                                connection={conn}
-                                perspective="sent"
-                                onAction={handleAction}
-                                isProcessingAction={isProcessingAction}
-                            />
-                        ))
-                    ) : (
-                        <EmptyState 
-                            icon={Send}
-                            title="No sent requests"
-                            description="When you request to connect with someone, it will appear here until they respond."
-                        />
-                    )}
-                </section>
-            </>
-        );
+        toast.success(successMessage);
     };
 
     return (
-        <AuthenticatedLayout>
-            <div className="container mx-auto py-8 px-4 md:px-6 max-w-7xl">
-                <h1 className="text-4xl font-bold tracking-tight mb-8">Connections</h1>
-                {renderContent()}
-            </div>
-        </AuthenticatedLayout>
+        <div className="container mx-auto py-8 px-4 md:px-6 max-w-7xl">
+            <h1 className="text-4xl font-bold tracking-tight mb-8">Connections</h1>
+            
+            {/* --- Incoming Requests --- */}
+            <section className="mb-12">
+                <h2 className="text-2xl font-semibold tracking-tight mb-4 flex items-center">
+                    <Inbox className="mr-3 h-6 w-6 text-primary" /> Invitations ({incoming.length})
+                </h2>
+                {incoming.length > 0 ? (
+                    incoming.map(conn => (
+                        <ConnectionActionCard
+                            key={conn.id}
+                            connection={conn}
+                            perspective="incoming"
+                            onAction={handleAction}
+                        />
+                    ))
+                ) : (
+                    <EmptyState 
+                        icon={MailQuestion}
+                        title="No pending invitations"
+                        description="When someone requests to connect with you, you'll see their invitation here."
+                    />
+                )}
+            </section>
+
+            {/* --- Active Connections --- */}
+            <section className="mb-12">
+                <h2 className="text-2xl font-semibold tracking-tight mb-4 flex items-center">
+                    <Users className="mr-3 h-6 w-6 text-primary" /> Your Connections ({active.length})
+                </h2>
+                {active.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {active.map(conn => (
+                            <UserConnectionCard
+                                key={conn.id}
+                                connection={conn}
+                                currentUserActualId={currentUserActualId}
+                                onAction={handleAction}
+                            />
+                        ))}
+                    </div>
+                ) : (
+                     <EmptyState 
+                        icon={Users}
+                        title="Find your community"
+                        description="You haven't made any connections yet. Start exploring to find and connect with others."
+                        action={{ href: '/discover', label: 'Discover People' }}
+                    />
+                )}
+            </section>
+
+            {/* --- Sent Requests --- */}
+            <section>
+                <h2 className="text-2xl font-semibold tracking-tight mb-4 flex items-center">
+                    <Send className="mr-3 h-6 w-6 text-primary" /> Sent Requests ({sent.length})
+                </h2>
+                {sent.length > 0 ? (
+                    sent.map(conn => (
+                        <ConnectionActionCard
+                            key={conn.id}
+                            connection={conn}
+                            perspective="sent"
+                            onAction={handleAction}
+                        />
+                    ))
+                ) : (
+                    <EmptyState 
+                        icon={Send}
+                        title="No sent requests"
+                        description="When you request to connect with someone, it will appear here until they respond."
+                    />
+                )}
+            </section>
+        </div>
     );
 };
 

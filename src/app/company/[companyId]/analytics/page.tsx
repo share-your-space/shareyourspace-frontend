@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Bar, Line, Pie, Doughnut } from 'react-chartjs-2';
 import {
@@ -14,10 +14,9 @@ import {
   Title,
   Tooltip,
   Legend,
+  Colors,
 } from 'chart.js';
-import { useAuthStore } from '@/store/authStore';
 import { AnalyticsData } from '@/types/analytics';
-import { Loader2 } from 'lucide-react';
 
 ChartJS.register(
   CategoryScale,
@@ -28,7 +27,8 @@ ChartJS.register(
   ArcElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  Colors
 );
 
 const chartOptions = {
@@ -38,171 +38,144 @@ const chartOptions = {
         legend: {
             position: 'top' as const,
         },
+        colors: {
+            forceOverride: true
+        }
     },
 };
 
+// Mock Data
+const mockAnalyticsData: AnalyticsData = {
+    summary: {
+        total_tenants: 150,
+        total_startups: 45,
+        total_freelancers: 105,
+        active_connections: 520,
+        occupancy_rate: 85.5,
+    },
+    tenant_growth: [
+        { date: '2023-01-01', count: 80 },
+        { date: '2023-02-01', count: 95 },
+        { date: '2023-03-01', count: 110 },
+        { date: '2023-04-01', count: 125 },
+        { date: '2023-05-01', count: 140 },
+        { date: '2023-06-01', count: 150 },
+    ],
+    tenant_composition: {
+        startups: 45,
+        freelancers: 105,
+    },
+    top_industries: [
+        { industry: 'FinTech', count: 25 },
+        { industry: 'HealthTech', count: 20 },
+        { industry: 'SaaS', count: 18 },
+        { industry: 'E-commerce', count: 15 },
+        { industry: 'AI/ML', count: 12 },
+    ],
+};
+
 const AnalyticsPage = () => {
-    const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const token = useAuthStore((state) => state.token);
-
-    useEffect(() => {
-        const fetchAnalytics = async () => {
-            if (!token) {
-                setLoading(false);
-                setError("Authentication token not found.");
-                return;
-            }
-
-            try {
-                setLoading(true);
-                const response = await fetch('/api/corp-admin/analytics', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                    },
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch analytics data');
-                }
-
-                const data: AnalyticsData = await response.json();
-                setAnalyticsData(data);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'An unknown error occurred');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchAnalytics();
-    }, [token]);
-
-    if (loading) {
-        return (
-            <div className="flex justify-center items-center h-full">
-                <Loader2 className="h-16 w-16 animate-spin text-primary" />
-            </div>
-        );
-    }
-
-    if (error) {
-        return <div className="text-center text-red-500">{error}</div>;
-    }
-
-    if (!analyticsData) {
-        return <div className="text-center text-muted-foreground">No analytics data available.</div>;
-    }
+    const analyticsData = mockAnalyticsData;
 
     const tenantGrowthChartData = {
-        labels: analyticsData.tenant_growth.map(d => new Date(d.date).toLocaleDateString()),
+        labels: analyticsData.tenant_growth.map(d => new Date(d.date).toLocaleString('default', { month: 'short', year: 'numeric' })),
         datasets: [
             {
-                label: 'New Tenants',
+                label: 'Total Tenants',
                 data: analyticsData.tenant_growth.map(d => d.count),
                 borderColor: 'hsl(var(--primary))',
                 backgroundColor: 'hsla(var(--primary), 0.2)',
                 fill: true,
+                tension: 0.3,
             },
         ],
     };
 
-    const bookingsChartData = {
-        labels: analyticsData.bookings_over_time.map(d => new Date(d.date).toLocaleDateString()),
+    const tenantCompositionChartData = {
+        labels: ['Startups', 'Freelancers'],
         datasets: [
             {
-                label: 'Bookings',
-                data: analyticsData.bookings_over_time.map(d => d.count),
-                borderColor: 'hsl(var(--destructive))',
-                backgroundColor: 'hsla(var(--destructive), 0.2)',
+                data: [analyticsData.tenant_composition.startups, analyticsData.tenant_composition.freelancers],
+                label: 'Tenant Composition',
             },
         ],
     };
 
-    const tenantDistributionChartData = {
-        labels: Object.keys(analyticsData.tenant_distribution),
+    const topIndustriesChartData = {
+        labels: analyticsData.top_industries.map(i => i.industry),
         datasets: [
             {
-                data: Object.values(analyticsData.tenant_distribution),
-                backgroundColor: ['#36A2EB', '#FFCE56'],
-                hoverOffset: 4,
+                label: 'Number of Tenants',
+                data: analyticsData.top_industries.map(i => i.count),
+                barPercentage: 0.5,
+                categoryPercentage: 0.5,
             },
         ],
     };
 
-    const utilizationChartData = {
-        labels: ['Occupied', 'Available'],
-        datasets: [
-          {
-            data: [analyticsData.workstation_utilization, 100 - analyticsData.workstation_utilization],
-            backgroundColor: ['#4BC0C0', '#E0E0E0'],
-            hoverOffset: 4
-          }
-        ]
-      };
+    return (
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
+                <p className="text-muted-foreground">Insights into your community and space utilization.</p>
+            </div>
 
+            {/* Summary Cards */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                <Card>
+                    <CardHeader><CardTitle>Total Tenants</CardTitle></CardHeader>
+                    <CardContent><p className="text-3xl font-bold">{analyticsData.summary.total_tenants}</p></CardContent>
+                </Card>
+                <Card>
+                    <CardHeader><CardTitle>Startups</CardTitle></CardHeader>
+                    <CardContent><p className="text-3xl font-bold">{analyticsData.summary.total_startups}</p></CardContent>
+                </Card>
+                <Card>
+                    <CardHeader><CardTitle>Freelancers</CardTitle></CardHeader>
+                    <CardContent><p className="text-3xl font-bold">{analyticsData.summary.total_freelancers}</p></CardContent>
+                </Card>
+                <Card>
+                    <CardHeader><CardTitle>Connections</CardTitle></CardHeader>
+                    <CardContent><p className="text-3xl font-bold">{analyticsData.summary.active_connections}</p></CardContent>
+                </Card>
+                <Card>
+                    <CardHeader><CardTitle>Occupancy</CardTitle></CardHeader>
+                    <CardContent><p className="text-3xl font-bold">{analyticsData.summary.occupancy_rate}%</p></CardContent>
+                </Card>
+            </div>
 
-  return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Analytics & Reporting</h1>
-        <p className="text-muted-foreground">Insights into your company&apos;s engagement and growth.</p>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Tenant Growth</CardTitle>
-            <CardDescription>New tenants joining over the last 30 days.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <Line data={tenantGrowthChartData} options={chartOptions} />
+            {/* Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                <Card className="lg:col-span-3">
+                    <CardHeader>
+                        <CardTitle>Tenant Growth</CardTitle>
+                        <CardDescription>Total number of tenants over the last 6 months.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-80">
+                        <Line data={tenantGrowthChartData} options={chartOptions} />
+                    </CardContent>
+                </Card>
+                <Card className="lg:col-span-2">
+                    <CardHeader>
+                        <CardTitle>Tenant Composition</CardTitle>
+                        <CardDescription>Breakdown of startups vs. freelancers.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-80 flex items-center justify-center">
+                        <Doughnut data={tenantCompositionChartData} options={chartOptions} />
+                    </CardContent>
+                </Card>
             </div>
-          </CardContent>
-        </Card>
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Booking Activity</CardTitle>
-            <CardDescription>Workstation bookings over the last 30 days.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <Bar data={bookingsChartData} options={chartOptions} />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Tenant Distribution</CardTitle>
-            <CardDescription>Breakdown of tenant types.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px]">
-              <Pie data={tenantDistributionChartData} options={chartOptions} />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Workstation Utilization</CardTitle>
-            <CardDescription>Percentage of occupied workstations.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px] flex items-center justify-center">
-                <div className="w-full h-full relative">
-                    <Doughnut data={utilizationChartData} options={{...chartOptions, cutout: '60%'}} />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-2xl font-bold">{analyticsData.workstation_utilization.toFixed(1)}%</span>
-                    </div>
-                </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
+            <Card>
+                <CardHeader>
+                    <CardTitle>Top Industries</CardTitle>
+                    <CardDescription>Distribution of tenants across different industries.</CardDescription>
+                </CardHeader>
+                <CardContent className="h-96">
+                    <Bar data={topIndustriesChartData} options={chartOptions} />
+                </CardContent>
+            </Card>
+        </div>
+    );
 };
 
 export default AnalyticsPage;

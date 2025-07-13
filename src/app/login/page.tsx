@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,134 +12,172 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/ui/PasswordInput";
 import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/store/authStore";
-import { api } from "@/lib/api"; // Import the api client
-import UnauthenticatedLayout from '@/components/layout/UnauthenticatedLayout';
-import { type User } from "@/types/auth";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
+import { UserRole } from "@/types/enums";
+import { User } from "@/types/auth";
+
+const mockUsers: { [key: string]: User } = {
+  "corpadmin@example.com": {
+    id: 1,
+    email: "corpadmin@example.com",
+    full_name: "Corporate Admin",
+    role: UserRole.CORP_ADMIN,
+    status: "ACTIVE",
+    space_id: 1,
+    company_id: 1,
+    company: { id: 1, name: "Innovate Inc." },
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    profile_picture_url: "https://i.pravatar.cc/150?u=corpadmin@example.com",
+  },
+  "corpmember@example.com": {
+    id: 2,
+    email: "corpmember@example.com",
+    full_name: "Corporate Member",
+    role: UserRole.CORP_MEMBER,
+    status: "ACTIVE",
+    space_id: 1,
+    company_id: 1,
+    company: { id: 1, name: "Innovate Inc." },
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    profile_picture_url: "https://i.pravatar.cc/150?u=corpmember@example.com",
+  },
+  "startupadmin@example.com": {
+    id: 3,
+    email: "startupadmin@example.com",
+    full_name: "Startup Admin",
+    role: UserRole.STARTUP_ADMIN,
+    status: "ACTIVE",
+    space_id: 2,
+    company_id: 2,
+    company: { id: 2, name: "QuantumLeap AI" },
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    profile_picture_url: "https://i.pravatar.cc/150?u=startupadmin@example.com",
+  },
+  "startupmember@example.com": {
+    id: 4,
+    email: "startupmember@example.com",
+    full_name: "Startup Member",
+    role: UserRole.STARTUP_MEMBER,
+    status: "ACTIVE",
+    space_id: 2,
+    company_id: 2,
+    company: { id: 2, name: "QuantumLeap AI" },
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    profile_picture_url: "https://i.pravatar.cc/150?u=startupmember@example.com",
+  },
+  "freelancer@example.com": {
+    id: 5,
+    email: "freelancer@example.com",
+    full_name: "Freelancer Fred",
+    role: UserRole.FREELANCER,
+    status: "ACTIVE",
+    space_id: 3,
+    company_id: null,
+    company: null,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    profile_picture_url: "https://i.pravatar.cc/150?u=freelancer@example.com",
+  },
+  "sysadmin@example.com": {
+    id: 6,
+    email: "sysadmin@example.com",
+    full_name: "SysAdmin Susan",
+    role: UserRole.SYS_ADMIN,
+    status: "ACTIVE",
+    space_id: null,
+    company_id: null,
+    company: null,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    profile_picture_url: "https://i.pravatar.cc/150?u=sysadmin@example.com",
+  },
+};
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuthStore();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const login = useAuthStore((state) => state.login);
+  const [email, setEmail] = useState("corpadmin@example.com");
+  const [password, setPassword] = useState("password123");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
-    setError(null);
+    const toastId = toast.loading("Logging in...");
 
-    try {
-      // Use the api client for login (it handles base URL and content type)
-      const response = await api.post(
-        '/auth/login',
-        new URLSearchParams({
-          username: email,
-          password: password,
-        }),
-        {
-          headers: {
-             // Override Content-Type for this specific request
-             'Content-Type': 'application/x-www-form-urlencoded'
-          }
-        }
-      );
+    setTimeout(() => {
+      const user = mockUsers[email];
 
-      const data = response.data; // axios puts data directly in .data
-
-      if (!data.access_token) {
-        throw new Error(data.detail || "Login failed. No token received.");
+      if (user && password === "password123") {
+        login("mock-jwt-token", user);
+        toast.success("Login successful!", { id: toastId });
+        router.push("/dashboard");
+      } else {
+        toast.error("Invalid email or password.", { id: toastId });
+        setIsLoading(false);
       }
-
-      // --- CRITICAL FIX: Set token in api client BEFORE making next request ---
-      api.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
-
-      // After getting the token, get user info and store it
-      // This ensures the user state is immediately populated on login
-      const userResponse = await api.get('/users/me/profile');
-      
-      login(response.data.access_token, userResponse.data);
-
-      toast.success('Login successful!', {
-        duration: 3000,
-      });
-
-      router.push("/dashboard"); // Redirect to dashboard
-
-    } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || "An unexpected error occurred.");
-    } finally {
-      setIsLoading(false);
-    }
+    }, 1000);
   };
 
   return (
-    <UnauthenticatedLayout>
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Card className="w-full max-w-sm">
-          <CardHeader>
-            <CardTitle className="text-2xl">Login</CardTitle>
-            <CardDescription>
-              Enter your email below to login to your account.
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleSubmit}>
-            <CardContent className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="m@example.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={isLoading}
-                />
-              </div>
-              <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
-                  <Link
-                    href="/forgot-password" // Link to the forgot password page
-                    className="ml-auto inline-block text-sm underline"
-                  >
-                    Forgot your password?
-                  </Link>
-                </div>
-                <PasswordInput
-                  id="password"
-                  required
-                  value={password}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-                  disabled={isLoading}
-                  autoComplete="current-password"
-                />
-              </div>
-              {error && (
-                <p className="text-sm font-medium text-destructive">{error}</p>
-              )}
-            </CardContent>
-            <CardFooter>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Signing In..." : "Sign in"}
-              </Button>
-            </CardFooter>
-          </form>
-           <CardFooter className="flex flex-col items-center text-sm">
-            <div>
-              Don't have an account?{' '}
-              <Link href="/signup" className="underline">
-                Sign up
-              </Link>
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="text-2xl">Login</CardTitle>
+          <CardDescription>
+            Use any password. Available emails:
+            <ul className="list-disc pl-5 mt-2 text-left">
+              {Object.keys(mockUsers).map((email) => (
+                <li key={email}>
+                  <code>{email}</code>
+                </li>
+              ))}
+            </ul>
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={handleLogin}>
+          <CardContent className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="m@example.com"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
             </div>
+            <div className="grid gap-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Logging in..." : "Log in"}
+            </Button>
           </CardFooter>
-        </Card>
-      </div>
-    </UnauthenticatedLayout>
+        </form>
+      </Card>
+    </div>
   );
-} 
+}
