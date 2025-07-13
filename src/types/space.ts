@@ -101,13 +101,13 @@ export interface WorkstationUnassignRequest {
   workstation_id: number;
 }
 
-// Based on app.schemas.space.BrowseableSpace
+// Corresponds to app.schemas.space.Space for browsing
 export interface BrowsableSpace {
-  id: number;
+  id: string;
   name: string;
-  address: string | null;
-  headline: string | null;
-  cover_image_url: string | null;
+  description: string;
+  image_url: string;
+  signed_url?: string; // Add this to handle new uploads before they are saved
   total_workstations: number;
   company_name: string;
   company_id: number | null;
