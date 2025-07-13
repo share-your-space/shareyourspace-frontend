@@ -11,7 +11,7 @@ import { UserProfile } from '@/types/userProfile';
 import UserProfileDisplay from '@/components/profile/UserProfileDisplay';
 import { Separator } from '@/components/ui/separator';
 import { mockUsers } from '@/lib/mock-data';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { useChatStore } from '@/store/chatStore';
 
 // Mock Data is now in lib/mock-data.ts
@@ -74,11 +74,11 @@ const UserProfilePage = () => {
     setTimeout(() => {
       if (connectionStatus === 'idle') {
         setConnectionStatus('pending');
-        toast({ title: 'Connection Request Sent', description: `Your request to connect with ${userDetail.full_name} has been sent.` });
+        toast.success('Connection Request Sent', { description: `Your request to connect with ${userDetail.full_name} has been sent.` });
       } else if (connectionStatus === 'pending' || connectionStatus === 'connected') {
         // Allow disconnecting
         setConnectionStatus('idle');
-        toast({ title: 'Disconnected', description: `You have disconnected from ${userDetail.full_name}.` });
+        toast.info('Disconnected', { description: `You have disconnected from ${userDetail.full_name}.` });
       }
     }, 500);
   };
@@ -113,15 +113,14 @@ const UserProfilePage = () => {
     addOrUpdateConversation(newConversation);
     setActiveConversationId(newConversation.id);
 
-    toast({
-      title: 'Chat Opened',
+    toast.success('Chat Opened', {
       description: `You can now message ${userDetail.full_name}.`,
     });
     router.push(`/chat?conversationId=${newConversation.id}`);
   };
 
   const renderConnectButton = () => {
-    if (!currentUser || !userDetail || currentUser.id.toString() === userId) {
+    if (!currentUser || !userDetail || currentUser.id === userDetail.id) {
       return null;
     }
 

@@ -14,6 +14,7 @@ export enum InvitationStatus {
 // Corresponds to app.schemas.user.User
 export interface User {
   id: number;
+  full_name: string;
   email: string;
   role: UserRole;
   is_active: boolean;
@@ -32,7 +33,7 @@ export interface Token {
 
 // Corresponds to app.schemas.auth.TokenWithUser
 export interface TokenWithUser extends Token {
-  user: User;
+  user: User & { full_name: string };
 }
 
 // Corresponds to app.schemas.user.UserCreateAcceptInvitation
