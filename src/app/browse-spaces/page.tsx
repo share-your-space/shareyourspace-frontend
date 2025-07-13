@@ -18,10 +18,10 @@ const BrowseSpacesPage = () => {
     user?.role === UserRole.STARTUP_ADMIN;
 
   const { currentUserSpace, otherSpaces } = useMemo(() => {
-    const currentUserSpace = spaces.find(space => space.id === user?.userProfile?.space_id);
-    const otherSpaces = spaces.filter(space => space.id !== user?.userProfile?.space_id);
+    const currentUserSpace = spaces.find(space => space.id === user?.space_id);
+    const otherSpaces = spaces.filter(space => space.id !== user?.space_id);
     return { currentUserSpace, otherSpaces };
-  }, [spaces, user?.userProfile?.space_id]);
+  }, [spaces, user?.space_id]);
 
   const handleExpressInterest = async (spaceId: string) => {
     toast.success('Your interest has been registered!');
