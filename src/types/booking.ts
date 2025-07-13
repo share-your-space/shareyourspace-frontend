@@ -2,7 +2,7 @@ import { UserSimpleInfo } from "./user";
 import { Workstation } from "./workstation";
 
 export interface Booking {
-    id: number;
+    id: string;
     start_date: string;
     end_date: string | null;
     user: UserSimpleInfo;

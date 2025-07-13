@@ -1,4 +1,3 @@
-
 import { UserSimpleInfo } from "./user";
 
 // Based on app.schemas.space.WorkstationStatus (Enum)
@@ -16,22 +15,22 @@ export enum WorkstationType {
 }
 
 export interface Booking {
-    id: number;
+    id: string;
     user: UserSimpleInfo;
 }
 
 export interface Space {
-    id: number;
+    id: string;
     name: string;
 }
 
 // Based on app.schemas.workstation.Workstation
 export interface Workstation {
-  id: number;
+  id: string;
   name: string;
   type: WorkstationType;
   status: WorkstationStatus;
-  space_id: number;
+  space_id?: string;
   space?: Space;
   current_booking?: Booking | null;
 }
