@@ -107,11 +107,34 @@ export interface BrowsableSpace {
   name: string;
   description: string;
   image_url: string;
-  signed_url?: string; // Add this to handle new uploads before they are saved
-  total_workstations: number;
+  address: string;
   company_name: string;
+  total_workstations: number;
+  interest_status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | null;
+  amenities: { id: number; name: string; }[];
+  headline: string;
+  vibe: string;
+}
+
+// Corresponds to app.schemas.space.SpaceWithAdmin
+export interface SpaceWithAdmin {
+  id: number;
+  name: string;
+  address: string | null;
+  amenities: string[];
+  images: SpaceImage[];
   company_id: number | null;
-  interest_status: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  total_workstations: number;
+  headline: string;
+  house_rules: string[];
+  vibe: string[];
+  opening_hours: string;
+  key_highlights: string[];
+  neighborhood_description: string;
+  admin_contact: BasicUser; // Assuming admin is a BasicUser for now
 }
 
 // Based on app.schemas.space.WorkstationStatusUpdateRequest
