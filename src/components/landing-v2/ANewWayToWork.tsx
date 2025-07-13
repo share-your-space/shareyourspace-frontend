@@ -2,10 +2,10 @@ import React from 'react';
 import Image from 'next/image';
 
 const cardData = [
-  { img: '/images/landing/hot-desks.jpg', title: 'Flexible Hot Desks' },
-  { img: '/images/landing/private-offices.jpg', title: 'Private Offices for Teams' },
-  { img: '/images/landing/project-spaces.jpg', title: 'Collaborative Project Spaces' },
-  { img: '/images/landing/meeting-rooms.jpg', title: 'Inspiring Meeting Rooms' },
+  { img: '/images/landing/hot-desks.jpeg', title: 'Flexible Hot Desks' },
+  { img: '/images/landing/private-offices.jpeg', title: 'Private Offices for Teams' },
+  { img: '/images/landing/project-spaces.jpeg', title: 'Collaborative Project Spaces' },
+  { img: '/images/landing/meeting-rooms.jpeg', title: 'Inspiring Meeting Rooms' },
 ];
 
 const ANewWayToWork = () => {
