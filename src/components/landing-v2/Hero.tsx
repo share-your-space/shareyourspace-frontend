@@ -11,7 +11,7 @@ const Hero = () => {
         loop
         muted
         playsInline
-        poster="/images/landing/hero-poster.png"
+        poster="/images/landing/hero-poster.jpg"
         className="absolute z-0 w-auto min-w-full min-h-full max-w-none"
         style={{
             objectFit: 'cover',

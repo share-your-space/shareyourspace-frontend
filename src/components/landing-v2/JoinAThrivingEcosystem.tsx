@@ -7,7 +7,7 @@ const JoinAThrivingEcosystem = () => {
     <section className="relative py-16 cursor-pointer">
       <div className="relative h-96 min-w-[300px]">
         <Image
-          src="/images/landing/ecosystem.png"
+          src="/images/landing/ecosystem.jpg"
           layout="fill"
           objectFit="cover"
           className="rounded-2xl"

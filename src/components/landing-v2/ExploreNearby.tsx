@@ -2,10 +2,10 @@ import React from 'react';
 import Image from 'next/image';
 
 const locations = [
-  { name: 'London Innovation Hub', location: 'London', img: '/images/landing/london.png' },
-  { name: 'NYC Tech Forward', location: 'New York', img: '/images/landing/new-york.png' },
-  { name: 'SF Creative Assembly', location: 'San Francisco', img: '/images/landing/san-francisco.png' },
-  { name: 'Berlin Green Desk', location: 'Berlin', img: '/images/landing/berlin.png' },
+  { name: 'London Innovation Hub', location: 'London', img: '/images/landing/london.jpg' },
+  { name: 'NYC Tech Forward', location: 'New York', img: '/images/landing/new-york.jpg' },
+  { name: 'SF Creative Assembly', location: 'San Francisco', img: '/images/landing/san-francisco.jpg' },
+  { name: 'Berlin Green Desk', location: 'Berlin', img: '/images/landing/berlin.jpg' },
 ];
 
 const ExploreNearby = () => {

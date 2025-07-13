@@ -35,7 +35,7 @@ export default function ForPartners() {
               alt="Image"
               className="mx-auto aspect-video overflow-hidden rounded-xl object-cover object-center sm:w-full"
               height="310"
-              src="/images/landing/for-partners.png"
+              src="/images/landing/for-partners.jpg"
               width="550"
             />
           </div>
