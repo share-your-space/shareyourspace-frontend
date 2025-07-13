@@ -18,8 +18,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Space } from '@/types/space';
-import { getCompanySpaces } from '@/lib/api/corp-admin';
 import { toast } from 'sonner';
+import { mockSpaces } from '@/lib/mock-data'; 
 
 interface AddTenantDialogProps {
   isOpen: boolean;
@@ -42,28 +42,32 @@ export const AddTenantDialog = ({
 
   useEffect(() => {
     if (isOpen) {
-      const fetchSpaces = async () => {
-        try {
-          const companySpaces = await getCompanySpaces();
-          setSpaces(companySpaces);
-          if (companySpaces.length > 0) {
-            setSelectedSpaceId(companySpaces[0].id.toString());
-          }
-        } catch (error) {
-          toast.error('Failed to fetch your spaces.');
-          console.error(error);
+      // Simulate fetching spaces
+      setIsLoading(true);
+      setTimeout(() => {
+        setSpaces(mockSpaces);
+        if (mockSpaces.length > 0) {
+          setSelectedSpaceId(mockSpaces[0].id.toString());
         }
-      };
-      fetchSpaces();
+        setIsLoading(false);
+      }, 500);
     }
   }, [isOpen]);
 
   const handleConfirm = () => {
     if (selectedSpaceId) {
       setIsLoading(true);
-      onConfirm(parseInt(selectedSpaceId, 10));
-      // The parent component will be responsible for closing the dialog
-      // and handling the final loading state.
+      // Simulate API call
+      setTimeout(() => {
+        onConfirm(parseInt(selectedSpaceId, 10));
+        toast.success(
+          hasExpressedInterest
+            ? `${tenantName} added to space.`
+            : `Invitation sent to ${tenantName}.`
+        );
+        setIsLoading(false);
+        onClose();
+      }, 1000);
     } else {
       toast.warning('Please select a space.');
     }
@@ -86,10 +90,10 @@ export const AddTenantDialog = ({
           <Select
             value={selectedSpaceId}
             onValueChange={setSelectedSpaceId}
-            disabled={spaces.length === 0}
+            disabled={spaces.length === 0 || isLoading}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select a space" />
+              <SelectValue placeholder={isLoading ? "Loading spaces..." : "Select a space"} />
             </SelectTrigger>
             <SelectContent>
               {spaces.map((space) => (
@@ -116,4 +120,4 @@ export const AddTenantDialog = ({
       </DialogContent>
     </Dialog>
   );
-}; 
+};

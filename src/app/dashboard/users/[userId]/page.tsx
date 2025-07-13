@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { UserDetail } from '@/types/auth';
-import { getUserDetailedProfile } from '@/lib/api/users'; 
+import { mockUsers } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import UserProfileDisplay from '@/components/profile/UserProfileDisplay';
@@ -18,31 +18,40 @@ export default function UserProfilePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setIsLoading(true);
+    setError(null);
     if (userId) {
-      const fetchUserProfile = async () => {
-        setIsLoading(true);
-        setError(null);
-        try {
-          const numericUserId = parseInt(userId, 10);
-          if (isNaN(numericUserId)) {
-            setError("Invalid user ID.");
-            setIsLoading(false);
-            return;
-          }
-          const data = await getUserDetailedProfile(numericUserId);
-          setUserDetail(data);
-        } catch (err: any) {
-          setError(err.response?.data?.detail || err.message || "Failed to load user profile.");
-          console.error("Error fetching user profile:", err);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      fetchUserProfile();
+      const numericUserId = parseInt(userId, 10);
+      if (isNaN(numericUserId)) {
+        setError("Invalid user ID.");
+        setIsLoading(false);
+        return;
+      }
+      
+      const user = mockUsers.find(u => u.id === numericUserId);
+
+      if (user) {
+        // We need to construct a UserDetail object from the mock User object.
+        // This might require combining data from different parts of mock-data or just mapping fields.
+        // For now, let's assume the mockUser has a compatible structure or we can create one.
+        const userProfile = user.profile;
+        const userDetailData: UserDetail = {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          profile: userProfile,
+          company: user.company,
+          startup: user.startup,
+          spaces: user.spaces,
+        };
+        setUserDetail(userDetailData);
+      } else {
+        setError("User not found.");
+      }
     } else {
       setError("User ID is missing.");
-      setIsLoading(false);
     }
+    setIsLoading(false);
   }, [userId]);
 
   if (isLoading) {
@@ -76,4 +85,4 @@ export default function UserProfilePage() {
       <UserProfileDisplay userDetail={userDetail} />
     </div>
   );
-} 
+}

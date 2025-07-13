@@ -1,27 +1,28 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { companySchema, CompanyFormData } from '@/lib/schemas';
-
-import { getCompany, updateMyCompany } from '@/lib/api/organizations';
-import { Company } from '@/types/organization';
+import { Company } from '@/types/company';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import CompanyProfileDisplay from '@/components/organization/CompanyProfileDisplay';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Edit } from 'lucide-react';
-import AuthenticatedLayout from '@/components/layout/AuthenticatedLayout';
+import { mockCompanies, mockStartups } from '@/lib/mock-data';
 
-const CompanyProfilePage = () => {
+const allCompanies = [...mockCompanies, ...mockStartups];
+
+const CompanyProfilePageContent = () => {
   const params = useParams();
-  const { user, refreshCurrentUser } = useAuthStore();
+  const { user } = useAuthStore();
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const companyId = Number(params.id);
 
@@ -29,99 +30,90 @@ const CompanyProfilePage = () => {
     resolver: zodResolver(companySchema),
   });
 
-  const { getValues, reset } = form;
+  const { reset } = form;
 
-  const fetchCompany = useCallback(async () => {
-    if (isNaN(companyId)) { setLoading(false); return; }
-    try {
-      setLoading(true);
-      const data = await getCompany(companyId);
-      setCompany(data);
-
-      const parseStringToArray = (value: string | string[] | null | undefined): string[] => {
-        if (Array.isArray(value)) return value;
-        if (typeof value === 'string') return value.split(',').map(s => s.trim()).filter(Boolean);
-        return [];
-      };
-
-      reset({
-        name: data.name,
-        website: data.website || '',
-        industry_focus: parseStringToArray(data.industry_focus),
-        description: data.description || '',
-        looking_for: parseStringToArray(data.looking_for),
-      });
-    } catch (e) {
-      const error = e as Error;
-      toast.error(`Failed to fetch company profile: ${error.message}`);
-    } finally {
+  const fetchCompany = useCallback(() => {
+    if (isNaN(companyId)) {
+      setError("Invalid company ID.");
       setLoading(false);
+      return;
     }
+    
+    const foundCompany = allCompanies.find(c => c.id === companyId);
+
+    if (foundCompany) {
+      setCompany(foundCompany);
+      reset({
+        name: foundCompany.name,
+        website: foundCompany.website || '',
+        industry_focus: foundCompany.industry_focus || [],
+        description: foundCompany.description || '',
+        looking_for: foundCompany.looking_for || [],
+      });
+    } else {
+      setError("Company not found.");
+    }
+    setLoading(false);
   }, [companyId, reset]);
 
   useEffect(() => {
     fetchCompany();
   }, [fetchCompany]);
 
-  const handleSave = async (field: keyof CompanyFormData) => {
-    try {
-      const value = getValues(field);
-      console.log('--- Saving Company Profile ---');
-      console.log(`Field: ${field}`);
-      console.log('Value being sent to backend:', value);
+  const handleSave = (field: keyof CompanyFormData, value: string | string[]) => {
+    const toastId = toast.loading("Saving changes...");
+    
+    setTimeout(() => {
+      if (company) {
+        const updatedCompany = { ...company, [field]: value };
+        setCompany(updatedCompany);
+        
+        // Note: This only updates the local state for the demo.
+        const companyIndex = allCompanies.findIndex(c => c.id === company.id);
+        if (companyIndex !== -1) {
+          allCompanies[companyIndex] = updatedCompany;
+        }
 
-      const payload = { [field]: value };
-      const updatedCompany = await updateMyCompany(payload);
-      
-      console.log('Response from backend (updated company):', updatedCompany);
-
-      setCompany(updatedCompany);
-      toast.success('Profile updated!');
-      
-      // The fetchCompany() call here might be causing a race condition
-      // where we fetch the data before the update has fully propagated in the backend db.
-      // The updateMyCompany should return the updated data, so we can rely on that for the UI update.
-      // A user page refresh will be the ultimate test of persistence.
-      // fetchCompany();
-
-      // Also refresh the user's auth context if their own company name changed
-      if (user?.company_id === companyId) {
-        await refreshCurrentUser();
+        toast.success('Profile updated successfully!', { id: toastId });
+        setIsEditing(false); // Exit editing mode for the specific field
+      } else {
+        toast.error('Failed to update profile.', { id: toastId });
       }
-
-    } catch (e) {
-      const error = e as Error;
-      console.error('--- Error Saving Company Profile ---');
-      console.error(`Failed to update field: ${field}`);
-      console.error(error);
-      toast.error(`Failed to update profile: ${error.message}`);
-    }
+    }, 1000);
   };
 
-  const canEdit = user?.role === 'CORP_ADMIN' && user?.company_id === companyId;
+  const canEdit = (user?.role === 'CORP_ADMIN' || user?.role === 'STARTUP_ADMIN') && user?.company_id === companyId;
 
   if (loading) {
-    return <AuthenticatedLayout><Skeleton className="h-64 w-full" /></AuthenticatedLayout>;
+    return <Skeleton className="h-64 w-full" />;
+  }
+
+  if (error) {
+    return <div className="text-center py-10">{error}</div>;
   }
 
   if (!company) {
-    return <AuthenticatedLayout><div>Company not found.</div></AuthenticatedLayout>;
+    return <div>Company not found.</div>;
   }
 
   return (
-    <AuthenticatedLayout>
-        <div className="container mx-auto p-4 max-w-4xl">
-             <div className="flex justify-end mb-4">
-                {canEdit && (
-                <Button onClick={() => setIsEditing(!isEditing)}>
-                    <Edit className="mr-2 h-4 w-4" /> {isEditing ? 'Cancel' : 'Edit Profile'}
-                </Button>
-                )}
-            </div>
-            <CompanyProfileDisplay company={company} isEditing={isEditing} form={form} onSave={handleSave} />
-        </div>
-    </AuthenticatedLayout>
+    <div className="container mx-auto p-4 max-w-4xl">
+      <div className="flex justify-end mb-4">
+        {canEdit && (
+          <Button onClick={() => setIsEditing(!isEditing)}>
+            <Edit className="mr-2 h-4 w-4" /> {isEditing ? 'Cancel' : 'Edit Profile'}
+          </Button>
+        )}
+      </div>
+      <CompanyProfileDisplay company={company} isEditing={isEditing} form={form} onSave={handleSave} />
+    </div>
   );
 };
+
+const CompanyProfilePage = () => (
+  <Suspense fallback={<Skeleton className="h-screen w-full" />}>
+    <CompanyProfilePageContent />
+  </Suspense>
+);
 
 export default CompanyProfilePage;

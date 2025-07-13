@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
-import { directInviteStartupMember } from '@/lib/api/invitations';
 import { getMyStartup } from '@/lib/api/organizations';
 import { StartupDirectInviteCreate } from '@/types/auth';
 import { Startup } from '@/types/organization';
@@ -58,34 +57,18 @@ const DirectInviteMemberForm = ({ onInvitationSent }: DirectInviteMemberFormProp
   }, []);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user?.startup_id) {
-        toast.error("Error", {
-          description: "You are not associated with a startup.",
-        });
-        return;
-    }
-    setIsSubmitting(true);
-    try {
-      const payload: StartupDirectInviteCreate = {
-        email: values.email,
-        full_name: values.full_name || null,
-        startup_id: user.startup_id,
-      };
-      await directInviteStartupMember(payload);
-      toast.success("Invitation Sent", {
-        description: `An invitation has been sent to ${values.email}.`,
-      });
-      form.reset();
-      onInvitationSent(); // This will refetch the list of members/invitations on the parent dashboard
-    } catch (error: any) {
-      console.error(error);
-      const errorMessage = error.response?.data?.detail || "An unexpected error occurred.";
-      toast.error("Failed to Send Invitation", {
-        description: errorMessage,
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Simulate sending an invitation
+    console.log('Simulating invitation for:', {
+      email: values.email,
+      entityId: user?.startup_id,
+      role: 'STARTUP_MEMBER', // Mock role
+    });
+
+    toast.success("Invitation Sent", {
+      description: `An invitation has been sent to ${values.email}.`,
+    });
+    form.reset();
+    onInvitationSent(); // This will refetch the list of members/invitations on the parent dashboard
   }
   
   const allocated = startup?.member_slots_allocated ?? 0;
@@ -146,4 +129,4 @@ const DirectInviteMemberForm = ({ onInvitationSent }: DirectInviteMemberFormProp
   );
 };
 
-export default DirectInviteMemberForm; 
+export default DirectInviteMemberForm;

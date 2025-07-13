@@ -2,17 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getSpaceProfile } from '@/lib/api/spaces';
-import { SpaceProfile as SpaceProfileType } from '@/types/space';
+import { Space } from '@/types/space';
 import { PhotoGallery } from '@/components/corp-admin/space-profile/PhotoGallery';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, Mail, CheckCircle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useAuthStore } from '@/store/authStore';
-import { expressInterest, getInterestStatus } from '@/lib/api/interests';
 import { toast } from 'sonner';
-import { getMe } from '@/lib/api/users';
+import { mockSpaces, mockUsers } from '@/lib/mock-data';
 import { UserDetail } from '@/types/auth';
+import { UserRole } from '@/types/enums';
 
 const SpaceProfilePage = () => {
     const params = useParams();
@@ -20,64 +19,73 @@ const SpaceProfilePage = () => {
     const spaceId = Number(params.id);
     const { user: authUser } = useAuthStore();
 
-    const [profile, setProfile] = useState<SpaceProfileType | null>(null);
+    const [profile, setProfile] = useState<Space | null>(null);
     const [currentUser, setCurrentUser] = useState<UserDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [hasExpressedInterest, setHasExpressedInterest] = useState(false);
 
     useEffect(() => {
-        if (isNaN(spaceId)) return;
+        if (isNaN(spaceId)) {
+            setLoading(false);
+            return;
+        }
         
-        const fetchProfileAndUser = async () => {
-            try {
-                const profileData = await getSpaceProfile(spaceId.toString());
-                setProfile(profileData);
+        setLoading(true);
+        const spaceData = mockSpaces.find(s => s.id === spaceId);
+        setProfile(spaceData || null);
 
-                if (authUser && (authUser.role === 'FREELANCER' || authUser.role === 'STARTUP_ADMIN')) {
-                    const status = await getInterestStatus(spaceId);
-                    setHasExpressedInterest(status.has_expressed_interest);
-                    
-                    const me = await getMe();
-                    setCurrentUser(me);
-                }
-            } catch (error) {
-                console.error("Failed to fetch space profile or user details:", error);
-                toast.error("Failed to load page data. Please try again.");
-            } finally {
-                setLoading(false);
+        if (authUser) {
+            const user = mockUsers.find(u => u.id === authUser.id);
+            if(user) {
+                const userDetailData: UserDetail = {
+                    id: user.id,
+                    email: user.email,
+                    role: user.role,
+                    is_active: user.is_active,
+                    is_verified: user.is_verified,
+                    profile: user.profile!,
+                    company: user.company || null,
+                    startup: user.startup,
+                    spaces: user.spaces,
+                    interests: [],
+                    company_id: user.company?.id,
+                };
+                setCurrentUser(userDetailData);
             }
-        };
+        }
+        
+        // Simulate checking interest status
+        if (authUser && (authUser.role === UserRole.FREELANCER || authUser.role === UserRole.STARTUP_ADMIN)) {
+            const interestExpressed = localStorage.getItem(`interest_${spaceId}_${authUser.id}`);
+            setHasExpressedInterest(!!interestExpressed);
+        }
 
-        fetchProfileAndUser();
+        setLoading(false);
     }, [spaceId, authUser]);
 
     const handleExpressInterest = async () => {
-        try {
-            await expressInterest(spaceId);
-            toast.success("Your interest has been expressed!");
-            setHasExpressedInterest(true);
-        } catch (error: any) {
-            toast.error(error.response?.data?.detail || "Failed to express interest.");
-        }
+        toast.success("Your interest has been expressed!");
+        localStorage.setItem(`interest_${spaceId}_${authUser?.id}`, 'true');
+        setHasExpressedInterest(true);
     };
 
     const isAlreadyInSpace = 
-        (currentUser?.role === 'FREELANCER' && currentUser.space_id === spaceId) ||
-        (currentUser?.role === 'STARTUP_ADMIN' && currentUser.startup?.space_id === spaceId);
+        (currentUser?.role === UserRole.FREELANCER && currentUser.spaces?.some(s => s.id === spaceId)) ||
+        (currentUser?.role === UserRole.STARTUP_ADMIN && currentUser.startup?.space_id === spaceId);
 
     const canExpressInterest = authUser && 
-                               (authUser.role === 'FREELANCER' || authUser.role === 'STARTUP_ADMIN') &&
+                               (authUser.role === UserRole.FREELANCER || authUser.role === UserRole.STARTUP_ADMIN) &&
                                !isAlreadyInSpace;
 
     if (loading) {
-        return <div>Loading...</div>;
+        return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
     }
 
     if (!profile) {
-        return <div>Space not found.</div>;
+        return <div className="flex justify-center items-center min-h-screen">Space not found.</div>;
     }
 
-    const canEdit = authUser?.role === 'CORP_ADMIN' && authUser?.company_id === profile.company?.id;
+    const canEdit = authUser?.role === UserRole.CORP_ADMIN && authUser?.company?.id === profile.company_id;
 
     return (
         <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -104,61 +112,58 @@ const SpaceProfilePage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="md:col-span-2">
-                    <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">{profile.name}</h1>
-                    <p className="mt-2 text-lg text-gray-500">{profile.headline}</p>
+                    <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-50 sm:text-4xl">{profile.name}</h1>
+                    <p className="mt-2 text-lg text-gray-600 dark:text-gray-400">{profile.headline}</p>
+                    <p className="mt-4 text-base text-gray-500 dark:text-gray-300">{profile.address}</p>
+                    
+                    <Separator className="my-6" />
+
+                    <div>
+                        <h2 className="text-2xl font-semibold mb-4">About the Space</h2>
+                        <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{profile.neighborhood_description}</p>
+                    </div>
 
                     <Separator className="my-6" />
 
-                    <div className="space-y-6">
-                        <div>
-                            <h2 className="text-xl font-semibold">About this space</h2>
-                            <p className="mt-2 text-gray-600 prose max-w-none">{profile.description}</p>
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-semibold">Amenities</h2>
-                            <ul className="mt-2 grid grid-cols-2 gap-2">
-                                {profile.amenities?.map((amenity, index) => (
-                                    <li key={index} className="flex items-center text-gray-600">
-                                        <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                                        {amenity}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-semibold">House Rules</h2>
-                            <p className="mt-2 text-gray-600 prose max-w-none">{profile.house_rules}</p>
-                        </div>
+                    <div>
+                        <h2 className="text-2xl font-semibold mb-4">Key Highlights</h2>
+                        <ul className="list-disc list-inside space-y-2">
+                            {profile.key_highlights.map((highlight, index) => (
+                                <li key={index} className="text-gray-700 dark:text-gray-300">{highlight}</li>
+                            ))}
+                        </ul>
                     </div>
                 </div>
 
                 <div className="md:col-span-1">
-                    <div className="sticky top-24">
-                        <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-6">
-                            <h3 className="text-lg font-medium leading-6 text-gray-900">Interested in this space?</h3>
-                            {canExpressInterest ? (
-                                <div className="mt-4">
-                                    {hasExpressedInterest ? (
-                                        <Button className="w-full" disabled>
-                                            <CheckCircle className="mr-2 h-4 w-4" /> Interest Expressed
-                                        </Button>
-                                    ) : (
-                                        <Button className="w-full" onClick={handleExpressInterest}>
-                                            <Mail className="mr-2 h-4 w-4" /> Express Interest
-                                        </Button>
-                                    )}
+                    <div className="sticky top-24 p-6 bg-gray-50 dark:bg-gray-800 rounded-lg shadow">
+                        <h2 className="text-xl font-bold mb-4">Interested?</h2>
+                        {canExpressInterest ? (
+                            hasExpressedInterest ? (
+                                <div className="flex items-center text-green-600">
+                                    <CheckCircle className="mr-2 h-5 w-5" />
+                                    <span>Interest Expressed</span>
                                 </div>
                             ) : (
-                                isAlreadyInSpace && (
-                                    <p className="mt-4 text-sm font-medium text-gray-700">
-                                        You are already a member of this space.
-                                    </p>
-                                )
-                            )}
-                            <p className="mt-4 text-sm text-gray-500">
-                                Expressing interest will notify the space admin, who can then review your profile and start a conversation.
+                                <Button onClick={handleExpressInterest} className="w-full">
+                                    <Mail className="mr-2 h-4 w-4" /> Express Interest
+                                </Button>
+                            )
+                        ) : (
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                {isAlreadyInSpace ? "You are already a member of this space." : "Log in as a freelancer or startup to express interest."}
                             </p>
-                        </div>
+                        )}
+                        <Separator className="my-4" />
+                        <h3 className="font-semibold mb-2">Amenities</h3>
+                        <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                            {profile.amenities.map((amenity, index) => (
+                                <li key={index}>{amenity}</li>
+                            ))}
+                        </ul>
+                        <Separator className="my-4" />
+                        <h3 className="font-semibold mb-2">Opening Hours</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{profile.opening_hours}</p>
                     </div>
                 </div>
             </div>

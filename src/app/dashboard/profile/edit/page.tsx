@@ -9,9 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from 'sonner';
-import { UserProfile, UserProfileUpdateRequest } from '@/types/userProfile';
+import { UserProfile } from '@/types/userProfile';
 import { ContactVisibility } from '@/types/enums';
-import { getMyProfile, updateMyProfile, uploadMyProfilePicture, uploadCoverPhoto } from '@/lib/api/users';
 import { Edit } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
@@ -19,6 +18,7 @@ import { Separator } from '@/components/ui/separator';
 import { EditableSection } from '@/components/corp-admin/space-profile/EditableSection';
 import { TagInput } from '@/components/ui/TagInput';
 import { ProfileSidebar } from '@/components/profile/ProfileSidebar';
+import { mockUsers } from '@/lib/mock-data';
 
 const profileFormSchema = z.object({
   title: z.string().max(100, "Title too long").optional().nullable(),
@@ -36,8 +36,7 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 const EditProfilePage = () => {
   const router = useRouter();
-  const user = useAuthStore((state) => state.user);
-  const authIsLoading = useAuthStore((state) => state.isLoading);
+  const { user, isLoading: authIsLoading } = useAuthStore((state) => ({ user: state.user, isLoading: state.isLoading }));
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -54,99 +53,79 @@ const EditProfilePage = () => {
     }
   });
 
-  const fetchProfile = useCallback(async () => {
-    setIsPageLoading(true);
-    try {
-      const fetchedProfile = await getMyProfile();
-      setProfile(fetchedProfile);
-      reset({
-        title: fetchedProfile.title || '',
-        bio: fetchedProfile.bio || '',
-        contact_info_visibility: fetchedProfile.contact_info_visibility || undefined,
-        skills_expertise: fetchedProfile.skills_expertise || [],
-        industry_focus: fetchedProfile.industry_focus || [],
-        project_interests_goals: fetchedProfile.project_interests_goals || '',
-        collaboration_preferences: fetchedProfile.collaboration_preferences || [],
-        tools_technologies: fetchedProfile.tools_technologies || [],
-        linkedin_profile_url: fetchedProfile.linkedin_profile_url || '',
-      });
-    } catch (e) {
-      const error = e as Error;
-      toast.error(`Failed to load your profile data: ${error.message}`);
-      router.push('/dashboard');
-    } finally {
-      setIsPageLoading(false);
+  const fetchProfile = useCallback(() => {
+    if (user) {
+      const userProfile = mockUsers.find(u => u.id === user.id)?.profile;
+      if (userProfile) {
+        setProfile(userProfile);
+        reset({
+          title: userProfile.title || '',
+          bio: userProfile.bio || '',
+          contact_info_visibility: userProfile.contact_info_visibility || undefined,
+          skills_expertise: userProfile.skills_expertise || [],
+          industry_focus: userProfile.industry_focus || [],
+          project_interests_goals: userProfile.project_interests_goals || '',
+          collaboration_preferences: userProfile.collaboration_preferences || [],
+          tools_technologies: userProfile.tools_technologies || [],
+          linkedin_profile_url: userProfile.linkedin_profile_url || '',
+        });
+      } else {
+        toast.error("Could not find your profile data.");
+        router.push('/dashboard');
+      }
     }
-  }, [reset, router]);
+    setIsPageLoading(false);
+  }, [user, reset, router]);
 
   useEffect(() => {
-    if (!authIsLoading && user) {
-      fetchProfile();
-    } else if (!authIsLoading && !user) {
-      router.push('/login');
+    if (!authIsLoading) {
+      if (user) {
+        fetchProfile();
+      } else {
+        router.push('/login');
+      }
     }
   }, [user, authIsLoading, fetchProfile, router]);
   
-  const handleProfilePictureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      try {
-        const updatedProfile = await uploadMyProfilePicture(e.target.files[0]);
-        setProfile(updatedProfile);
+  const handleProfilePictureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0] && profile) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfile({ ...profile, profile_picture_url: reader.result as string });
         toast.success("Profile picture updated!");
-      } catch (e) {
-        const error = e as Error;
-        toast.error(`Failed to upload profile picture: ${error.message}`);
-      }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleCoverPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      try {
-        const updatedProfile = await uploadCoverPhoto(e.target.files[0]);
-        setProfile(updatedProfile);
+  const handleCoverPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0] && profile) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfile({ ...profile, cover_photo_url: reader.result as string });
         toast.success("Cover photo updated!");
-      } catch (e) {
-        const error = e as Error;
-        toast.error(`Failed to upload cover photo: ${error.message}`);
-      }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleSave = async (fields: (keyof ProfileFormValues)[]) => {
-    if (!user) {
-      toast.error("User not authenticated.");
+  const handleSave = (fields: (keyof ProfileFormValues)[]) => {
+    if (!profile) {
+      toast.error("Profile not loaded.");
       return;
     }
-    try {
-      const dataToSave: Partial<UserProfileUpdateRequest> = {};
-      fields.forEach(field => {
-        const value = getValues(field);
-        (dataToSave as Record<string, unknown>)[field] = value;
-      });
+    
+    const updatedProfile: UserProfile = { ...profile };
+    fields.forEach(field => {
+      const value = getValues(field);
+      (updatedProfile as Record<string, unknown>)[field] = value;
+    });
 
-      console.log('--- Saving User Profile ---');
-      console.log('Fields to save:', fields);
-      console.log('Data being sent to backend:', dataToSave);
-
-      const updatedProfile = await updateMyProfile(dataToSave);
-
-      console.log('Response from backend (updated profile):', updatedProfile);
-
-      setProfile(updatedProfile);
-      toast.success("Profile Updated");
-      // We will not redirect immediately to observe the state.
-      // The user can navigate away manually.
-      // router.push(`/users/${user.id}`);
-    } catch (e) {
-      const error = e as Error & { response?: { data?: { detail?: string } } };
-      const msg = error.response?.data?.detail || error.message || "Failed to update profile.";
-      console.error('--- Error Saving User Profile ---');
-      console.error('Fields:', fields);
-      console.error('Data sent:', getValues());
-      console.error(error);
-      toast.error(msg);
-    }
+    setProfile(updatedProfile);
+    toast.success("Profile Updated");
+    setIsEditing(false);
   };
 
   if (isPageLoading || authIsLoading) {

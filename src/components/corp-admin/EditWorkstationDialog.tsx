@@ -10,22 +10,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { WorkstationDetail } from '@/types/space';
-import { updateWorkstationDetails } from '@/lib/api/corp-admin';
+import { Workstation } from '@/types/workstation';
 
 interface EditWorkstationDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  workstation: WorkstationDetail | null;
-  spaceId: number;
-  onEditSuccess: () => void;
+  workstation: Workstation | null;
+  onEditSuccess: (updatedWorkstation: Workstation) => void;
 }
 
 export const EditWorkstationDialog: React.FC<EditWorkstationDialogProps> = ({
   isOpen,
   onOpenChange,
   workstation,
-  spaceId,
   onEditSuccess,
 }) => {
   const [name, setName] = useState('');
@@ -44,10 +41,16 @@ export const EditWorkstationDialog: React.FC<EditWorkstationDialogProps> = ({
       return;
     }
     setIsSaving(true);
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     try {
-      await updateWorkstationDetails(spaceId.toString(), workstation.id, { name });
+      const updatedWorkstation = {
+        ...workstation,
+        name,
+      };
       toast.success('Workstation updated successfully!');
-      onEditSuccess();
+      onEditSuccess(updatedWorkstation);
+      onOpenChange(false);
     } catch (error) {
       console.error('Failed to update workstation:', error);
       toast.error('Failed to update workstation. Please try again.');
@@ -55,6 +58,8 @@ export const EditWorkstationDialog: React.FC<EditWorkstationDialogProps> = ({
       setIsSaving(false);
     }
   };
+
+  if (!workstation) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -86,4 +91,4 @@ export const EditWorkstationDialog: React.FC<EditWorkstationDialogProps> = ({
       </DialogContent>
     </Dialog>
   );
-}; 
+};

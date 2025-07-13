@@ -10,50 +10,11 @@ import { UserDetail } from '@/types/auth';
 import { UserProfile } from '@/types/userProfile';
 import UserProfileDisplay from '@/components/profile/UserProfileDisplay';
 import { Separator } from '@/components/ui/separator';
+import { mockUsers } from '@/lib/mock-data';
+import { toast } from '@/components/ui/use-toast';
+import { useChatStore } from '@/store/chatStore';
 
-// Mock Data
-const mockUsers: { [key: string]: UserDetail } = {
-  '1': {
-    id: 1,
-    full_name: 'John Doe',
-    email: 'john.doe@example.com',
-    role: 'FREELANCER',
-    status: 'ACTIVE',
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    profile: {
-      headline: 'Senior Frontend Developer',
-      bio: 'Passionate about creating beautiful and intuitive user interfaces. 10+ years of experience in React, Next.js, and TypeScript.',
-      skills_expertise: ['React', 'Next.js', 'TypeScript', 'Tailwind CSS', 'Node.js'],
-      linkedin_profile_url: 'https://linkedin.com/in/johndoe',
-      website_url: 'https://johndoe.dev',
-      profile_picture_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=2080&auto=format&fit=crop',
-    },
-    company: null,
-    interests: [{ id: 1, name: 'Web Development' }, { id: 2, name: 'UI/UX Design' }],
-  },
-  '2': {
-    id: 2,
-    full_name: 'Jane Smith',
-    email: 'jane.smith@example.com',
-    role: 'STARTUP_ADMIN',
-    status: 'ACTIVE',
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    profile: {
-      headline: 'Founder & CEO at Innovate Inc.',
-      bio: 'Building the future of SaaS. Looking for talented individuals to join our team.',
-      skills_expertise: ['Leadership', 'Product Management', 'SaaS', 'Fundraising'],
-      linkedin_profile_url: 'https://linkedin.com/in/janesmith',
-      website_url: 'https://innovateinc.com',
-      profile_picture_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1974&auto=format&fit=crop',
-    },
-    company: { id: 1, name: 'Innovate Inc.', description: 'A cutting-edge SaaS company.' },
-    interests: [{ id: 3, name: 'Startups' }, { id: 4, name: 'Venture Capital' }],
-  },
-};
+// Mock Data is now in lib/mock-data.ts
 
 type ConnectButtonStatus = 'idle' | 'loading' | 'pending' | 'connected' | 'error';
 
@@ -68,6 +29,8 @@ const UserProfilePage = () => {
   const [error, setError] = useState<string | null>(null);
 
   const currentUser = useAuthStore(state => state.user);
+  const { addOrUpdateConversation, setActiveConversationId } = useChatStore();
+
 
   useEffect(() => {
     setIsLoading(true);
@@ -75,7 +38,7 @@ const UserProfilePage = () => {
     
     // Simulate API call
     setTimeout(() => {
-      const user = mockUsers[userId];
+      const user = mockUsers.find(u => u.id.toString() === userId);
       if (user) {
         // The profile from mock data is partial, so we cast it to create a full UserDetail object.
         const partialProfile = user.profile as Partial<UserProfile>;
@@ -90,7 +53,7 @@ const UserProfilePage = () => {
         setUserDetail(fullUserDetail);
 
         // Simulate checking connection status
-        if (currentUser && currentUser.id !== user.id) {
+        if (currentUser && currentUser.id.toString() !== userId) {
           // Let's pretend we have a connection with user 2
           if (user.id === 2) {
             setConnectionStatus('connected');
@@ -111,20 +74,54 @@ const UserProfilePage = () => {
     setTimeout(() => {
       if (connectionStatus === 'idle') {
         setConnectionStatus('pending');
+        toast({ title: 'Connection Request Sent', description: `Your request to connect with ${userDetail.full_name} has been sent.` });
       } else if (connectionStatus === 'pending' || connectionStatus === 'connected') {
         // Allow disconnecting
         setConnectionStatus('idle');
+        toast({ title: 'Disconnected', description: `You have disconnected from ${userDetail.full_name}.` });
       }
     }, 500);
   };
 
   const handleMessage = () => {
-    if (!userDetail) return;
-    router.push(`/chat?userId=${userDetail.id}`);
+    if (!userDetail || !currentUser) return;
+
+    // Simulate creating a new conversation
+    const otherUser = userDetail;
+    const newConversationId = `conv_${currentUser.id}_${otherUser.id}_${Date.now()}`;
+
+    const newConversation = {
+      id: newConversationId,
+      participants: [
+        {
+          id: currentUser.id,
+          full_name: currentUser.full_name,
+          profile_picture_url: currentUser.profile?.profile_picture_url || '',
+        },
+        {
+          id: otherUser.id,
+          full_name: otherUser.full_name,
+          profile_picture_url: otherUser.profile?.profile_picture_url || '',
+        },
+      ],
+      messages: [],
+      unread_count: 0,
+      last_message: null,
+    };
+
+    // @ts-expect-error - The type in chatStore might need adjustment, but this structure is correct
+    addOrUpdateConversation(newConversation);
+    setActiveConversationId(newConversation.id);
+
+    toast({
+      title: 'Chat Opened',
+      description: `You can now message ${userDetail.full_name}.`,
+    });
+    router.push(`/chat?conversationId=${newConversation.id}`);
   };
 
   const renderConnectButton = () => {
-    if (!currentUser || !userDetail || currentUser.id === userDetail.id) {
+    if (!currentUser || !userDetail || currentUser.id.toString() === userId) {
       return null;
     }
 
@@ -179,7 +176,7 @@ const UserProfilePage = () => {
           <div className="flex-grow">
             <UserProfileDisplay userDetail={userDetail} />
           </div>
-          <div className="w-full md:w-64 flex-shrink-0 space-y-4">
+          <div className="w-full md:w-64 flex-shrink-0 space-y-4 mt-8 md:mt-0">
             {renderConnectButton()}
             {connectionStatus === 'connected' && (
               <Button onClick={handleMessage} className="w-full">

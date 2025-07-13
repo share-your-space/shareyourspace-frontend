@@ -1,11 +1,10 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Space } from '@/types/space';
-import { getCompanySpaces } from '@/lib/api/corp-admin';
 import { UserRole } from '@/types/enums';
 import { useAuthStore } from '@/store/authStore';
-import axios from 'axios';
+import { mockSpaces } from '@/lib/mock-data';
 
 interface SpaceContextType {
   spaces: Space[];
@@ -15,7 +14,7 @@ interface SpaceContextType {
   loading: boolean;
   setLoading: (loading: boolean) => void;
   showOnboarding: boolean;
-  refetchSpaces: () => Promise<void>;
+  refetchSpaces: () => void;
 }
 
 const SpaceContext = createContext<SpaceContextType | undefined>(undefined);
@@ -27,34 +26,33 @@ export const SpaceProvider = ({ children }: { children: React.ReactNode }) => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const user = useAuthStore((state) => state.user);
 
-  const refetchSpaces = useCallback(async () => {
-    if (!user || user.role !== UserRole.CORP_ADMIN) {
+  const refetchSpaces = useCallback(() => {
+    if (!user || user.role !== UserRole.CORP_ADMIN || !user.company_id) {
       setSpaces([]);
+      setLoading(false);
+      setShowOnboarding(user?.role === UserRole.CORP_ADMIN);
       return;
     }
+
     setLoading(true);
-    try {
-      const companySpaces = await getCompanySpaces();
+    setTimeout(() => {
+      const companySpaces = mockSpaces.filter(space => space.company_id === user.company_id);
       setSpaces(companySpaces);
       setShowOnboarding(companySpaces.length === 0);
-      // If there's no selection or the current selection is invalid, select the first one.
+
       const currentSelectionIsValid = companySpaces.some(s => s.id.toString() === selectedSpaceId);
       if (companySpaces.length > 0 && !currentSelectionIsValid) {
         setSelectedSpaceId(companySpaces[0].id.toString());
       } else if (companySpaces.length === 0) {
         setSelectedSpaceId(null);
       }
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        setShowOnboarding(true);
-        setSpaces([]);
-      } else {
-        console.error("Failed to fetch company spaces:", error);
-      }
-    } finally {
       setLoading(false);
-    }
-  }, [user]);
+    }, 500); // Simulate network delay
+  }, [user, selectedSpaceId]);
+
+  useEffect(() => {
+    refetchSpaces();
+  }, [refetchSpaces]);
 
   const selectedSpace = useMemo(() => {
     if (!selectedSpaceId) return null;

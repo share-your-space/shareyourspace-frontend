@@ -2,8 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { apiClient } from '@/lib/api/base';
-import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LucideIcon } from "lucide-react";
@@ -12,16 +10,61 @@ import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
-import { PaginatedActivityResponse, Activity } from '@/types/activity';
+import { Activity } from '@/types/activity';
 
-interface DashboardStats {
-  total_spaces: number;
-  total_workstations: number;
-  occupied_workstations: number;
-  total_tenants: number;
-  pending_invites: number;
-  active_bookings: number;
-}
+// Mock Data
+const mockDashboardStats = {
+  total_spaces: 2,
+  total_workstations: 150,
+  occupied_workstations: 95,
+  total_tenants: 80,
+  pending_invites: 5,
+  active_bookings: 12,
+};
+
+const mockActivity: Activity[] = [
+  {
+    id: '1',
+    type: 'USER_JOINED',
+    description: 'John Doe joined Innovate Inc.',
+    timestamp: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+    user_avatar_url: 'https://i.pravatar.cc/150?u=john',
+    link: '/users/1',
+  },
+  {
+    id: '2',
+    type: 'SPACE_CREATED',
+    description: 'A new space "Creative Corner" was added.',
+    timestamp: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+    user_avatar_url: 'https://i.pravatar.cc/150?u=admin',
+    link: '/company/1/space-profile/3',
+  },
+  {
+    id: '3',
+    type: 'BOOKING_CONFIRMED',
+    description: 'Jane Smith booked a workstation at TechPark.',
+    timestamp: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+    user_avatar_url: 'https://i.pravatar.cc/150?u=jane',
+    link: '/company/1/bookings',
+  },
+  {
+    id: '4',
+    type: 'MEMBER_INVITED',
+    description: 'Alex Ray was invited to join the company.',
+    timestamp: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
+    user_avatar_url: 'https://i.pravatar.cc/150?u=alex',
+    link: '/company/1/invites',
+  },
+  {
+    id: '5',
+    type: 'TENANT_ADDED',
+    description: 'QuantumLeap AI was added as a tenant to InnovateHub.',
+    timestamp: new Date(Date.now() - 345600000).toISOString(), // 4 days ago
+    user_avatar_url: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=100&auto=format&fit=crop',
+    link: '/companies/2',
+  }
+];
+
 
 const RecentActivity = ({ companyId }: { companyId: string | string[] }) => {
     const [activity, setActivity] = useState<Activity[]>([]);
@@ -29,19 +72,12 @@ const RecentActivity = ({ companyId }: { companyId: string | string[] }) => {
 
     useEffect(() => {
         if (companyId) {
-            const fetchActivity = async () => {
-                setIsLoading(true);
-                try {
-                    const response = await apiClient.get<PaginatedActivityResponse>(`/company/${companyId}/dashboard/activity?limit=7`);
-                    setActivity(response.data.activities);
-                } catch (error) {
-                    toast.error('Failed to load recent activity.');
-                    console.error("Failed to fetch activity:", error);
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-            fetchActivity();
+            setIsLoading(true);
+            setTimeout(() => {
+                // In a real app, you'd filter activity for the specific companyId
+                setActivity(mockActivity);
+                setIsLoading(false);
+            }, 1000);
         }
     }, [companyId]);
 
@@ -112,25 +148,16 @@ const StatCard = ({ title, value, icon: Icon, isLoading, description }: { title:
 const CompanyDashboardOverviewPage = () => {
     const params = useParams();
     const companyId = params.companyId;
-    const [stats, setStats] = useState<DashboardStats | null>(null);
+    const [stats, setStats] = useState<typeof mockDashboardStats | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         if (companyId) {
-            const fetchStats = async () => {
-                setIsLoading(true);
-                try {
-                    // The endpoint is not company-specific in the backend yet, but we call it when a companyId is present.
-                    const response = await apiClient.get<DashboardStats>(`/company/${companyId}/dashboard/stats`);
-                    setStats(response.data);
-                } catch (error) {
-                    toast.error('Failed to load dashboard statistics.');
-                    console.error("Failed to fetch dashboard stats:", error);
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-            fetchStats();
+            setIsLoading(true);
+            setTimeout(() => {
+                setStats(mockDashboardStats);
+                setIsLoading(false);
+            }, 500);
         }
     }, [companyId]);
 

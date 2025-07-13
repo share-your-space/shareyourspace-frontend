@@ -31,7 +31,7 @@ export interface Company {
 }
 
 export interface Startup extends OrganizationBase {
-  id: string;
+  id: number;
   type: "startup"; // Add the type property
   expressed_interest?: boolean;
   mission?: string | null;

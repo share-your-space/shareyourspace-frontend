@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { registerStartupAdmin } from '@/lib/api/auth';
 import { toast } from 'sonner';
 
 const startupAdminSchema = z.object({
@@ -43,31 +42,17 @@ export default function StartupAdminSignUpPage() {
 
   const onSubmit = async (values: StartupAdminFormValues) => {
     setIsLoading(true);
-    const payload = {
-      user_data: {
-        full_name: values.fullName,
-        email: values.email,
-        password: values.password,
-      },
-      startup_data: {
-        name: values.startupName,
-        website: values.startupWebsite,
-        description: values.startupDescription,
-      },
-    };
-    try {
-      await registerStartupAdmin(payload);
-      toast.success('Registration successful!', {
-        description: 'Your startup is now on the waitlist. We will notify you upon approval.',
-      });
-      router.push('/auth/check-email');
-    } catch (error: any) {
-      toast.error('Registration Failed', {
-        description: error.response?.data?.detail || 'An unexpected error occurred.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    console.log('Simulating startup admin registration with values:', values);
+
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    toast.success('Registration successful!', {
+      description: 'Your startup is now on the waitlist. We will notify you upon approval.',
+    });
+    router.push('/login');
+
+    setIsLoading(false);
   };
 
   return (
@@ -123,6 +108,7 @@ export default function StartupAdminSignUpPage() {
               />
               <hr />
               <h3 className="text-lg font-semibold">Startup Information</h3>
+              <div className="grid grid-cols-1 gap-4">
                 <FormField
                   control={form.control}
                   name="startupName"
@@ -162,6 +148,7 @@ export default function StartupAdminSignUpPage() {
                     </FormItem>
                   )}
                 />
+              </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? 'Registering...' : 'Register Startup'}
               </Button>
@@ -171,4 +158,4 @@ export default function StartupAdminSignUpPage() {
       </Card>
     </div>
   );
-} 
+}

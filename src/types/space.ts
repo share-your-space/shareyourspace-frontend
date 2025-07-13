@@ -1,9 +1,9 @@
 // Based on app.schemas.user.User (BasicUser in space.py context)
 export interface BasicUser {
   id: number;
-  full_name: string | null;
-  email: string;
-  role: string; // Consider an Enum if roles are strictly defined on frontend too
+  first_name: string;
+  last_name: string;
+  profile_image_url?: string;
 }
 
 export interface SpaceImage {
@@ -12,28 +12,12 @@ export interface SpaceImage {
   signed_url?: string; // Add this to handle new uploads before they are saved
 }
 
-export interface Space {
-  id: number;
-  name: string;
-  address: string | null;
-  company_id: number | null;
-  total_workstations: number;
-  headline: string | null;
-  amenities: string[] | null;
-  house_rules: string | null;
-  vibe: string | null;
-  opening_hours: Record<string, string> | null;
-  key_highlights: string[] | null;
-  neighborhood_description: string | null;
-  description: string | null;
-  images?: SpaceImage[];
-}
-
 // Based on app.schemas.organization.Startup (BasicStartup in space.py context)
 export interface BasicStartup {
   id: number;
   name: string;
   description?: string;
+  space_id?: number | null;
 }
 
 // Based on app.schemas.space.StartupTenantInfo
@@ -204,20 +188,23 @@ export interface Space {
   id: number;
   name: string;
   address: string | null;
+  amenities: string[];
+  images: SpaceImage[];
   company_id: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
   total_workstations: number;
-  headline: string | null;
-  amenities: string[] | null;
-  house_rules: string | null;
-  vibe: string | null;
-  opening_hours: Record<string, string> | null;
-  key_highlights: string[] | null;
-  neighborhood_description: string | null;
-  description: string | null;
-  images?: SpaceImage[];
+  headline: string;
+  house_rules: string[];
+  vibe: string[];
+  opening_hours: string;
+  key_highlights: string[];
+  neighborhood_description: string;
 }
 
-export interface SpaceProfile {
+// Based on app.schemas.space.SpaceProfileResponse
+export interface SpaceProfileResponse {
   id: number;
   name: string;
   address?: string;

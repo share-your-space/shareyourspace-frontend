@@ -5,8 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { api } from '@/lib/api';
-import { Loader2 } from 'lucide-react';
 
 interface InviteEmployeeCardProps {
     onEmployeeInvited: () => void;
@@ -14,27 +12,18 @@ interface InviteEmployeeCardProps {
 
 export default function InviteEmployeeCard({ onEmployeeInvited }: InviteEmployeeCardProps) {
     const [email, setEmail] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
 
     const handleInvite = async () => {
         if (!email) {
             toast.error("Please enter an email address.");
             return;
         }
-        setIsLoading(true);
-        try {
-            const response = await api.post('/spaces/me/invite-employee', { email });
-            toast.success(response.data.message || "Invitation sent successfully!");
-            setEmail('');
-            onEmployeeInvited();
-        } catch (err: unknown) {
-            const error = err as { response?: { data?: { detail?: string } }, message?: string };
-            toast.error("Failed to send invitation", {
-                description: error.response?.data?.detail || error.message || "An unknown error occurred.",
-            });
-        } finally {
-            setIsLoading(false);
-        }
+        
+        // Simulate sending an invitation
+        console.log(`Simulating invitation for: ${email}`);
+        toast.success(`Invitation sent to ${email}`);
+        setEmail('');
+        onEmployeeInvited();
     };
 
     return (
@@ -52,14 +41,12 @@ export default function InviteEmployeeCard({ onEmployeeInvited }: InviteEmployee
                         placeholder="employee@yourcompany.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        disabled={isLoading}
                     />
-                    <Button onClick={handleInvite} disabled={isLoading}>
-                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    <Button onClick={handleInvite}>
                         Invite
                     </Button>
                 </div>
             </CardContent>
         </Card>
     );
-} 
+}

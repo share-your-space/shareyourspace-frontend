@@ -9,14 +9,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createWorkstation } from '@/lib/api/corp-admin';
 import { toast } from 'sonner';
+import { Workstation } from '@/types/workstation';
 
 interface CreateWorkstationDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   spaceId: number;
-  onCreateSuccess: () => void;
+  onCreateSuccess: (newWorkstation: Workstation) => void;
 }
 
 export const CreateWorkstationDialog: React.FC<CreateWorkstationDialogProps> = ({
@@ -34,10 +34,21 @@ export const CreateWorkstationDialog: React.FC<CreateWorkstationDialogProps> = (
       return;
     }
     setIsCreating(true);
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     try {
-      await createWorkstation(spaceId.toString(), { name: workstationName });
+      const newWorkstation: Workstation = {
+        id: Math.floor(Math.random() * 10000), // Mock ID
+        name: workstationName,
+        status: 'Available',
+        space_id: spaceId,
+        company_id: 0, // Mock company_id
+        user_id: null,
+        user: null,
+      };
       toast.success('Workstation created successfully!');
-      onCreateSuccess();
+      onCreateSuccess(newWorkstation);
+      onOpenChange(false); // Close dialog on success
     } catch (error) {
       console.error('Failed to create workstation:', error);
       toast.error('Failed to create workstation. Please try again.');
@@ -78,4 +89,4 @@ export const CreateWorkstationDialog: React.FC<CreateWorkstationDialogProps> = (
       </DialogContent>
     </Dialog>
   );
-}; 
+};

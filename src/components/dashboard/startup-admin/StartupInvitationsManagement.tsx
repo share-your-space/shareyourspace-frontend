@@ -1,34 +1,38 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { listPendingStartupInvitations, revokeStartupInvitation } from '@/lib/api/invitations';
 import { Invitation, InvitationStatus } from '@/types/auth';
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { format } from 'date-fns'; // For formatting dates
+import { format } from 'date-fns';
+import { mockInvitations } from '@/lib/mock-data';
 
 const StartupInvitationsManagement = () => {
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchInvitations = async () => {
+  const fetchInvitations = () => {
     setIsLoading(true);
     setError(null);
-    try {
-      const response = await listPendingStartupInvitations();
-      setInvitations(response.invitations);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || err.message || "Failed to fetch invitations.";
-      setError(errorMessage);
-      toast.error("Error", {
-        description: errorMessage,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // Simulate API call
+    setTimeout(() => {
+      try {
+        // Filter mock invitations for the startup
+        const startupInvitations = mockInvitations.filter(inv => inv.startup_id === 1);
+        setInvitations(startupInvitations);
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : "Failed to fetch invitations.";
+        setError(errorMessage);
+        toast.error("Error", {
+          description: errorMessage,
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }, 1000);
   };
 
   useEffect(() => {
@@ -36,15 +40,13 @@ const StartupInvitationsManagement = () => {
   }, []);
 
   const handleRevoke = async (invitationId: number) => {
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 500));
     try {
-      await revokeStartupInvitation(invitationId);
       toast.success("Invitation Revoked", {
         description: `The invitation for ${invitations.find(inv => inv.id === invitationId)?.email} has been successfully revoked.`,
       });
-      // Refresh the list: filter out the revoked invitation or mark status and re-filter view
-      setInvitations(prev => prev.map(inv => 
-        inv.id === invitationId ? { ...inv, status: InvitationStatus.REVOKED } : inv
-      ));
+      setInvitations(prev => prev.filter(inv => inv.id !== invitationId));
     } catch (error) {
       console.error("Failed to revoke invitation:", error);
       toast.error("Error", {
@@ -56,7 +58,6 @@ const StartupInvitationsManagement = () => {
   if (isLoading) return <p>Loading pending invitations...</p>;
   if (error) return <p className="text-red-500">Error: {error}</p>;
 
-  // Filter to show only genuinely pending (not expired, not already revoked by another action)
   const pendingInvitationsToDisplay = invitations.filter(
     inv => inv.status === InvitationStatus.PENDING && new Date(inv.expires_at) > new Date()
   );
@@ -114,4 +115,4 @@ const StartupInvitationsManagement = () => {
   );
 };
 
-export default StartupInvitationsManagement; 
+export default StartupInvitationsManagement;

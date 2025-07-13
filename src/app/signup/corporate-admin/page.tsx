@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { registerCorporateAdmin } from '@/lib/api/auth';
 import { toast } from 'sonner';
 
 const corporateAdminSchema = z.object({
@@ -43,31 +42,17 @@ export default function CorporateAdminSignUpPage() {
 
   const onSubmit = async (values: CorporateAdminFormValues) => {
     setIsLoading(true);
-    const payload = {
-      user_data: {
-        full_name: values.fullName,
-        email: values.email,
-        password: values.password,
-      },
-      company_data: {
-        name: values.companyName,
-        website: values.companyWebsite,
-        description: values.companyDescription,
-      },
-    };
-    try {
-      await registerCorporateAdmin(payload);
-      toast.success('Registration successful!', {
-        description: 'A verification email has been sent to your address. Please verify to continue.',
-      });
-      router.push('/auth/check-email');
-    } catch (error: any) {
-      toast.error('Registration Failed', {
-        description: error.response?.data?.detail || 'An unexpected error occurred.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    console.log("Simulating registration with values:", values);
+
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    toast.success('Registration successful!', {
+      description: 'You can now log in with your new account.',
+    });
+    router.push('/login');
+
+    setIsLoading(false);
   };
 
   return (
@@ -171,4 +156,4 @@ export default function CorporateAdminSignUpPage() {
       </Card>
     </div>
   );
-} 
+}

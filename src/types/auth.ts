@@ -1,6 +1,6 @@
 import { BasicStartup, BasicSpace, UserWorkstationInfo, BasicCompany } from "./space";
 import { UserProfile } from "./userProfile"; // Import UserProfile
-import { UserRole as AppUserRole } from './enums';
+import { UserRole } from './enums';
 
 // Corresponds to app.models.invitation.InvitationStatus enum
 export enum InvitationStatus {
@@ -15,20 +15,13 @@ export enum InvitationStatus {
 export interface User {
   id: number;
   email: string;
-  full_name: string;
-  role: AppUserRole;
-  status: string; // Consider using an enum if you have UserStatus on frontend
+  role: UserRole;
   is_active: boolean;
-  created_at: string; // ISO datetime string
-  updated_at: string; // ISO datetime string
-  corporate_admin_id?: number | null;
-  startup_id?: number | null;
-  space_id?: number | null;
-  company_id?: number | null;
+  is_verified: boolean;
   profile?: UserProfile | null;
   company?: BasicCompany | null;
-  interests?: { id: number; name: string }[] | null;
-  profile_picture_url?: string | null;
+  startup?: BasicStartup | null;
+  spaces?: BasicSpace[];
 }
 
 // Corresponds to app.schemas.auth.Token
@@ -52,23 +45,26 @@ export interface UserCreateAcceptInvitation {
 export interface Invitation {
   id: number;
   email: string;
-  startup_id: number;
-  invitation_token: string;
+  role: UserRole;
+  startup_id?: number | null;
+  company_id?: number | null;
+  invitation_token?: string;
   status: InvitationStatus;
   expires_at: string; // ISO datetime string
   created_at: string; // ISO datetime string
-  updated_at: string; // ISO datetime string
-  approved_by_admin_id?: number | null;
+  updated_at?: string; // ISO datetime string
+  approved_by_admin_id?: string | null;
   accepted_at?: string | null; // ISO datetime string
-  accepted_by_user_id?: number | null;
+  accepted_by_user_id?: string | null;
   revoked_at?: string | null; // ISO datetime string
-  revoked_by_admin_id?: number | null;
+  revoked_by_admin_id?: string | null;
   declined_at?: string | null;
   decline_reason?: string | null;
 
   // Optional populated fields from backend schema
   startup?: BasicStartup | null;
-  approved_by_admin?: User | null;
+  company?: BasicCompany | null;
+  approved_by_admin?: { id: string; full_name: string } | null;
   accepted_by_user?: User | null;
   revoked_by_admin?: User | null;
 }
@@ -77,7 +73,11 @@ export interface Invitation {
 export interface UserDetail extends User {
     profile: UserProfile;
     company: BasicCompany | null;
+    startup?: BasicStartup | null;
+    spaces?: BasicSpace[];
     interests: { id: number; name: string }[];
+    space_id?: number | null; // For freelancers
+    company_id?: number | null; // For corporate users
 }
 
 // Corresponds to app.schemas.invitation.InvitationListResponse

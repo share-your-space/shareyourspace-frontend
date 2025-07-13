@@ -1,9 +1,11 @@
 import { ContactVisibility } from './enums';
-import { UserRole } from './auth';
+import { UserRole } from './enums';
 
 export interface UserProfile {
   id: number;
   user_id: number;
+  first_name: string;
+  last_name: string;
   role: UserRole;
   full_name?: string | null;
   title?: string | null;

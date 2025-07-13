@@ -7,16 +7,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
-import { acceptInvitation, getInvitationDetails } from '@/lib/api/invitations';
-import { UserCreateAcceptInvitation, InvitationDeclineRequest, InvitationStatus } from '@/types/auth';
 import { useAuthStore } from '@/store/authStore';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { api } from '@/lib/api';
+import { UserRole } from '@/types/enums';
+import { User } from '@/types/auth';
 
 const acceptFormSchema = z.object({
   full_name: z.string().min(2, { message: "Full name must be at least 2 characters." }),
@@ -27,17 +23,32 @@ const acceptFormSchema = z.object({
   path: ["confirm_password"],
 });
 
-const declineFormSchema = z.object({
-  reason: z.string().optional(),
-});
-
 type AcceptFormValues = z.infer<typeof acceptFormSchema>;
-type DeclineFormValues = z.infer<typeof declineFormSchema>;
+
+// Mock invitation details based on a token
+const mockInvitations: { [key: string]: { email: string; organization_name: string; organization_type: string, role: UserRole, company_id: number, company_name: string } } = {
+  'valid-token-startup': {
+    email: 'new.member@example.com',
+    organization_name: 'QuantumLeap AI',
+    organization_type: 'Startup',
+    role: UserRole.STARTUP_MEMBER,
+    company_id: 2,
+    company_name: 'QuantumLeap AI'
+  },
+  'valid-token-company': {
+    email: 'new.employee@example.com',
+    organization_name: 'Innovate Inc.',
+    organization_type: 'Company',
+    role: UserRole.CORP_MEMBER,
+    company_id: 1,
+    company_name: 'Innovate Inc.'
+  },
+};
 
 function AcceptInvitationContent() {
   const router = useRouter();
   const params = useParams();
-  const { loginWithNewToken } = useAuthStore();
+  const login = useAuthStore((state) => state.login);
   const [invitationDetails, setInvitationDetails] = useState<{ email: string; organization_name: string; organization_type: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,17 +57,12 @@ function AcceptInvitationContent() {
 
   useEffect(() => {
     if (token) {
-      getInvitationDetails(token)
-        .then(response => {
-          setInvitationDetails({
-            email: response.email,
-            organization_name: response.startup?.name || 'the organization',
-            organization_type: 'Startup'
-          });
-        })
-        .catch(err => {
-          setError(err.response?.data?.detail || 'Invalid or expired invitation link.');
-        });
+      const details = mockInvitations[token];
+      if (details) {
+        setInvitationDetails(details);
+      } else {
+        setError('Invalid or expired invitation link.');
+      }
     }
   }, [token]);
 
@@ -67,37 +73,51 @@ function AcceptInvitationContent() {
 
   const onSubmit = async (values: AcceptFormValues) => {
     if (!token) {
-      toast.error("Invitation token is missing. Please use a valid invitation link.");
+      toast.error("Invitation token is missing.");
       return;
     }
     setIsLoading(true);
-    try {
-      const response = await acceptInvitation(token, {
+    const toastId = toast.loading("Accepting invitation...");
+
+    setTimeout(() => {
+      const invitation = mockInvitations[token];
+      if (!invitation) {
+          toast.error('Invalid invitation.', { id: toastId });
+          setIsLoading(false);
+          return;
+      }
+
+      const newUser: User = {
+        id: Math.floor(Math.random() * 1000) + 10, // random user id
+        email: invitation.email,
         full_name: values.full_name,
-        password: values.password,
-      });
-      const { access_token, user } = response;
-      loginWithNewToken(access_token);
-      toast.success(`Welcome to ${invitationDetails?.organization_name}!`);
+        role: invitation.role,
+        status: 'ACTIVE',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        company_id: invitation.company_id,
+        company: { id: invitation.company_id, name: invitation.company_name },
+        profile_picture_url: `https://i.pravatar.cc/150?u=${invitation.email}`
+      };
+
+      login('mock-jwt-token-accepted-invite', newUser);
+      
+      toast.success(`Welcome to ${invitation.organization_name}!`, { id: toastId });
       router.push('/dashboard');
-    } catch (err: any) {
-      toast.error('Failed to accept invitation', {
-        description: err.response?.data?.detail || 'An unexpected error occurred.',
-      });
-    } finally {
-      setIsLoading(false);
-  }
+    }, 1500);
   };
 
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Card>
+        <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Invitation Error</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-red-500">{error}</p>
+            <p className="text-destructive">{error}</p>
+            <Button onClick={() => router.push('/signup')} className="mt-4 w-full">Sign Up</Button>
           </CardContent>
         </Card>
       </div>
@@ -109,12 +129,12 @@ function AcceptInvitationContent() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-background">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Join {invitationDetails.organization_name}</CardTitle>
           <CardDescription>
-            You have been invited to join {invitationDetails.organization_name} on ShareYourSpace.
+            You&apos;ve been invited to join {invitationDetails.organization_name}.
             Please create an account to accept.
           </CardDescription>
         </CardHeader>
@@ -122,7 +142,7 @@ function AcceptInvitationContent() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
-                control={form.control}
+              control={form.control}
               name="full_name"
               render={({ field }) => (
                 <FormItem>
@@ -133,7 +153,7 @@ function AcceptInvitationContent() {
               )}
             />
             <FormField
-                control={form.control}
+              control={form.control}
               name="password"
               render={({ field }) => (
                 <FormItem>
@@ -144,7 +164,7 @@ function AcceptInvitationContent() {
               )}
             />
             <FormField
-                control={form.control}
+              control={form.control}
               name="confirm_password"
               render={({ field }) => (
                 <FormItem>
@@ -157,8 +177,8 @@ function AcceptInvitationContent() {
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? 'Joining...' : 'Accept Invitation'}
               </Button>
-                </form>
-              </Form>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>
@@ -171,4 +191,4 @@ export default function AcceptInvitationPage() {
       <AcceptInvitationContent />
     </Suspense>
   );
-} 
+}
