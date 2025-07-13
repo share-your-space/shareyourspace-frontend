@@ -4,14 +4,16 @@ import React, { useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { ContactList } from '@/components/chat/ContactList';
-import { MessageArea } from '@/components/chat/MessageArea';
-import { MessageInput } from '@/components/chat/MessageInput';
-import { useChatStore } from '@/store/chatStore';
+import { ChatBubble } from "@/components/chat/ChatBubble";
+import ChatList from "@/components/chat/ChatList";
+import { ChatHeader } from "@/components/chat/ChatHeader";
+import { MessageArea } from "@/components/chat/MessageArea";
+import MessageInput from "@/components/chat/MessageInput";
+import { useChatStore } from "@/store/chatStore";
 import { useAuthStore } from '@/store/authStore';
 import { Conversation, Message, User } from '@/types/chat';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, MessageSquare } from "lucide-react";
-import { ChatHeader } from '@/components/chat/ChatHeader';
 
 // --- MOCK DATA ---
 const mockUsers: Record<string, User> = {

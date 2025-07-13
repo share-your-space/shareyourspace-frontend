@@ -20,7 +20,7 @@ interface BrowsableSpace {
   address: string;
   image_url: string;
   cover_image_url: string;
-  amenities: string[];
+  amenities: { id: number; name: string }[];
   vibe: string;
   company_name: string;
   interest_status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | null;
@@ -38,7 +38,7 @@ const dummySpaces: BrowsableSpace[] = [
     address: '123 Art Street, Creativity City',
     image_url: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?q=80&w=2070&auto=format&fit=crop',
     cover_image_url: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?q=80&w=2070&auto=format&fit=crop',
-    amenities: ['Wi-Fi', 'Coffee', 'Printing'],
+    amenities: [{id: 1, name: 'Wi-Fi'}, {id: 2, name: 'Coffee'}, {id: 3, name: 'Printing'}],
     vibe: 'Energetic and inspiring',
     company_name: 'Innovate Inc.',
     interest_status: null,
@@ -53,7 +53,7 @@ const dummySpaces: BrowsableSpace[] = [
     address: '456 Tech Avenue, Silicon Valley',
     image_url: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=2070&auto=format&fit=crop',
     cover_image_url: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=2070&auto=format&fit=crop',
-    amenities: ['High-speed Wi-Fi', 'Meeting Rooms', '24/7 Access'],
+    amenities: [{id: 1, name: 'High-speed Wi-Fi'}, {id: 2, name: 'Meeting Rooms'}, {id: 3, name: '24/7 Access'}],
     vibe: 'Focused and collaborative',
     company_name: 'Future Tech',
     interest_status: 'PENDING',
@@ -68,7 +68,7 @@ const dummySpaces: BrowsableSpace[] = [
     address: '789 Serenity Lane, Calm Town',
     image_url: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=1932&auto=format&fit=crop',
     cover_image_url: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=1932&auto=format&fit=crop',
-    amenities: ['Silent Zone', 'Library', 'Tea & Coffee'],
+    amenities: [{id: 1, name: 'Silent Zone'}, {id: 2, name: 'Library'}, {id: 3, name: 'Tea & Coffee'}],
     vibe: 'Calm and studious',
     company_name: 'Tranquil Spaces',
     interest_status: null,
