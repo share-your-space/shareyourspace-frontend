@@ -3,106 +3,32 @@
 import React, { useState, useMemo } from 'react';
 import { SpaceCard } from '@/components/ui/SpaceCard';
 import { toast } from 'sonner';
-
-// Define the types right here for simplicity
-enum UserRole {
-  FREELANCER = "FREELANCER",
-  STARTUP_ADMIN = "STARTUP_ADMIN",
-  COMPANY_ADMIN = "COMPANY_ADMIN",
-  SYS_ADMIN = "SYS_ADMIN",
-}
-
-interface BrowsableSpace {
-  id: string;
-  name: string;
-  headline: string;
-  description: string;
-  address: string;
-  image_url: string;
-  cover_image_url: string;
-  amenities: { id: number; name: string }[];
-  vibe: string;
-  company_name: string;
-  interest_status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | null;
-  total_workstations: number;
-  company_id: number;
-}
-
-// Dummy Data
-const dummySpaces: BrowsableSpace[] = [
-  {
-    id: '1',
-    name: 'Creative Hub',
-    headline: 'A vibrant space for creators',
-    description: 'This is a great place for artists and designers to collaborate.',
-    address: '123 Art Street, Creativity City',
-    image_url: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?q=80&w=2070&auto=format&fit=crop',
-    cover_image_url: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?q=80&w=2070&auto=format&fit=crop',
-    amenities: [{id: 1, name: 'Wi-Fi'}, {id: 2, name: 'Coffee'}, {id: 3, name: 'Printing'}],
-    vibe: 'Energetic and inspiring',
-    company_name: 'Innovate Inc.',
-    interest_status: null,
-    total_workstations: 15,
-    company_id: 101,
-  },
-  {
-    id: '2',
-    name: 'Tech Central',
-    headline: 'The heart of tech innovation',
-    description: 'A modern co-working space for tech startups and developers.',
-    address: '456 Tech Avenue, Silicon Valley',
-    image_url: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=2070&auto=format&fit=crop',
-    cover_image_url: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?q=80&w=2070&auto=format&fit=crop',
-    amenities: [{id: 1, name: 'High-speed Wi-Fi'}, {id: 2, name: 'Meeting Rooms'}, {id: 3, name: '24/7 Access'}],
-    vibe: 'Focused and collaborative',
-    company_name: 'Future Tech',
-    interest_status: 'PENDING',
-    total_workstations: 40,
-    company_id: 102,
-  },
-  {
-    id: '3',
-    name: 'Quiet Corner',
-    headline: 'For focus and deep work',
-    description: 'A peaceful environment for writers, researchers, and anyone needing quiet.',
-    address: '789 Serenity Lane, Calm Town',
-    image_url: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=1932&auto=format&fit=crop',
-    cover_image_url: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=1932&auto=format&fit=crop',
-    amenities: [{id: 1, name: 'Silent Zone'}, {id: 2, name: 'Library'}, {id: 3, name: 'Tea & Coffee'}],
-    vibe: 'Calm and studious',
-    company_name: 'Tranquil Spaces',
-    interest_status: null,
-    total_workstations: 20,
-    company_id: 103,
-  },
-];
+import { BrowsableSpace } from '@/types/space';
+import { UserRole } from '@/types/enums';
+import { mockBrowsableSpaces } from '@/lib/mock-data';
+import { useAuthStore } from '@/store/authStore';
 
 const BrowseSpacesPage = () => {
-  const [spaces, setSpaces] = useState<BrowsableSpace[]>(dummySpaces);
+  const [spaces, setSpaces] = useState<BrowsableSpace[]>(mockBrowsableSpaces);
   const [loading] = useState(false); // Not really loading anymore
-
-  // Mocked user data
-  const user = {
-    role: UserRole.FREELANCER,
-    space_id: '1',
-  };
+  const { user } = useAuthStore();
 
   const canExpressInterest =
     user?.role === UserRole.FREELANCER ||
     user?.role === UserRole.STARTUP_ADMIN;
 
   const { currentUserSpace, otherSpaces } = useMemo(() => {
-    const currentUserSpace = spaces.find(space => space.id === user?.space_id);
-    const otherSpaces = spaces.filter(space => space.id !== user?.space_id);
+    const currentUserSpace = spaces.find(space => space.id === user?.userProfile?.space_id);
+    const otherSpaces = spaces.filter(space => space.id !== user?.userProfile?.space_id);
     return { currentUserSpace, otherSpaces };
-  }, [spaces, user?.space_id]);
+  }, [spaces, user?.userProfile?.space_id]);
 
   const handleExpressInterest = async (spaceId: string) => {
     toast.success('Your interest has been registered!');
     setSpaces((prevSpaces) =>
       prevSpaces.map((space) =>
         space.id.toString() === spaceId
-          ? { ...space, interest_status: 'PENDING' }
+          ? { ...space, interest_status: 'interested' }
           : space
       )
     );

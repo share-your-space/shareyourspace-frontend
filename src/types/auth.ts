@@ -26,6 +26,7 @@ export interface User {
   status?: string;
   created_at?: string;
   updated_at?: string;
+  space_id?: string | null; // For freelancers or startup members in a space
 }
 
 // Corresponds to app.schemas.auth.Token
