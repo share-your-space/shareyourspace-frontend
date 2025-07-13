@@ -92,7 +92,7 @@ function AcceptInvitationContent() {
         const newUser: User = {
           id: (Math.floor(Math.random() * 10000) + 100).toString(), // random user id as string
           email: invitation.email,
-          name: values.full_name,
+          full_name: values.full_name,
           role: invitation.role,
           profile_picture_url: `https://i.pravatar.cc/150?u=${invitation.email}`,
           status: 'ACTIVE',
