@@ -5,21 +5,19 @@ import { useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { companySchema, CompanyFormData } from '@/lib/schemas';
-import { Company } from '@/types/company';
+import { Company, Startup } from '@/types/organization';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import CompanyProfileDisplay from '@/components/organization/CompanyProfileDisplay';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Edit } from 'lucide-react';
-import { mockCompanies, mockStartups } from '@/lib/mock-data';
-
-const allCompanies = [...mockCompanies, ...mockStartups];
+import { mockOrganizations } from '@/lib/mock-data';
 
 const CompanyProfilePageContent = () => {
   const params = useParams();
   const { user } = useAuthStore();
-  const [company, setCompany] = useState<Company | null>(null);
+  const [company, setCompany] = useState<Company | Startup | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +28,7 @@ const CompanyProfilePageContent = () => {
     resolver: zodResolver(companySchema),
   });
 
-  const { reset } = form;
+  const { reset, getValues } = form;
 
   const fetchCompany = useCallback(() => {
     if (!companyId) {
@@ -39,7 +37,7 @@ const CompanyProfilePageContent = () => {
       return;
     }
     
-    const foundCompany = allCompanies.find(c => c.id === companyId);
+    const foundCompany = mockOrganizations.find((c: Company | Startup) => c.id === companyId);
 
     if (foundCompany) {
       setCompany(foundCompany);
@@ -60,7 +58,8 @@ const CompanyProfilePageContent = () => {
     fetchCompany();
   }, [fetchCompany]);
 
-  const handleSave = (field: keyof CompanyFormData, value: string | string[]) => {
+  const handleSave = (field: keyof CompanyFormData) => {
+    const value = getValues(field);
     const toastId = toast.loading("Saving changes...");
     
     setTimeout(() => {
@@ -68,14 +67,13 @@ const CompanyProfilePageContent = () => {
         const updatedCompany = { ...company, [field]: value };
         setCompany(updatedCompany);
         
-        // Note: This only updates the local state for the demo.
-        const companyIndex = allCompanies.findIndex(c => c.id === company.id);
+        const companyIndex = mockOrganizations.findIndex((c: Company | Startup) => c.id === company.id);
         if (companyIndex !== -1) {
-          allCompanies[companyIndex] = updatedCompany;
+          mockOrganizations[companyIndex] = updatedCompany;
         }
 
         toast.success('Profile updated successfully!', { id: toastId });
-        setIsEditing(false); // Exit editing mode for the specific field
+        setIsEditing(false); 
       } else {
         toast.error('Failed to update profile.', { id: toastId });
       }
@@ -98,10 +96,12 @@ const CompanyProfilePageContent = () => {
 
   return (
     <div className="container mx-auto p-4 max-w-4xl">
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-3xl font-bold">{company.name}</h1>
         {canEdit && (
-          <Button onClick={() => setIsEditing(!isEditing)}>
-            <Edit className="mr-2 h-4 w-4" /> {isEditing ? 'Cancel' : 'Edit Profile'}
+          <Button onClick={() => setIsEditing(!isEditing)} variant="outline">
+            <Edit className="mr-2 h-4 w-4" />
+            {isEditing ? 'Cancel' : 'Edit Profile'}
           </Button>
         )}
       </div>

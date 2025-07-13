@@ -57,8 +57,8 @@ const EditStartupProfilePage = () => {
   });
 
   useEffect(() => {
-    if (user?.startup?.id) {
-      const startupData = mockStartups.find(s => s.id === user.startup!.id);
+    if (user?.company_id) {
+      const startupData = mockStartups.find(s => s.id === user.company_id);
       if (startupData) {
         setStartup(startupData as Startup);
 
@@ -71,11 +71,11 @@ const EditStartupProfilePage = () => {
         form.reset({
           name: startupData.name,
           website: startupData.website || '',
-          pitch_deck_url: (startupData as Startup).pitch_deck_url || '',
+          pitch_deck_url: startupData.pitch_deck_url || '',
           industry_focus: parseStringToArray(startupData.industry_focus),
           looking_for: parseStringToArray(startupData.looking_for),
-          team_size: (startupData as Startup).team_size || undefined,
-          mission: (startupData as Startup).mission || '',
+          team_size: startupData.team_size || undefined,
+          mission: startupData.mission || '',
           description: startupData.description || '',
         });
       }
@@ -88,7 +88,7 @@ const EditStartupProfilePage = () => {
       success: () => {
         // Here you would typically update the mock data if you want changes to persist across the session
         console.log("Updated startup data (simulation):", data);
-        router.push(`/startups/${user?.startup?.id}`);
+        router.push(`/startups/${user?.company_id}`);
         return 'Profile updated successfully!';
       },
       error: 'Failed to update profile.',

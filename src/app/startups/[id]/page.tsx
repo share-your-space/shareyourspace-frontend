@@ -37,7 +37,7 @@ const StartupProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
 
-  const startupId = Number(params.id);
+  const startupId = params.id as string;
 
   const form = useForm<StartupFormData>({
     resolver: zodResolver(startupSchema),
@@ -46,13 +46,13 @@ const StartupProfilePage = () => {
   const { getValues, reset } = form;
 
   const fetchStartup = useCallback(async () => {
-    if (isNaN(startupId)) {
+    if (!startupId) {
       setLoading(false);
       return;
     }
     try {
       setLoading(true);
-      const data = mockStartups.find(s => s.id === startupId) as Startup | undefined;
+      const data = mockStartups.find(s => s.id === startupId);
 
       if (data) {
         setStartup(data);

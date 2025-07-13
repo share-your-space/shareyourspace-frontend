@@ -1,68 +1,37 @@
-import { TeamSize, StartupStage, UserStatus } from './enums';
-import { UserSimpleInfo } from './connection';
-import { User } from './auth';
+import { TeamSize, StartupStage } from "./enums";
+import { User } from "./auth";
 
-interface OrganizationBase {
+export interface CompanySettings {
+  companyName: string;
+  contactEmail: string;
+  website?: string;
+  address?: string;
+}
+
+export interface Organization {
+  id: string;
   name: string;
-  logo_url?: string | null;
-  industry_focus?: string[] | null;
-  description?: string | null;
-  website?: string | null;
+  description: string;
+  website: string | null;
+  industry_focus: string[] | null;
   team_size?: TeamSize | null;
   looking_for?: string[] | null;
-  social_media_links?: { [key: string]: string } | null;
-}
-
-export interface Company {
-  id: number;
-  name: string;
-  logo_url?: string | null;
-  website?: string | null;
-  industry_focus?: string[] | null; // Reverted from string
-  team_size?: TeamSize | null;
-  description?: string | null;
-  looking_for?: string[] | null;
-  social_media_links?: { [key: string]: string } | null;
-  created_at: string;
-  updated_at: string;
-  admin?: UserSimpleInfo | null;
-  // This can be expanded based on what the backend provides
+  created_at?: string;
+  updated_at?: string;
+  owner_id?: string;
+  admin?: User | null;
   direct_members?: User[] | null;
+  profile_image_url?: string;
+  type: 'Company' | 'Startup';
 }
 
-export interface Startup extends OrganizationBase {
-  id: number;
-  type: "startup"; // Add the type property
-  expressed_interest?: boolean;
-  mission?: string | null;
-  stage?: StartupStage | null;
-  pitch_deck_url?: string | null;
-  status: UserStatus;
-  admin?: UserSimpleInfo | null;
-  created_at: string;
-  updated_at: string;
-  member_slots_allocated?: number | null;
-  member_slots_used?: number | null;
-  direct_members?: User[] | null;
-  funding_amount?: number | null;
-  achievements?: string[] | null;
-  founder?: UserSimpleInfo | null;
-  contact_email?: string | null;
-  profile?: {
-    id?: number;
-    startup_id?: number;
-    tagline?: string;
-    logo_signed_url?: string;
-  };
+export interface Company extends Organization {
+    type: 'Company';
 }
 
-export interface CompanyUpdate extends Omit<OrganizationBase, 'name'> {
-  name?: string;
-}
-
-export interface StartupUpdate extends Omit<OrganizationBase, 'name'> {
-    name?: string;
-    mission?: string | null;
-    stage?: StartupStage | null;
-    pitch_deck_url?: string | null;
+export interface Startup extends Organization {
+    type: 'Startup';
+    mission?: string;
+    stage?: StartupStage;
+    pitch_deck_url?: string;
 }

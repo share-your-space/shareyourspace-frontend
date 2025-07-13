@@ -1,9 +1,5 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Link as LinkIcon, Building, Users, ExternalLink, Calendar, Info } from 'lucide-react';
-import { Company } from '@/types/organization';
+import { Company, Startup } from '@/types/organization';
 import { CompanyHeader } from './CompanyHeader';
 import { CompanySidebar } from './CompanySidebar';
 import { Separator } from '@/components/ui/separator';
@@ -16,7 +12,7 @@ import { UseFormReturn } from 'react-hook-form';
 import { CompanyFormData } from '@/lib/schemas';
 
 interface CompanyProfileDisplayProps {
-  company: Company;
+  company: Company | Startup;
   isEditing: boolean;
   form: UseFormReturn<CompanyFormData>;
   onSave: (field: keyof CompanyFormData) => void;
