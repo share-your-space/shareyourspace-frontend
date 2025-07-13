@@ -87,24 +87,34 @@ function AcceptInvitationContent() {
           return;
       }
 
-      const newUser: User = {
-        id: Math.floor(Math.random() * 1000) + 10, // random user id
-        email: invitation.email,
-        full_name: values.full_name,
-        role: invitation.role,
-        status: 'ACTIVE',
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        company_id: invitation.company_id,
-        company: { id: invitation.company_id, name: invitation.company_name },
-        profile_picture_url: `https://i.pravatar.cc/150?u=${invitation.email}`
-      };
+      try {
+        // Simulate API call
+        const newUser: User = {
+          id: (Math.floor(Math.random() * 10000) + 100).toString(), // random user id as string
+          email: invitation.email,
+          name: values.full_name,
+          role: invitation.role,
+          profile_picture_url: `https://i.pravatar.cc/150?u=${invitation.email}`,
+          status: 'ACTIVE',
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          company_id: invitation.company_id?.toString(),
+          company_name: invitation.company_name,
+        };
 
-      login('mock-jwt-token-accepted-invite', newUser);
-      
-      toast.success(`Welcome to ${invitation.organization_name}!`, { id: toastId });
-      router.push('/dashboard');
+        // Simulate successful user creation and login
+        login('mock-jwt-token-accepted-invite', newUser);
+        
+        toast.success(`Welcome to ${invitation.organization_name}!`, { id: toastId });
+        router.push('/dashboard');
+      } catch (err) {
+        console.error("Failed to create account:", err);
+        setIsLoading(false);
+        toast.error('Failed to accept invitation. Please try again.', { id: toastId });
+      } finally {
+        setIsLoading(false);
+      }
     }, 1500);
   };
 
