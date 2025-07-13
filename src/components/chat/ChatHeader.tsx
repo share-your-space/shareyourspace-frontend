@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useChatStore } from '@/store/chatStore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { MoreVertical } from 'lucide-react';
 import { Button } from '../ui/button';
-import { socket } from '@/lib/socket';
 
 const getInitials = (name?: string | null): string => {
     if (!name) return '?';
@@ -19,25 +18,34 @@ const getInitials = (name?: string | null): string => {
 const ChatHeader = () => {
     const { conversations, activeConversationId, onlineUserIds } = useChatStore();
     const [isTyping, setIsTyping] = useState(false);
-    const activeConversation = conversations.find(c => c.id === activeConversationId);
-    const otherUser = activeConversation?.other_user;
+    
+    const activeConversation = useMemo(() => 
+        conversations.find(c => c.id === activeConversationId),
+        [conversations, activeConversationId]
+    );
+
+    const otherUser = useMemo(() => {
+        if (!activeConversation) return null;
+        // This logic needs to be adapted based on how `other_user` is structured in your mock data
+        // Assuming participants array and a currentUser from another store
+        // const currentUser = useAuthStore.getState().user;
+        // return activeConversation.participants.find(p => p.id !== currentUser?.id);
+        return activeConversation.participants[1]; // Simplified for mock
+    }, [activeConversation]);
+
 
     useEffect(() => {
-        if (!otherUser) return;
-
-        const handleTypingEvent = (data: { sender_id: number }) => {
-            if (data.sender_id === otherUser.id) {
-                setIsTyping(true);
-                const timer = setTimeout(() => setIsTyping(false), 3000); // Hide after 3s
-                return () => clearTimeout(timer);
-            }
-        };
-
-        socket.on('user_typing', handleTypingEvent);
-
+        // Mock typing indicator
+        let typingInterval: NodeJS.Timeout;
+        if (otherUser) {
+            typingInterval = setInterval(() => {
+                setIsTyping(Math.random() > 0.7); // Randomly simulate typing
+            }, 2000);
+        }
         return () => {
-            socket.off('user_typing', handleTypingEvent);
-        };
+            clearInterval(typingInterval);
+            setIsTyping(false);
+        }
     }, [otherUser]);
 
     if (!otherUser) {

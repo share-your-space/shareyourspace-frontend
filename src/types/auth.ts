@@ -11,19 +11,21 @@ export enum InvitationStatus {
   DECLINED = "declined",
 }
 
+export { UserRole };
+
 // Corresponds to app.schemas.user.User
 export interface User {
-  id: number;
-  full_name: string;
+  id: string;
   email: string;
+  name?: string;
   role: UserRole;
-  status: string; // Added status
-  is_active: boolean;
-  is_verified: boolean;
-  profile?: UserProfile | null;
-  company?: BasicCompany | null;
-  startup?: BasicStartup | null;
-  spaces?: BasicSpace[];
+  profile_picture_url?: string;
+  company_id?: string | null;
+  company_name?: string;
+  is_active?: boolean;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Corresponds to app.schemas.auth.Token
@@ -79,7 +81,6 @@ export interface UserDetail extends User {
     spaces?: BasicSpace[];
     interests: { id: number; name: string }[];
     space_id?: number | null; // For freelancers
-    company_id?: number | null; // For corporate users
 }
 
 // Corresponds to app.schemas.invitation.InvitationListResponse
