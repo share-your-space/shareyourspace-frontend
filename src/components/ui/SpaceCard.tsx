@@ -29,16 +29,13 @@ export const SpaceCard: React.FC<SpaceCardProps> = ({
 }) => {
   const isInterestButtonDisabled =
     isCurrentUserSpace ||
-    space.interest_status === 'PENDING' ||
-    space.interest_status === 'APPROVED';
+    space.interest_status === 'interested';
 
   const getInterestButtonText = () => {
     if (isCurrentUserSpace) return 'Your Space';
     switch (space.interest_status) {
-      case 'PENDING':
-        return 'Pending';
-      case 'APPROVED':
-        return 'Joined';
+      case 'interested':
+        return 'Interest Expressed';
       default:
         return 'Express Interest';
     }
@@ -54,7 +51,7 @@ export const SpaceCard: React.FC<SpaceCardProps> = ({
       <CardHeader className="p-0 relative">
         <div className="aspect-square w-full relative">
           <Image
-            src={space.cover_image_url || PLACEHOLDER_IMAGE_URL}
+            src={space.image_url || PLACEHOLDER_IMAGE_URL}
             alt={`Image of ${space.name}`}
             fill
             className="object-cover"
@@ -95,4 +92,4 @@ export const SpaceCard: React.FC<SpaceCardProps> = ({
       </CardFooter>
     </Card>
   );
-}; 
+};

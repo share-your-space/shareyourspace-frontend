@@ -9,6 +9,7 @@ interface ChatState {
   conversations: Conversation[];
   activeConversationId: string | null;
   setConversations: (conversations: Conversation[]) => void;
+  addOrUpdateConversation: (conversation: Conversation) => void;
   addMessage: (conversationId: string, message: ChatMessageData) => void;
   setActiveConversationId: (conversationId: string | null) => void;
 }
@@ -36,6 +37,19 @@ export const useChatStore = create<ChatState>((set) => ({
       }));
       set({ conversations: conversationsWithDefaults });
   },
+  addOrUpdateConversation: (conversation) => set(state => {
+    const existingIndex = state.conversations.findIndex(c => c.id === conversation.id);
+    if (existingIndex > -1) {
+      const updatedConversations = [...state.conversations];
+      updatedConversations[existingIndex] = {
+        ...updatedConversations[existingIndex],
+        ...conversation,
+      };
+      return { conversations: updatedConversations };
+    } else {
+      return { conversations: [conversation, ...state.conversations] };
+    }
+  }),
   addMessage: (conversationId, message) => set((state) => {
     const conversations = state.conversations.map((conv) => {
       if (conv.id === conversationId) {

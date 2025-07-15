@@ -9,6 +9,7 @@ import { UserRole } from '@/types/enums';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useChatStore } from '@/store/chatStore';
+import { Conversation, ChatMessageData } from '@/types/chat';
 
 interface UserDashboardProps {
   user: User;
@@ -17,11 +18,11 @@ interface UserDashboardProps {
 const UserDashboard = ({ user }: UserDashboardProps) => {
   const isWaitlisted = user.status === 'WAITLISTED';
   const router = useRouter();
-  const addConversation = useChatStore((state) => state.addConversation);
+  const addOrUpdateConversation = useChatStore((state) => state.addOrUpdateConversation);
 
   const handleChatWithAdmin = () => {
     // Simulate creating a new conversation with a space admin
-    const adminId = 999; // A consistent mock ID for the admin
+    const adminId = 'admin-user-id'; // A consistent mock ID for the admin
     const existingConversation = useChatStore.getState().conversations.find(c => c.participants.some(p => p.id === adminId));
 
     if (existingConversation) {
@@ -30,24 +31,41 @@ const UserDashboard = ({ user }: UserDashboardProps) => {
       return;
     }
 
-    const newConversation = {
-      id: `conv-${Date.now()}`,
-      participants: [
-        { id: user.id, full_name: user.full_name || 'You', avatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d' },
-        { id: adminId, full_name: 'Space Admin', avatar: 'https://i.pravatar.cc/150?u=spaceadmin' },
-      ],
-      messages: [
-        {
-          id: `msg-${Date.now()}`,
-          sender_id: adminId,
-          content: 'Hello! How can I help you with the space today?',
-          created_at: new Date().toISOString(),
-        },
-      ],
-      unread_count: 1,
+    const adminUser = {
+        id: adminId,
+        full_name: 'Space Admin',
+        email: 'admin@space.com',
+        role: UserRole.CORP_ADMIN,
+        profile_picture_url: 'https://i.pravatar.cc/150?u=spaceadmin'
     };
 
-    addConversation(newConversation);
+    const currentUserParticipant = {
+        ...user,
+        profile_picture_url: user.profile_picture_url || `https://i.pravatar.cc/150?u=${user.id}`
+    };
+    
+    const firstMessage: ChatMessageData = {
+        id: `msg-${Date.now()}`,
+        sender_id: adminId,
+        recipient_id: user.id,
+        content: 'Hello! How can I help you with the space today?',
+        created_at: new Date().toISOString(),
+        is_deleted: false,
+        sender: adminUser,
+    };
+
+    const newConversation: Conversation = {
+      id: `conv-${Date.now()}`,
+      participants: [currentUserParticipant, adminUser],
+      messages: [firstMessage],
+      last_message: firstMessage,
+      unread_count: 1,
+      isLoadingMessages: false,
+      hasMoreMessages: true,
+      messagesFetched: true,
+    };
+
+    addOrUpdateConversation(newConversation);
     toast.success("Chat with space admin initiated.");
     router.push(`/chat?conversationId=${newConversation.id}`);
   };

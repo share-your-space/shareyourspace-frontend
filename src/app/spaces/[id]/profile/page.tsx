@@ -16,7 +16,7 @@ import { UserRole } from '@/types/enums';
 const SpaceProfilePage = () => {
     const params = useParams();
     const router = useRouter();
-    const spaceId = Number(params.id);
+    const spaceId = params.id as string;
     const { user: authUser } = useAuthStore();
 
     const [profile, setProfile] = useState<Space | null>(null);
@@ -25,7 +25,7 @@ const SpaceProfilePage = () => {
     const [hasExpressedInterest, setHasExpressedInterest] = useState(false);
 
     useEffect(() => {
-        if (isNaN(spaceId)) {
+        if (!spaceId) {
             setLoading(false);
             return;
         }
@@ -36,34 +36,22 @@ const SpaceProfilePage = () => {
 
         if (authUser) {
             const user = mockUsers.find(u => u.id === authUser.id);
-            if(user) {
+            if(user && user.profile) {
                 const userDetailData: UserDetail = {
-                    id: user.id,
-                    email: user.email,
-                    role: user.role,
-                    is_active: user.is_active,
-                    is_verified: user.is_verified,
-                    profile: user.profile!,
-                    company: user.company || null,
-                    startup: user.startup,
-                    spaces: user.spaces,
-                    interests: [],
-                    company_id: user.company?.id,
+                    ...user,
+                    profile: user.profile,
+                    company: null,
+                    startup: null,
+                    spaces: [],
+                    interests: user.profile.interests || [],
                 };
                 setCurrentUser(userDetailData);
             }
         }
-        
-        // Simulate checking interest status
-        if (authUser && (authUser.role === UserRole.FREELANCER || authUser.role === UserRole.STARTUP_ADMIN)) {
-            const interestExpressed = localStorage.getItem(`interest_${spaceId}_${authUser.id}`);
-            setHasExpressedInterest(!!interestExpressed);
-        }
-
         setLoading(false);
     }, [spaceId, authUser]);
 
-    const handleExpressInterest = async () => {
+    const handleExpressInterest = () => {
         toast.success("Your interest has been expressed!");
         localStorage.setItem(`interest_${spaceId}_${authUser?.id}`, 'true');
         setHasExpressedInterest(true);
@@ -85,7 +73,7 @@ const SpaceProfilePage = () => {
         return <div className="flex justify-center items-center min-h-screen">Space not found.</div>;
     }
 
-    const canEdit = authUser?.role === UserRole.CORP_ADMIN && authUser?.company?.id === profile.company_id;
+    const canEdit = authUser?.role === UserRole.CORP_ADMIN && authUser?.company_id === profile.company_id;
 
     return (
         <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8">
@@ -128,7 +116,7 @@ const SpaceProfilePage = () => {
                     <div>
                         <h2 className="text-2xl font-semibold mb-4">Key Highlights</h2>
                         <ul className="list-disc list-inside space-y-2">
-                            {profile.key_highlights.map((highlight, index) => (
+                            {profile.key_highlights?.map((highlight, index) => (
                                 <li key={index} className="text-gray-700 dark:text-gray-300">{highlight}</li>
                             ))}
                         </ul>
@@ -158,7 +146,7 @@ const SpaceProfilePage = () => {
                         <h3 className="font-semibold mb-2">Amenities</h3>
                         <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                             {profile.amenities.map((amenity, index) => (
-                                <li key={index}>{amenity}</li>
+                                <li key={index}>{amenity.name}</li>
                             ))}
                         </ul>
                         <Separator className="my-4" />

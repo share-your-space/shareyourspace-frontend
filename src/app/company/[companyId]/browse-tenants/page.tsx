@@ -15,80 +15,96 @@ import {
 } from "@/components/ui/select"
 import { Tenant } from '@/types/user';
 import { toast } from 'sonner';
-import { UserProfile } from '@/types/userProfile';
-import { UserRole } from '@/types/auth';
+import { UserRole, ContactVisibility, StartupStage, TeamSize } from '@/types/enums';
 import { Startup } from '@/types/organization';
 
 const mockTenants: Tenant[] = [
 	{
 		type: 'freelancer',
-		id: 1,
+		id: 'user-diana-prince',
 		full_name: 'Diana Prince',
 		email: 'diana@freelance.com',
 		space_id: null,
 		profile: {
-			id: 1,
-			user_id: 1,
+			id: 'profile-diana',
+			user_id: 'user-diana',
 			role: UserRole.FREELANCER,
+			first_name: 'Diana',
+			last_name: 'Prince',
 			full_name: 'Diana Prince',
-			headline: 'UX/UI Designer & Prototyping Expert',
-			industry: 'Design',
+			title: 'UX/UI Designer',
+			bio: 'UX/UI Designer & Prototyping Expert',
 			profile_picture_url: 'https://i.pravatar.cc/150?u=diana',
-			is_profile_complete: true,
+			skills_expertise: ['UX', 'UI', 'Prototyping'],
+			industry_focus: ['Design'],
+			tools_technologies: ['Figma', 'Sketch'],
+			contact_info_visibility: ContactVisibility.PUBLIC,
 		},
 	},
 	{
 		type: 'startup',
-		id: 101,
+		id: 'startup-innovate-inc',
 		name: 'Innovate Inc.',
-		mission: 'Building the future of decentralized finance through innovative blockchain solutions.',
-		logo_url: 'https://i.pravatar.cc/150?u=innovate',
+		description: 'Building the future of decentralized finance through innovative blockchain solutions.',
+		website: 'https://innovate.com',
+		profile_image_url: 'https://i.pravatar.cc/150?u=innovate',
 		industry_focus: ['FinTech', 'Blockchain'],
-		team_size: 15,
-		stage: 'Series A',
+		team_size: TeamSize.SMALL,
+		stage: StartupStage.SERIES_A,
 	},
 	{
 		type: 'freelancer',
-		id: 2,
+		id: 'user-clark-kent',
 		full_name: 'Clark Kent',
 		email: 'clark@dailyplanet.com',
 		space_id: null,
 		profile: {
-			id: 2,
-			user_id: 2,
+			id: 'profile-clark',
+			user_id: 'user-clark',
 			role: UserRole.FREELANCER,
+			first_name: 'Clark',
+			last_name: 'Kent',
 			full_name: 'Clark Kent',
-			headline: 'Investigative Journalist & Storyteller',
-			industry: 'Media',
+			title: 'Journalist',
+			bio: 'Investigative Journalist & Storyteller',
 			profile_picture_url: 'https://i.pravatar.cc/150?u=clark',
-			is_profile_complete: true,
+			skills_expertise: ['Writing', 'Investigation'],
+			industry_focus: ['Media'],
+			tools_technologies: ['Wordpress', 'Quill'],
+			contact_info_visibility: ContactVisibility.PUBLIC,
 		},
 	},
 	{
 		type: 'startup',
-		id: 102,
+		id: 'startup-healthify',
 		name: 'Healthify',
-		mission: 'Personalized AI-driven health and wellness platform.',
-		logo_url: 'https://i.pravatar.cc/150?u=healthify',
+		description: 'Personalized AI-driven health and wellness platform.',
+		website: 'https://healthify.com',
+		profile_image_url: 'https://i.pravatar.cc/150?u=healthify',
 		industry_focus: ['HealthTech', 'AI'],
-		team_size: 8,
-		stage: 'Seed',
+		team_size: TeamSize.EXTRA_SMALL,
+		stage: StartupStage.SEED,
 	},
 	{
 		type: 'freelancer',
-		id: 3,
+		id: 'user-bruce-wayne',
 		full_name: 'Bruce Wayne',
 		email: 'bruce@wayne-enterprises.com',
 		space_id: null,
 		profile: {
-			id: 3,
-			user_id: 3,
+			id: 'profile-bruce',
+			user_id: 'user-bruce',
 			role: UserRole.FREELANCER,
+			first_name: 'Bruce',
+			last_name: 'Wayne',
 			full_name: 'Bruce Wayne',
-			headline: 'Security Consultant & Gadgeteer',
-			industry: 'Security',
+			title: 'Consultant',
+			bio: 'Security Consultant & Gadgeteer',
 			profile_picture_url: 'https://i.pravatar.cc/150?u=bruce',
-			is_profile_complete: true,
+			skills_expertise: ['Security', 'Engineering'],
+			industry_focus: ['Security'],
+			tools_technologies: ['Custom Hardware'],
+			contact_info_visibility: ContactVisibility.PRIVATE,
 		},
 	},
 ];
@@ -101,11 +117,16 @@ const getInitials = (name?: string | null): string => {
     return (names[0][0] + names[names.length - 1][0]).toUpperCase();
 };
 
-const TenantCard: React.FC<{ tenant: Tenant, onAddToSpace: (tenant: Tenant) => void }> = ({ tenant, onAddToSpace }) => {
+const TenantCard = ({ tenant, onAddToSpace }: { tenant: Tenant, onAddToSpace: (tenant: Tenant) => void }) => {
     const name = tenant.type === 'startup' ? tenant.name : tenant.full_name;
-    const description = tenant.type === 'startup' ? tenant.mission : (tenant.profile as UserProfile)?.headline;
-    const avatarUrl = tenant.type === 'startup' ? tenant.logo_url : (tenant.profile as UserProfile)?.profile_picture_url;
-    const industry = tenant.type === 'startup' ? tenant.industry_focus?.[0] : (tenant.profile as UserProfile)?.industry;
+    const description = tenant.type === 'startup' ? tenant.description : tenant.profile?.bio;
+    const avatarUrl = tenant.type === 'startup' ? tenant.profile_image_url : tenant.profile?.profile_picture_url;
+    const industry = tenant.type === 'startup' ? tenant.industry_focus?.[0] : tenant.profile?.industry_focus?.[0];
+
+    const handleSendMessage = () => {
+        const contactName = tenant.type === 'startup' ? tenant.name : tenant.full_name;
+        toast.info(`Message sent to ${contactName}`);
+    };
 
     return (
         <Card className="transition-shadow hover:shadow-lg">
@@ -129,7 +150,7 @@ const TenantCard: React.FC<{ tenant: Tenant, onAddToSpace: (tenant: Tenant) => v
                     </div>
                 </div>
                 <div className="flex justify-end gap-2 mt-4">
-                    <Button variant="outline" size="sm"><Mail className="mr-2 h-4 w-4" /> Contact</Button>
+                    <Button variant="outline" size="sm" onClick={handleSendMessage}><Mail className="mr-2 h-4 w-4" /> Contact</Button>
                     <Button size="sm" onClick={() => onAddToSpace(tenant)}><Briefcase className="mr-2 h-4 w-4" /> Add to Waitlist</Button>
                 </div>
             </CardContent>
@@ -149,12 +170,13 @@ export default function BrowseTenantsPage() {
     const filteredTenants = useMemo(() => {
         return mockTenants.filter(tenant => {
             const typeMatch = typeFilter === 'all' || tenant.type === typeFilter;
+            if (!typeMatch) return false;
 
-            const searchMatch = searchTerm.trim() === '' ||
-                (tenant.type === 'startup' && (tenant as Startup).name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (tenant.type === 'freelancer' && tenant.full_name && tenant.full_name.toLowerCase().includes(searchTerm.toLowerCase()));
-
-            return typeMatch && searchMatch;
+            if (searchTerm) {
+                const name = tenant.type === 'startup' ? (tenant as Startup).name : tenant.full_name;
+                return name?.toLowerCase().includes(searchTerm.toLowerCase());
+            }
+            return true;
         });
     }, [searchTerm, typeFilter]);
 
@@ -198,9 +220,9 @@ export default function BrowseTenantsPage() {
             </Card>
 
             {filteredTenants.length > 0 ? (
-                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredTenants.map(tenant => (
-                        <TenantCard key={`${tenant.type}-${tenant.id}`} tenant={tenant} onAddToSpace={handleAddToSpace} />
+                        <TenantCard key={tenant.id} tenant={tenant} onAddToSpace={handleAddToSpace} />
                     ))}
                 </div>
             ) : (

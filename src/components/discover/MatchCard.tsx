@@ -19,10 +19,10 @@ type ConnectionStatusValue = 'connected' | 'pending_from_me' | 'pending_from_the
 export interface MatchCardProps {
   match: MatchResult;
   connectionStatus: ConnectionStatusValue;
-  onConnect: (userId: number) => void;
-  onAccept: (userId: number) => void;
-  onDecline: (userId: number) => void;
-  onSendMessage: (userId: number) => void;
+  onConnect: (userId: string) => void;
+  onAccept: (userId: string) => void;
+  onDecline: (userId: string) => void;
+  onSendMessage: (userId: string) => void;
 }
 
 export const MatchCard: React.FC<MatchCardProps> = ({ 

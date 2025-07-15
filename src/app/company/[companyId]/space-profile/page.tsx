@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { Space, SpaceImage } from "@/types/space";
 import { Wifi, Coffee, Users, Loader2, Trash2, ImagePlus } from 'lucide-react';
 import Image from 'next/image';
+import { mockSpaces } from '@/lib/mock-data';
+import { useAuthStore } from '@/store/authStore';
 
 const allAmenities = [
     { id: 'wifi', name: 'High-Speed WiFi', icon: Wifi },
@@ -19,55 +21,18 @@ const allAmenities = [
     // ... add other amenities from your original list if needed
 ];
 
-const mockSpaces: Space[] = [
-  {
-    id: 1,
-    name: "Downtown Hub",
-    address: "123 Main St, Anytown, USA",
-    company_id: 1,
-    total_workstations: 50,
-    headline: "The most vibrant coworking space in the heart of the city.",
-    description: "Our Downtown Hub offers a dynamic environment for freelancers, startups, and enterprises. With state-of-the-art facilities and a bustling community, it's the perfect place to grow your business.",
-    amenities: ["wifi", "coffee", "meeting_room"],
-    house_rules: "1. Be respectful of others.\n2. Clean up after yourself.\n3. Don't be evil.",
-    vibe: "Energetic & Collaborative",
-    images: [
-      { id: 1, image_url: "https://images.unsplash.com/photo-1560421683-6856ea585c78?q=80&w=800" },
-      { id: 2, image_url: "https://images.unsplash.com/photo-1521737852567-6949f3f9f2b5?q=80&w=800" },
-    ],
-    opening_hours: null,
-    key_highlights: null,
-    neighborhood_description: null,
-  },
-  {
-    id: 2,
-    name: "Tech Park Oasis",
-    address: "456 Innovation Drive, Techville, USA",
-    company_id: 1,
-    total_workstations: 100,
-    headline: "A serene and focused environment for deep work.",
-    description: "Located in the quiet Tech Park, our Oasis space is designed for focus and productivity. Ample natural light, ergonomic furniture, and quiet zones make it ideal for developers, writers, and thinkers.",
-    amenities: ["wifi", "coffee"],
-    house_rules: "Standard coworking etiquette applies.",
-    vibe: "Quiet & Focused",
-    images: [
-      { id: 3, image_url: "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=800" },
-    ],
-    opening_hours: null,
-    key_highlights: null,
-    neighborhood_description: null,
-  },
-];
-
 const SpaceProfilePage = () => {
-    const [spaces, setSpaces] = useState<Space[]>(mockSpaces);
-    const [selectedSpaceId, setSelectedSpaceId] = useState<number | null>(mockSpaces.length > 0 ? mockSpaces[0].id : null);
+    const { user } = useAuthStore();
+    const companySpaces = useMemo(() => mockSpaces.filter(s => s.company_id === user?.company_id), [user?.company_id]);
+
+    const [spaces, setSpaces] = useState<Space[]>(companySpaces);
+    const [selectedSpaceId, setSelectedSpaceId] = useState<string | null>(companySpaces.length > 0 ? companySpaces[0].id : null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const selectedSpace = useMemo(() => spaces.find(s => s.id === selectedSpaceId), [spaces, selectedSpaceId]);
 
     const handleSpaceChange = (spaceIdStr: string) => {
-        setSelectedSpaceId(Number(spaceIdStr));
+        setSelectedSpaceId(spaceIdStr);
     };
 
     const updateSelectedSpace = (field: keyof Space, value: Space[keyof Space]) => {
@@ -82,14 +47,22 @@ const SpaceProfilePage = () => {
     const handleAmenityToggle = (amenityId: string) => {
         if (!selectedSpace) return;
         const currentAmenities = selectedSpace.amenities || [];
-        const newAmenities = currentAmenities.includes(amenityId)
-            ? currentAmenities.filter(a => a !== amenityId)
-            : [...currentAmenities, amenityId];
+        const amenity = allAmenities.find(a => a.id === amenityId);
+        if (!amenity) return;
+
+        const newAmenities = currentAmenities.some(a => a.id === amenityId)
+            ? currentAmenities.filter(a => a.id !== amenityId)
+            : [...currentAmenities, {id: amenity.id, name: amenity.name}];
         updateSelectedSpace('amenities', newAmenities);
     };
 
     const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        updateSelectedSpace(e.target.name as keyof Space, e.target.value);
+        const { name, value } = e.target;
+        if (name === 'key_highlights' || name === 'house_rules' || name === 'vibe') {
+            updateSelectedSpace(name as keyof Space, value.split(',').map(s => s.trim()));
+        } else {
+            updateSelectedSpace(name as keyof Space, value);
+        }
     };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,21 +71,21 @@ const SpaceProfilePage = () => {
         const reader = new FileReader();
         reader.onloadend = () => {
             const newImage: SpaceImage = {
-                id: Date.now(),
+                id: `new-img-${Date.now()}`,
                 image_url: reader.result as string,
+                signed_url: reader.result as string,
             };
-            const updatedImages = [...(selectedSpace.images || []), newImage];
-            updateSelectedSpace('images', updatedImages);
-            toast.success("Image added. Save changes to make it permanent.");
+            const newImages = [...(selectedSpace.images || []), newImage];
+            updateSelectedSpace('images', newImages);
         };
         reader.readAsDataURL(file);
     };
-    
-    const handleRemoveImage = (imageId: number) => {
+
+    const handleRemoveImage = (imageId: string) => {
         if (!selectedSpace) return;
         const updatedImages = (selectedSpace.images || []).filter(img => img.id !== imageId);
         updateSelectedSpace('images', updatedImages);
-        toast.info("Image marked for removal. Save changes to confirm.");
+        toast.success("Image removed.");
     };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -124,7 +97,7 @@ const SpaceProfilePage = () => {
         toast.success(`Space "${selectedSpace.name}" updated successfully!`);
     };
 
-    if (!selectedSpace) {
+    if (companySpaces.length === 0) {
         return (
             <Card>
                 <CardHeader>
@@ -136,6 +109,12 @@ const SpaceProfilePage = () => {
                 </CardContent>
             </Card>
         );
+    }
+
+    if (!selectedSpace) {
+        // This case should ideally not be hit if companySpaces.length > 0
+        // But it's good practice to handle it.
+        return <div>Loading space...</div>;
     }
 
     return (
@@ -217,7 +196,7 @@ const SpaceProfilePage = () => {
                             {allAmenities.map(amenity => (
                                 <Button
                                     key={amenity.id}
-                                    variant={selectedSpace.amenities?.includes(amenity.id) ? "secondary" : "outline"}
+                                    variant={selectedSpace.amenities?.some(a => a.id === amenity.id) ? "secondary" : "outline"}
                                     onClick={() => handleAmenityToggle(amenity.id)}
                                     className="justify-start"
                                 >
@@ -228,20 +207,34 @@ const SpaceProfilePage = () => {
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="vibe">Vibe</Label>
-                        <Input id="vibe" name="vibe" value={selectedSpace.vibe || ''} onChange={handleFormChange} placeholder="e.g., Energetic, Quiet, Professional" />
+                        <Label htmlFor="vibe">Vibe (comma-separated)</Label>
+                        <Input
+                            id="vibe"
+                            name="vibe"
+                            value={selectedSpace?.vibe?.join(', ') || ''}
+                            onChange={handleFormChange}
+                            placeholder="e.g. Energetic, Collaborative"
+                        />
                     </div>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Additional Details</CardTitle>
-                </CardHeader>
-                <CardContent>
                     <div className="space-y-2">
-                        <Label htmlFor="house_rules">House Rules</Label>
-                        <Textarea id="house_rules" name="house_rules" value={selectedSpace.house_rules || ''} onChange={handleFormChange} rows={4} placeholder="e.g., Be respectful, clean up..." />
+                        <Label htmlFor="key_highlights">Key Highlights (comma-separated)</Label>
+                        <Textarea
+                            id="key_highlights"
+                            name="key_highlights"
+                            value={selectedSpace?.key_highlights?.join(', ') || ''}
+                            onChange={handleFormChange}
+                            placeholder="e.g. 24/7 Access, Pet-Friendly"
+                        />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="house_rules">House Rules (comma-separated)</Label>
+                        <Textarea
+                            id="house_rules"
+                            name="house_rules"
+                            value={selectedSpace?.house_rules?.join(', ') || ''}
+                            onChange={handleFormChange}
+                            placeholder="e.g. Be respectful, Clean up"
+                        />
                     </div>
                 </CardContent>
             </Card>

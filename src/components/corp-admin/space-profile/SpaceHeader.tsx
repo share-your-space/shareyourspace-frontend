@@ -1,10 +1,10 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { MapPin, Edit } from 'lucide-react';
-import { SpaceProfile } from '@/types/space';
+import { Space } from '@/types/space';
 
 interface SpaceHeaderProps {
-  profile: SpaceProfile;
+  profile: Space;
   isEditing: boolean;
   onEditToggle: () => void;
   showEditButton?: boolean;
@@ -33,4 +33,4 @@ export const SpaceHeader: React.FC<SpaceHeaderProps> = ({
       )}
     </div>
   );
-}; 
+};

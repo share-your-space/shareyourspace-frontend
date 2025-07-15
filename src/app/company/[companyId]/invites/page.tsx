@@ -30,17 +30,17 @@ import { UserRole } from '@/types/enums';
 // Mock Data
 const initialMockInvites: Invitation[] = [
     {
-        id: 1,
+        id: 'inv-1',
         email: 'pending.user@example.com',
-        role: UserRole.CORP_EMPLOYEE,
+        role: UserRole.CORP_MEMBER,
         status: InvitationStatus.PENDING,
         created_at: '2023-07-10T10:00:00Z',
         expires_at: '2023-07-17T10:00:00Z',
         invitation_token: 'abc-123',
-        company_id: 1,
+        company_id: 'comp-1',
     },
     {
-        id: 2,
+        id: 'inv-2',
         email: 'accepted.user@example.com',
         role: UserRole.FREELANCER,
         status: InvitationStatus.ACCEPTED,
@@ -48,17 +48,17 @@ const initialMockInvites: Invitation[] = [
         accepted_at: '2023-07-09T14:00:00Z',
         expires_at: '2023-07-16T11:30:00Z',
         invitation_token: 'def-456',
-        company_id: 1,
+        company_id: 'comp-1',
     },
     {
-        id: 3,
+        id: 'inv-3',
         email: 'expired.user@example.com',
         role: UserRole.STARTUP_ADMIN,
         status: InvitationStatus.EXPIRED,
         created_at: '2023-06-01T12:00:00Z',
         expires_at: '2023-06-08T12:00:00Z',
         invitation_token: 'ghi-789',
-        company_id: 1,
+        company_id: 'comp-1',
     },
 ];
 
@@ -74,10 +74,10 @@ const getStatusBadgeVariant = (status: InvitationStatus) => {
 
 export default function InvitesPage() {
     const params = useParams();
-    const companyId = Number(params.companyId);
+    const companyId = params.companyId as string;
     const [invites, setInvites] = useState<Invitation[]>(initialMockInvites);
     const [newInviteEmail, setNewInviteEmail] = useState('');
-    const [newInviteRole, setNewInviteRole] = useState<UserRole>(UserRole.CORP_EMPLOYEE);
+    const [newInviteRole, setNewInviteRole] = useState<UserRole>(UserRole.CORP_MEMBER);
 
     const handleSendInvite = () => {
         if (!newInviteEmail || !/^\S+@\S+\.\S+$/.test(newInviteEmail)) {
@@ -86,7 +86,7 @@ export default function InvitesPage() {
         }
 
         const newInvite: Invitation = {
-            id: Math.max(...invites.map(i => i.id), 0) + 1,
+            id: `inv-${Math.random().toString(36).substr(2, 9)}`,
             email: newInviteEmail,
             role: newInviteRole,
             status: InvitationStatus.PENDING,
@@ -101,14 +101,14 @@ export default function InvitesPage() {
         setNewInviteEmail('');
     };
 
-    const handleResendInvite = (inviteId: number) => {
+    const handleResendInvite = (inviteId: string) => {
         setInvites(prev => prev.map(inv => inv.id === inviteId ? { ...inv, created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() } : inv));
         const invite = invites.find(i => i.id === inviteId);
         toast.success(`Invitation for ${invite?.email} has been resent.`);
     };
 
-    const handleRevokeInvite = (inviteId: number) => {
-        setInvites(prev => prev.filter(inv => inv.id !== inviteId));
+    const handleRevokeInvite = (inviteId: string) => {
+        setInvites(prev => prev.map(inv => inv.id === inviteId ? { ...inv, status: InvitationStatus.REVOKED } : inv));
         const invite = invites.find(i => i.id === inviteId);
         toast.info(`Invitation for ${invite?.email} has been revoked.`);
     };
@@ -132,7 +132,7 @@ export default function InvitesPage() {
                                 <SelectValue placeholder="Select a role" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value={UserRole.CORP_EMPLOYEE}>Employee</SelectItem>
+                                <SelectItem value={UserRole.CORP_MEMBER}>Employee</SelectItem>
                                 <SelectItem value={UserRole.FREELANCER}>Freelancer</SelectItem>
                                 <SelectItem value={UserRole.STARTUP_ADMIN}>Startup Admin</SelectItem>
                             </SelectContent>

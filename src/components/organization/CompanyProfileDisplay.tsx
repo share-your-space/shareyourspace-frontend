@@ -44,7 +44,7 @@ const CompanyProfileDisplay = ({ company, isEditing, form, onSave }: CompanyProf
             editContent={<Controller name="looking_for" control={form.control} render={({ field }) => <MultiSelect selected={field.value || []} onChange={field.onChange} options={lookingForOptions} placeholder="Add a role..."/>} />}
           >
              <div className="flex flex-wrap gap-2">
-                {company.looking_for?.map(role => <div key={role} className="bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-1 text-sm font-medium">{role}</div>)}
+                {company.type === 'startup' && (company as Startup).looking_for?.map(role => <div key={role} className="bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-1 text-sm font-medium">{role}</div>)}
             </div>
           </EditableSection>
 

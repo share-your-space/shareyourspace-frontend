@@ -9,7 +9,7 @@ interface PhotoGalleryProps {
   images: SpaceImage[];
   isEditing: boolean;
   onImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onImageDelete: (imageId: number) => void;
+  onImageDelete: (imageId: string) => void;
 }
 
 export const PhotoGallery: React.FC<PhotoGalleryProps> = ({
@@ -100,4 +100,4 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({
       )}
     </div>
   );
-}; 
+};

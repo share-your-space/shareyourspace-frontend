@@ -12,7 +12,7 @@ import { Notification } from '@/types/notification';
 const NotificationsPage = () => {
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
 
-  const handleMarkRead = (notificationId: number) => {
+  const handleMarkRead = (notificationId: string) => {
     setNotifications(notifications.map(n => 
       n.id === notificationId ? { ...n, is_read: true } : n
     ));
@@ -24,17 +24,17 @@ const NotificationsPage = () => {
     toast.success('All notifications marked as read.');
   };
 
-  const handleAcceptConnection = (notificationId: number) => {
+  const handleAcceptConnection = (notificationId: string) => {
     setNotifications(notifications.filter(n => n.id !== notificationId));
     toast.success("Connection accepted!");
   };
 
-  const handleDeclineConnection = (notificationId: number) => {
+  const handleDeclineConnection = (notificationId: string) => {
     setNotifications(notifications.filter(n => n.id !== notificationId));
     toast.success("Connection declined.");
   };
 
-  const handleDeleteNotification = (notificationId: number) => {
+  const handleDeleteNotification = (notificationId: string) => {
     setNotifications(notifications.filter(n => n.id !== notificationId));
     toast.success("Notification deleted.");
   };

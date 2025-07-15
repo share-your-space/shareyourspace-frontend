@@ -21,12 +21,10 @@ import {
 } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import { toast } from 'sonner';
-import { Workstation } from '@/types/workstation';
-
-const WORKSTATION_STATUSES = ['Available', 'Occupied', 'Under Maintenance'] as const;
+import { Workstation, WorkstationStatus } from '@/types/workstation';
 
 const statusSchema = z.object({
-  status: z.enum(WORKSTATION_STATUSES),
+  status: z.nativeEnum(WorkstationStatus),
 });
 
 type StatusFormValues = z.infer<typeof statusSchema>;
@@ -50,7 +48,7 @@ export const ChangeWorkstationStatusDialog = ({
 
   useEffect(() => {
     if (workstation) {
-      form.setValue('status', workstation.status as typeof WORKSTATION_STATUSES[number]);
+      form.setValue('status', workstation.status);
     }
   }, [workstation, form]);
 
@@ -66,7 +64,7 @@ export const ChangeWorkstationStatusDialog = ({
         ...workstation,
         status: values.status,
         // If status is 'Available', unassign the user
-        ...(values.status === 'Available' && { user: null, user_id: null }),
+        ...(values.status === WorkstationStatus.AVAILABLE && { user: null, user_id: null }),
       };
 
       toast.success(`Successfully updated status for ${workstation.name}.`);
@@ -77,6 +75,11 @@ export const ChangeWorkstationStatusDialog = ({
       console.error(error);
     }
   };
+
+  const formatStatus = (status: WorkstationStatus) => {
+    const lower = status.toLowerCase().replace(/_/g, ' ');
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -102,9 +105,9 @@ export const ChangeWorkstationStatusDialog = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {WORKSTATION_STATUSES.map((status) => (
+                      {Object.values(WorkstationStatus).map((status) => (
                         <SelectItem key={status} value={status}>
-                          {status}
+                          {formatStatus(status)}
                         </SelectItem>
                       ))}
                     </SelectContent>

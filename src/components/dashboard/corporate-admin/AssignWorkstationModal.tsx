@@ -19,15 +19,15 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import type { BasicUser } from '@/types/space';
+import { User } from '@/types/auth';
 import type { WorkstationDetail } from '@/types/space';
 
 interface AssignWorkstationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  assignableUsers: BasicUser[];
+  assignableUsers: User[];
   availableWorkstations: WorkstationDetail[];
-  onAssign: (userId: string, workstationId: number) => Promise<void>;
+  onAssign: (userId: string, workstationId: string) => Promise<void>;
   userIdToAssign?: string;
   isAssigning: boolean;
 }
@@ -53,7 +53,7 @@ const AssignWorkstationModal: React.FC<AssignWorkstationModalProps> = ({
   
   const handleAssign = () => {
     if (!selectedUserId || !selectedWorkstationId) return;
-    onAssign(selectedUserId, Number(selectedWorkstationId));
+    onAssign(selectedUserId, selectedWorkstationId);
   };
 
   return (
@@ -80,7 +80,7 @@ const AssignWorkstationModal: React.FC<AssignWorkstationModalProps> = ({
               </SelectTrigger>
               <SelectContent>
                 {assignableUsers.map(u => (
-                  <SelectItem key={u.id} value={String(u.id)}>
+                  <SelectItem key={u.id} value={u.id}>
                     {u.full_name || u.email}
                   </SelectItem>
                 ))}
@@ -100,7 +100,7 @@ const AssignWorkstationModal: React.FC<AssignWorkstationModalProps> = ({
               </SelectTrigger>
               <SelectContent>
                 {availableWorkstations.map(ws => (
-                  <SelectItem key={ws.id} value={String(ws.id)}>
+                  <SelectItem key={ws.id} value={ws.id}>
                     {ws.name}
                   </SelectItem>
                 ))}

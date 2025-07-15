@@ -21,7 +21,7 @@ const StartupInvitationsManagement = () => {
     setTimeout(() => {
       try {
         // Filter mock invitations for the startup
-        const startupInvitations = mockInvitations.filter(inv => inv.startup_id === 1);
+        const startupInvitations = mockInvitations.filter(inv => inv.startup_id === '1');
         setInvitations(startupInvitations);
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : "Failed to fetch invitations.";
@@ -39,7 +39,7 @@ const StartupInvitationsManagement = () => {
     fetchInvitations();
   }, []);
 
-  const handleRevoke = async (invitationId: number) => {
+  const handleRevoke = async (invitationId: string) => {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
     try {

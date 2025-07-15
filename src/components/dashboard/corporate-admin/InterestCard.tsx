@@ -16,7 +16,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
-import { Interest } from '@/types/space';
+import { Interest } from '@/types/interest';
 import { UserRole } from '@/types/enums';
 import { useChatStore } from '@/store/chatStore';
 import { useAuthStore } from '@/store/authStore';
@@ -56,23 +56,15 @@ export default function InterestCard({
 
     const newConversation: Conversation = {
       id: newConversationId,
-      participants: [
-        {
-          id: currentUser.id,
-          full_name: currentUser.full_name,
-          profile_picture_url: currentUser.profile?.profile_picture_url || '',
-        },
-        {
-          id: otherUser.id,
-          full_name: otherUser.full_name,
-          profile_picture_url: otherUser.profile?.profile_picture_url || '',
-        },
-      ],
+      participants: [currentUser, otherUser],
       messages: [],
       unread_count: 0,
       last_message: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      isLoadingMessages: false,
+      hasMoreMessages: false,
+      messagesFetched: false,
     };
 
     addOrUpdateConversation(newConversation);
@@ -98,7 +90,7 @@ export default function InterestCard({
           <AvatarImage
             src={
               (isStartup
-                ? interest.startup?.logo_url
+                ? interest.startup?.profile_image_url
                 : interest.user.profile?.profile_picture_url) || ''
             }
             alt="Profile"

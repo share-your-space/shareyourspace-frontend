@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { User } from '@/types/auth';
 import { UserRole } from '@/types/enums';
+import { mockCompanies } from '@/lib/mock-data';
 
 // Mock user data for frontend-only development
 const mockUser: User = {
@@ -10,11 +11,12 @@ const mockUser: User = {
   role: UserRole.CORP_ADMIN,
   status: 'ACTIVE',
   company_id: 'comp-1',
-  company_name: 'ShareYourSpace Inc.',
+  company_name: 'Innovate Inc.',
   is_active: true,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
-  profile_picture_url: 'https://i.pravatar.cc/150?u=corpadmin@example.com'
+  profile_picture_url: 'https://i.pravatar.cc/150?u=corpadmin@example.com',
+  company: mockCompanies.find(c => c.id === 'comp-1' && c.type === 'Company') || null,
 };
 
 interface AuthState {

@@ -1,6 +1,7 @@
 import { BasicStartup, BasicSpace, UserWorkstationInfo, BasicCompany } from "./space";
 import { UserProfile } from "./userProfile"; // Import UserProfile
 import { UserRole } from './enums';
+import { Company } from './company';
 
 // Corresponds to app.models.invitation.InvitationStatus enum
 export enum InvitationStatus {
@@ -22,11 +23,14 @@ export interface User {
   profile_picture_url?: string;
   company_id?: string | null;
   company_name?: string;
+  company?: Company | null; // Added to hold company details
   is_active?: boolean;
   status?: string;
   created_at?: string;
   updated_at?: string;
   space_id?: string | null; // For freelancers or startup members in a space
+  profile?: UserProfile | null;
+  avatar?: string;
 }
 
 // Corresponds to app.schemas.auth.Token
@@ -77,10 +81,9 @@ export interface Invitation {
 // Corresponds to app.schemas.user.UserDetail in the backend
 export interface UserDetail extends User {
     profile: UserProfile;
-    company: BasicCompany | null;
     startup?: BasicStartup | null;
     spaces?: BasicSpace[];
-    interests: { id: number; name: string }[];
+    interests: { id: string; name: string }[];
     space_id?: string | null; // For freelancers
 }
 

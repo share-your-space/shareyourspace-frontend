@@ -48,14 +48,16 @@ const UserProfilePage = () => {
                 id: user.id,
                 user_id: user.id,
                 ...partialProfile,
-            } as UserProfile
+            } as UserProfile,
+            company: null, // Add missing property
+            interests: [], // Add missing property
         };
         setUserDetail(fullUserDetail);
 
         // Simulate checking connection status
         if (currentUser && currentUser.id.toString() !== userId) {
-          // Let's pretend we have a connection with user 2
-          if (user.id === 2) {
+          // Let's pretend we have a connection with user '2'
+          if (user.id === '2') {
             setConnectionStatus('connected');
           } else {
             setConnectionStatus('idle');

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { toast } from "sonner";
-import { CompanySettings } from "@/types/company";
+import { CompanySettings } from "@/types/organization";
 import { Loader2, Trash2 } from "lucide-react";
 
 const mockSettings: CompanySettings = {

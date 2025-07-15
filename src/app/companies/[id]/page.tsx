@@ -41,13 +41,18 @@ const CompanyProfilePageContent = () => {
 
     if (foundCompany) {
       setCompany(foundCompany);
-      reset({
+      const initialData: CompanyFormData = {
         name: foundCompany.name,
         website: foundCompany.website || '',
         industry_focus: foundCompany.industry_focus || [],
         description: foundCompany.description || '',
-        looking_for: foundCompany.looking_for || [],
-      });
+      };
+
+      if (foundCompany.type === 'startup') {
+        initialData.looking_for = (foundCompany as Startup).looking_for || [];
+      }
+
+      reset(initialData);
     } else {
       setError("Company not found.");
     }

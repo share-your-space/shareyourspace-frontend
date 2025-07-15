@@ -10,12 +10,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Workstation } from '@/types/workstation';
+import { Workstation, WorkstationStatus, WorkstationType } from '@/types/workstation';
 
 interface CreateWorkstationDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  spaceId: number;
+  spaceId: string;
   onCreateSuccess: (newWorkstation: Workstation) => void;
 }
 
@@ -38,11 +38,11 @@ export const CreateWorkstationDialog: React.FC<CreateWorkstationDialogProps> = (
     await new Promise((resolve) => setTimeout(resolve, 1000));
     try {
       const newWorkstation: Workstation = {
-        id: Math.floor(Math.random() * 10000), // Mock ID
+        id: String(Math.floor(Math.random() * 10000)), // Mock ID
         name: workstationName,
-        status: 'Available',
+        status: WorkstationStatus.AVAILABLE,
+        type: WorkstationType.HOT_DESK,
         space_id: spaceId,
-        company_id: 0, // Mock company_id
         user_id: null,
         user: null,
       };

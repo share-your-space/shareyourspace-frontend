@@ -67,15 +67,18 @@ export const CreateSpaceDialog = ({
 
     try {
       const newSpace: Space = {
-        id: Math.floor(Math.random() * 10000),
+        id: String(Math.floor(Math.random() * 10000)),
         name: values.name,
         address: values.address,
         company_id: user.company_id,
         total_workstations: values.total_workstations,
         available_workstations: values.total_workstations,
-        status: 'active',
         image_url: `https://source.unsplash.com/random/400x300?workspace&sig=${Math.random()}`,
-        workstations: [],
+        images: [],
+        amenities: [],
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
       toast.success('Space created successfully!');

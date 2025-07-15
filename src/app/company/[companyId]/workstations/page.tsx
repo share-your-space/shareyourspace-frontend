@@ -11,48 +11,48 @@ import { toast } from 'sonner';
 
 const mockWorkstations: Workstation[] = [
 	{
-		id: 1,
+		id: 'w-1',
 		name: 'Desk 101',
 		type: WorkstationType.HOT_DESK,
 		status: WorkstationStatus.AVAILABLE,
-		space_id: 1,
-		space: { id: 1, name: 'Downtown Hub' },
+		space_id: 'space-1',
+		space: { id: 'space-1', name: 'Downtown Hub' },
 		current_booking: null,
 	},
 	{
-		id: 2,
+		id: 'w-2',
 		name: 'Desk 102',
 		type: WorkstationType.HOT_DESK,
 		status: WorkstationStatus.OCCUPIED,
-		space_id: 1,
-		space: { id: 1, name: 'Downtown Hub' },
-		current_booking: { id: 1, user: { id: 101, full_name: 'Alice Johnson', email: 'alice@example.com' } },
+		space_id: 'space-1',
+		space: { id: 'space-1', name: 'Downtown Hub' },
+		current_booking: { id: 'booking-1', user: { id: 'user-101', full_name: 'Alice Johnson', email: 'alice@example.com' } },
 	},
 	{
-		id: 3,
+		id: 'w-3',
 		name: 'Private Office A',
 		type: WorkstationType.PRIVATE_OFFICE,
 		status: WorkstationStatus.MAINTENANCE,
-		space_id: 1,
-		space: { id: 1, name: 'Downtown Hub' },
+		space_id: 'space-1',
+		space: { id: 'space-1', name: 'Downtown Hub' },
 		current_booking: null,
 	},
 	{
-		id: 4,
+		id: 'w-4',
 		name: 'Dedicated Desk 12',
 		type: WorkstationType.PRIVATE_DESK,
 		status: WorkstationStatus.OCCUPIED,
-		space_id: 2,
-		space: { id: 2, name: 'Tech Park Oasis' },
-		current_booking: { id: 2, user: { id: 102, full_name: 'Bob Williams', email: 'bob@startup.io' } },
+		space_id: 'space-2',
+		space: { id: 'space-2', name: 'Tech Park Oasis' },
+		current_booking: { id: 'booking-2', user: { id: 'user-102', full_name: 'Bob Williams', email: 'bob@startup.io' } },
 	},
 	{
-		id: 5,
+		id: 'w-5',
 		name: 'Desk 201',
 		type: WorkstationType.HOT_DESK,
 		status: WorkstationStatus.AVAILABLE,
-		space_id: 2,
-		space: { id: 2, name: 'Tech Park Oasis' },
+		space_id: 'space-2',
+		space: { id: 'space-2', name: 'Tech Park Oasis' },
 		current_booking: null,
 	},
 ];
@@ -74,7 +74,7 @@ const handleAddWorkstation = () => {
 	toast.info('This would open a modal to add a new workstation.');
 };
 
-const handleEditWorkstation = (id: number) => {
+const handleEditWorkstation = (id: string) => {
 	toast.info(`Editing workstation ${id}. This would open an edit form.`);
 };
 
@@ -111,28 +111,24 @@ export default function WorkstationsPage() {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{workstations.map((ws) => (
-								<TableRow key={ws.id}>
+							{workstations.map((workstation) => (
+								<TableRow key={workstation.id}>
 									<TableCell className="font-mono text-xs">
-										WS-{ws.id.toString().padStart(4, '0')}
+										WS-{workstation.id.toString().padStart(4, '0')}
 									</TableCell>
-									<TableCell className="font-medium">{ws.name}</TableCell>
-									<TableCell>{ws.space?.name || 'N/A'}</TableCell>
+									<TableCell className="font-medium">{workstation.name}</TableCell>
+									<TableCell>{workstation.space?.name || 'N/A'}</TableCell>
 									<TableCell className="capitalize">
-										{ws.type.replace(/_/g, ' ').toLowerCase()}
+										{workstation.type.replace(/_/g, ' ').toLowerCase()}
 									</TableCell>
 									<TableCell>
-										<Badge variant={getStatusVariant(ws.status)} className="capitalize">
-											{ws.status.toLowerCase()}
+										<Badge variant={getStatusVariant(workstation.status)} className="capitalize">
+											{workstation.status.toLowerCase()}
 										</Badge>
 									</TableCell>
-									<TableCell>{ws.current_booking?.user.full_name || '—'}</TableCell>
+									<TableCell>{workstation.current_booking?.user.full_name || '—'}</TableCell>
 									<TableCell className="text-right">
-										<Button
-											variant="outline"
-											size="sm"
-											onClick={() => handleEditWorkstation(ws.id)}
-										>
+										<Button variant="outline" size="sm" onClick={() => handleEditWorkstation(workstation.id)}>
 											Edit
 										</Button>
 									</TableCell>

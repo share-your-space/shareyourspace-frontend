@@ -22,8 +22,9 @@ import {
 } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
 import { toast } from 'sonner';
-import { Workstation } from '@/types/workstation';
-import { User } from '@/types/user';
+import { Workstation, WorkstationStatus } from '@/types/workstation';
+import { User } from '@/types/auth';
+import { UserSimpleInfo } from '@/types/user';
 
 const assignSchema = z.object({
   userId: z.string().nonempty('Please select a user'),
@@ -63,11 +64,18 @@ export const AssignWorkstationDialog = ({
         return;
       }
 
+      const userForWorkstation: UserSimpleInfo = {
+        id: selectedUser.id,
+        email: selectedUser.email,
+        full_name: selectedUser.full_name || null,
+        profile: selectedUser.profile,
+      };
+
       const updatedWorkstation: Workstation = {
         ...workstation,
         user_id: selectedUser.id,
-        user: selectedUser,
-        status: 'Occupied',
+        user: userForWorkstation,
+        status: WorkstationStatus.OCCUPIED,
       };
 
       toast.success(`Successfully assigned ${workstation.name} to ${selectedUser.full_name}.`);

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
-import { getMyStartup } from '@/lib/api/organizations';
+import { mockStartups } from '@/lib/mock-data';
 import { StartupDirectInviteCreate } from '@/types/auth';
 import { Startup } from '@/types/organization';
 import { useAuthStore } from '@/store/authStore';
@@ -41,8 +41,13 @@ const DirectInviteMemberForm = ({ onInvitationSent }: DirectInviteMemberFormProp
     const fetchMyStartup = async () => {
       setIsLoading(true);
       try {
-        const startupData = await getMyStartup();
-        setStartup(startupData);
+        // Simulate fetching startup data
+        const startupData = mockStartups.find(s => s.id === user?.company_id);
+        if (startupData) {
+          setStartup(startupData);
+        } else {
+          throw new Error("Startup not found");
+        }
       } catch (error) {
         console.error("Failed to fetch startup data:", error);
         toast.error("Error", {
@@ -54,13 +59,19 @@ const DirectInviteMemberForm = ({ onInvitationSent }: DirectInviteMemberFormProp
     };
 
     fetchMyStartup();
-  }, []);
+  }, [user?.company_id]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!startup) {
+      toast.error("Error", {
+        description: `Could not find your startup details. Please try again.`,
+      });
+      return;
+    }
     // Simulate sending an invitation
     console.log('Simulating invitation for:', {
       email: values.email,
-      entityId: user?.startup_id,
+      entityId: startup.id,
       role: 'STARTUP_MEMBER', // Mock role
     });
 

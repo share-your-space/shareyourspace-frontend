@@ -67,6 +67,8 @@ export interface Conversation {
   isLoadingMessages: boolean;
   hasMoreMessages: boolean;
   messagesFetched: boolean;
+  created_at?: string;
+  updated_at?: string;
 } 
 
 export type ConversationData = Conversation;

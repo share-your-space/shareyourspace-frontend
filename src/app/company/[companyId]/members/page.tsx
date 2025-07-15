@@ -10,67 +10,55 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreHorizontal, Search, UserPlus, FileDown } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import { UserRole } from '@/types/enums';
 import { User } from '@/types/auth';
 import { Startup } from '@/types/organization';
 
 // Mock Data
 const mockUsers: User[] = [
   {
-    id: 101,
+    id: 'user-101',
     full_name: 'Alice Johnson',
     email: 'alice.j@innovate.io',
-    role: 'FREELANCER',
+    role: UserRole.FREELANCER,
     status: 'ACTIVE',
     is_active: true,
     created_at: '2023-01-15T09:30:00Z',
     updated_at: '2023-01-15T09:30:00Z',
-    profile: {
-      id: 101,
-      user_id: 101,
-      title: 'UX/UI Designer',
-      profile_picture_signed_url: 'https://images.unsplash.com/photo-1521119989659-a83eee488004?q=80&w=1974&auto=format&fit=crop',
-    },
+    profile_picture_url: 'https://images.unsplash.com/photo-1521119989659-a83eee488004?q=80&w=1974&auto=format&fit=crop',
   },
   {
-    id: 102,
+    id: 'user-102',
     full_name: 'Bob Williams',
     email: 'bob.w@synergy.co',
-    role: 'FREELANCER',
+    role: UserRole.FREELANCER,
     status: 'ACTIVE',
     is_active: true,
     created_at: '2023-02-20T11:00:00Z',
     updated_at: '2023-02-20T11:00:00Z',
-    profile: {
-      id: 102,
-      user_id: 102,
-      title: 'Backend Developer',
-      profile_picture_signed_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1974&auto=format&fit=crop',
-    },
+    profile_picture_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1974&auto=format&fit=crop',
   },
 ];
 
 const mockStartups: Startup[] = [
   {
-    id: 201,
+    id: 'startup-201',
     name: 'Innovate Inc.',
-    contact_email: 'contact@innovate.io',
-    profile: {
-      id: 201,
-      startup_id: 201,
-      tagline: 'Pioneering new technologies.',
-      logo_signed_url: 'https://images.unsplash.com/photo-1556761175-577389e7a4c8?q=80&w=2070&auto=format&fit=crop',
-    },
+    description: 'Pioneering new technologies.',
+    website: 'https://innovate.io',
+    industry_focus: ['Technology'],
+    profile_image_url: 'https://images.unsplash.com/photo-1556761175-577389e7a4c8?q=80&w=2070&auto=format&fit=crop',
+    type: 'startup',
   },
   {
-    id: 202,
+    id: 'startup-202',
     name: 'Synergy Solutions',
-    contact_email: 'hello@synergy.co',
-    profile: {
-      id: 202,
-      startup_id: 202,
-      tagline: 'Connecting ideas and people.',
-      logo_signed_url: 'https://images.unsplash.com/photo-1562575214-da9fcf59b907?q=80&w=1974&auto=format&fit=crop',
-    },
+    description: 'Connecting ideas and people.',
+    website: 'https://synergy.co',
+    industry_focus: ['Consulting'],
+    profile_image_url: 'https://images.unsplash.com/photo-1562575214-da9fcf59b907?q=80&w=1974&auto=format&fit=crop',
+    type: 'startup',
   },
 ];
 
@@ -84,11 +72,11 @@ const getInitials = (name?: string | null): string => {
 };
 
 const MemberCard: React.FC<{ member: Tenant }> = ({ member }) => {
-    const isUser = 'full_name' in member;
-    const name = isUser ? member.full_name : member.name;
-    const avatarUrl = isUser ? member.profile?.profile_picture_signed_url : member.profile?.logo_signed_url;
-    const title = isUser ? member.profile?.title : (member as Startup).profile?.tagline;
-    const status = isUser ? member.status : 'Active'; // Startups are always active
+    const isUser = 'email' in member;
+    const name = isUser ? (member as User).full_name : (member as Startup).name;
+    const avatarUrl = isUser ? (member as User).profile_picture_url : (member as Startup).profile_image_url;
+    const title = isUser ? (member as User).role : (member as Startup).description;
+    const status = isUser ? (member as User).status : 'Active'; // Startups are always active
 
     const handleAction = (action: string) => {
         toast.info(`Action: "${action}" on "${name}"`);
@@ -99,7 +87,7 @@ const MemberCard: React.FC<{ member: Tenant }> = ({ member }) => {
             <CardContent className="p-4 flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                     <Avatar className="h-12 w-12">
-                        <AvatarImage src={avatarUrl || undefined} alt={name || ''} />
+                        <AvatarImage src={avatarUrl || undefined} alt={name || 'avatar'} />
                         <AvatarFallback>{getInitials(name)}</AvatarFallback>
                     </Avatar>
                     <div>
@@ -107,13 +95,11 @@ const MemberCard: React.FC<{ member: Tenant }> = ({ member }) => {
                         <p className="text-sm text-muted-foreground">{title}</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                        {status}
-                    </span>
+                <div className="flex items-center space-x-4">
+                    <Badge variant={status === 'ACTIVE' ? 'success' : 'secondary'}>{status}</Badge>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" className="h-8 w-8 p-0">
                                 <MoreHorizontal className="h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
@@ -141,7 +127,7 @@ export default function CompanyMembersPage() {
     const filteredMembers = useMemo(() => {
         if (!searchTerm) return allMembers;
         return allMembers.filter(member => {
-            const name = 'full_name' in member ? member.full_name : member.name;
+            const name = 'email' in member ? (member as User).full_name : (member as Startup).name;
             return name?.toLowerCase().includes(searchTerm.toLowerCase());
         });
     }, [searchTerm, allMembers]);

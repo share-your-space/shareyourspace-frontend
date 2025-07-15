@@ -116,12 +116,12 @@ const EditProfilePage = () => {
       toast.error("Profile not loaded.");
       return;
     }
-    
-    const updatedProfile: UserProfile = { ...profile };
-    fields.forEach(field => {
-      const value = getValues(field);
-      (updatedProfile as Record<string, unknown>)[field] = value;
-    });
+
+    const updatedValues = fields.reduce((acc, field) => {
+      return { ...acc, [field]: getValues(field) };
+    }, {} as Partial<ProfileFormValues>);
+
+    const updatedProfile: UserProfile = { ...profile, ...updatedValues };
 
     setProfile(updatedProfile);
     toast.success("Profile Updated");

@@ -43,7 +43,8 @@ export function SocketConnectionManager() {
       
       if (connectionAttempts.current >= maxConnectionAttempts) {
         console.error('Socket connection failed after multiple attempts, logging out.');
-        logout(router);
+        logout();
+        router.push('/login?session_expired=true');
         toast.error('Session expired. Please log in again.');
       }
     };
@@ -108,15 +109,15 @@ export function SocketConnectionManager() {
   useEffect(() => {
     const handleUserOnline = (data: { user_id: number }) => {
       console.log('User online:', data.user_id);
-      addOnlineUser(data.user_id);
+      addOnlineUser(String(data.user_id));
     };
     const handleUserOffline = (data: { user_id: number }) => {
       console.log('User offline:', data.user_id);
-      removeOnlineUser(data.user_id);
+      removeOnlineUser(String(data.user_id));
     };
     const handleOnlineUsersList = (userIds: number[]) => {
       console.log('Received online users list:', userIds);
-      setOnlineUsers(userIds);
+      setOnlineUsers(userIds.map(String));
     };
 
     socket.on('user_online', handleUserOnline);
@@ -141,13 +142,9 @@ export function SocketConnectionManager() {
       }
       
       const currentUserId = currentUser.id; 
-      if (isNaN(currentUserId)) {
-        console.error('Current user ID from authStore is not a valid number:', currentUser.id);
-        return;
-      }
 
       // Don't show notification for your own messages
-      if (payload.sender_id === currentUserId) {
+      if (String(payload.sender_id) === currentUserId) {
         return;
       }
 

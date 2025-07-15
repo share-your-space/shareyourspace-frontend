@@ -42,7 +42,7 @@ const ConnectionActionCard: React.FC<{
                         <Link href={`/users/${otherUser?.id}`} className="hover:underline">
                             <p className="font-bold text-lg">{otherUser?.full_name || `User ${otherUser?.id}`}</p>
                         </Link>
-                        <p className="text-sm text-muted-foreground">{otherUser?.title || 'No title specified'}</p>
+                        <p className="text-sm text-muted-foreground">{otherUser?.profile?.title || 'No title specified'}</p>
                         <p className="text-xs text-muted-foreground mt-1">
                             {perspective === 'incoming' ? `Wants to connect` : `Request sent`}
                             {` on ${new Date(connection.created_at).toLocaleDateString()}`}
@@ -92,7 +92,7 @@ const ConnectionCard: React.FC<{
                          <Link href={`/users/${otherUser?.id}`} className="hover:underline">
                             <p className="font-bold text-lg">{otherUser?.full_name || `User ${otherUser?.id}`}</p>
                         </Link>
-                        <p className="text-sm text-muted-foreground">{otherUser?.title || 'No title specified'}</p>
+                        <p className="text-sm text-muted-foreground">{otherUser?.profile?.title || 'No title specified'}</p>
                     </div>
                 </div>
                 <div className="flex gap-2 self-end sm:self-center">

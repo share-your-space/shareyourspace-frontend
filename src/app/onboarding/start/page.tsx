@@ -13,8 +13,7 @@ import { useAuthStore } from '@/store/authStore';
 import { toast } from "sonner";
 import { UserRole, TeamSize, StartupStage } from '@/types/enums';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Company } from '@/types/company';
-import { Startup } from '@/types/startup';
+import { Company, Startup } from '@/types/organization';
 
 
 const OnboardingChoiceCard: React.FC<{title: string, description: string, onClick: () => void, icon: React.ReactNode}> = ({ title, description, onClick, icon }) => (
@@ -72,47 +71,45 @@ export default function StartOnboardingPage() {
 
       if (modalType === 'startup') {
         const newStartup: Startup = {
-          id: Math.floor(Math.random() * 1000) + 1,
+          id: (Math.floor(Math.random() * 1000) + 1).toString(),
           name: data.name as string,
           description: data.description as string,
           website: data.website as string,
-          industry_focus: data.industry_focus as string,
+          industry_focus: (data.industry_focus as string).split(',').map(s => s.trim()),
           team_size: data.team_size as TeamSize,
           mission: data.mission as string,
           stage: data.stage as StartupStage,
           pitch_deck_url: data.pitch_deck_url as string,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          owner_id: user.id,
+          type: 'startup',
+          profile_image_url: null,
         };
         setUser({
           ...user,
           role: UserRole.STARTUP_ADMIN,
-          status: 'ACTIVE',
-          startup: newStartup,
-          company: null,
         });
         toast.success(`Startup "${newStartup.name}" registered!`, { id: toastId });
       } else if (modalType === 'corporation') {
         const newCompany: Company = {
-          id: Math.floor(Math.random() * 1000) + 1,
+          id: (Math.floor(Math.random() * 1000) + 1).toString(),
           name: data.name as string,
           description: data.description as string,
           website: data.website as string,
-          industry_focus: data.industry_focus as string,
-          team_size: data.team_size as TeamSize,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          owner_id: user.id,
+          industry_focus: (data.industry_focus as string).split(',').map(s => s.trim()),
+          type: 'Company',
+          profile_image_url: null,
         };
         setUser({
           ...user,
           role: UserRole.CORP_ADMIN,
-          status: 'ACTIVE',
-          company: newCompany,
-          startup: null,
         });
-        toast.success(`Corporation "${newCompany.name}" registered!`, { id: toastId });
+        toast.success(`Company "${newCompany.name}" registered!`, { id: toastId });
+      } else if (modalType === 'freelancer') {
+        setUser({
+          ...user,
+          role: UserRole.FREELANCER,
+          status: 'ACTIVE',
+        });
+        toast.success("Profile updated! Welcome, Freelancer.", { id: toastId });
       }
       
       setIsLoading(false);

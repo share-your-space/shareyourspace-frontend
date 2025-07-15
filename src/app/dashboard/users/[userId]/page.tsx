@@ -21,32 +21,23 @@ export default function UserProfilePage() {
     setIsLoading(true);
     setError(null);
     if (userId) {
-      const numericUserId = parseInt(userId, 10);
-      if (isNaN(numericUserId)) {
-        setError("Invalid user ID.");
-        setIsLoading(false);
-        return;
-      }
-      
-      const user = mockUsers.find(u => u.id === numericUserId);
+      const user = mockUsers.find(u => u.id === userId);
 
-      if (user) {
+      if (user && user.profile) {
         // We need to construct a UserDetail object from the mock User object.
         // This might require combining data from different parts of mock-data or just mapping fields.
         // For now, let's assume the mockUser has a compatible structure or we can create one.
-        const userProfile = user.profile;
         const userDetailData: UserDetail = {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          profile: userProfile,
-          company: user.company,
-          startup: user.startup,
-          spaces: user.spaces,
+          ...user,
+          profile: user.profile,
+          company: null, // Assuming no company for mock user, or find it from mock data
+          startup: null, // Assuming no startup for mock user, or find it from mock data
+          spaces: [], // Assuming no spaces for mock user, or find it from mock data
+          interests: user.profile.interests || [],
         };
         setUserDetail(userDetailData);
       } else {
-        setError("User not found.");
+        setError("User not found or profile is missing.");
       }
     } else {
       setError("User ID is missing.");

@@ -271,14 +271,14 @@ export const mockOrganizations: (Company | Startup)[] = [
     website: 'https://quantumleap.ai',
     industry_focus: ['Quantum Computing', 'AI'],
     profile_image_url: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=800&auto=format&fit=crop',
-    type: 'Startup',
+    type: 'startup',
     mission: 'To build the future of computation.',
     stage: StartupStage.SEED,
   },
 ];
 
 export const mockCompanies: Company[] = mockOrganizations.filter(org => org.type === 'Company') as Company[];
-export const mockStartups: Startup[] = mockOrganizations.filter(org => org.type === 'Startup') as Startup[];
+export const mockStartups: Startup[] = mockOrganizations.filter(org => org.type === 'startup') as Startup[];
 
 const createSpaceImage = (id: string, url: string): SpaceImage => ({
     id,
@@ -302,43 +302,42 @@ export const mockSpaces: Space[] = [
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         total_workstations: 50,
-        headline: 'The best place to innovate',
-        house_rules: ["No smoking", "Keep common areas clean"],
-        vibe: ["Creative", "Productive"],
-        opening_hours: "Mon-Fri: 9am - 6pm",
-        key_highlights: ["Rooftop terrace", "Weekly networking events"],
-        neighborhood_description: "Located in the bustling downtown district, surrounded by cafes and restaurants."
+        available_workstations: 25,
+        headline: 'A vibrant coworking space in the heart of the city.',
+        house_rules: ['Be respectful', 'Clean up after yourself'],
+        vibe: ['Creative', 'Collaborative'],
+        opening_hours: 'Mon-Fri, 9am - 6pm',
+        key_highlights: ['24/7 Access', 'Pet-Friendly'],
+        neighborhood_description: 'Located in the bustling downtown district, surrounded by cafes and restaurants.',
     },
     {
         id: 'space-2',
-        name: 'TechPark Silicon Valley',
-        address: '456 Innovation Dr, Techville, USA',
-        amenities: [{id: 'amenity-5', name: '24/7 Access'}, {id: 'amenity-6', name: 'Private Offices'}, {id: 'amenity-7', name: 'Networking Events'}, {id: 'amenity-8', name: 'Parking'}],
+        name: 'QuantumLeap Labs',
+        address: '456 Innovation Drive, Techville, USA',
+        amenities: [{id: 'amenity-1', name: 'High-speed WiFi'}, {id: 'amenity-5', name: 'Quiet Zones'}],
         image_url: 'https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=800&auto=format&fit=crop',
         images: [
             createSpaceImage('img-4', 'https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=800&auto=format&fit=crop'),
-            createSpaceImage('img-5', 'https://images.unsplash.com/photo-1549923746-c502d488b3ea?q=80&w=800&auto=format&fit=crop'),
         ],
         company_id: 'comp-1',
         is_active: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         total_workstations: 100,
-        headline: 'Where tech giants are born',
-        house_rules: ["Respect quiet zones", "Clean up after yourself"],
-        vibe: ["Innovative", "Fast-paced"],
-        opening_hours: "24/7",
-        key_highlights: ["On-site gym", "Access to mentors"],
-        neighborhood_description: "In the heart of Silicon Valley, close to major tech companies."
+        available_workstations: 10,
+        headline: 'State-of-the-art labs for deep tech and quantum research.',
+        house_rules: ['No unauthorized experiments'],
+        vibe: ['Focused', 'Innovative'],
+        opening_hours: 'Mon-Fri, 8am - 8pm',
+        key_highlights: ['Specialized Equipment', 'Secure Labs'],
+        neighborhood_description: 'Located in the secure Quantum Tech Park.',
     }
 ];
 
 export const mockBrowsableSpaces: BrowsableSpace[] = mockSpaces.map(space => ({
-  ...space,
-  description: space.headline || 'A great place to work and collaborate.',
-  interest_status: null,
-  company_name: mockOrganizations.find(o => o.id === space.company_id)?.name || 'Unknown Company',
-  available_workstations: Math.floor(space.total_workstations * Math.random()),
+    ...space,
+    company_name: mockCompanies.find(c => c.id === space.company_id)?.name || 'Unknown Company',
+    interest_status: 'undecided',
 }));
 
 

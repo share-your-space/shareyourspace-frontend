@@ -32,5 +32,7 @@ export interface Workstation {
   status: WorkstationStatus;
   space_id?: string;
   space?: Space;
+  user_id?: string | null;
+  user?: UserSimpleInfo | null;
   current_booking?: Booking | null;
 }

@@ -104,7 +104,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             <div className={`p-4 ${isMobile ? 'border-b' : ''}`}>
                 <Link href={`/company/${companyId}`} className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 border-2 border-primary">
-                        <AvatarImage src={user?.company?.logo_url || undefined} />
+                        <AvatarImage src={user?.company?.profile_image_url || undefined} />
                         <AvatarFallback><Building /></AvatarFallback>
                     </Avatar>
                     <span className="font-bold text-xl truncate">{user?.company?.name || 'Dashboard'}</span>

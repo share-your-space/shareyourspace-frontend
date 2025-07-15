@@ -1,3 +1,5 @@
+import { Startup } from "./organization";
+
 // Based on app.schemas.user.User (BasicUser in space.py context)
 export interface BasicUser {
   id: string;
@@ -121,6 +123,7 @@ export interface Space {
   created_at: string;
   updated_at: string;
   total_workstations: number;
+  available_workstations: number;
   headline?: string;
   house_rules?: string[];
   vibe?: string[];
